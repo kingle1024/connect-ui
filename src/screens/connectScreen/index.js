@@ -1,12 +1,12 @@
-// src/screens/RecruitScreen.js
+// src/screens/ConnectScreen.js
 import React, { useState, useEffect } from 'react';
-import { Text, View, FlatList, TouchableOpacity } from 'react-native';
+import { Text, View, FlatList, TouchableOpacity, Alert } from 'react-native';
 import Constants from 'expo-constants';
-import localStyles from './styles'; // 👈 스타일 파일을 import 해서 사용!
+import localStyles from './styles';
 
 const API_BASE_URL = Constants.expoConfig.extra.API_BASE_URL;
 
-export default function RecruitScreen() {
+export default function ConnectScreen() {
   const [posts, setPosts] = useState([]);
 
   useEffect(() => {
@@ -42,7 +42,7 @@ export default function RecruitScreen() {
   }, []); // [] : 컴포넌트가 처음 마운트될 때 한 번만 실행
 
   const renderItem = ({ item }) => (
-    <TouchableOpacity style={localStyles.postItem}> {/* styles 대신 localStyles 사용 */}
+    <TouchableOpacity style={localStyles.postItem}>
       <Text style={localStyles.postCategory}>[{item.category}]</Text>
       <Text style={localStyles.postTitle}>{item.title}</Text>
       <Text style={localStyles.postContent}>{item.content.substring(0, 50)}...</Text>
@@ -51,7 +51,7 @@ export default function RecruitScreen() {
   );
 
   return (
-    <View style={localStyles.screenContainer}> {/* styles 대신 localStyles 사용 */}
+    <View style={localStyles.screenContainer}>
       <Text style={localStyles.header}>모집</Text>
       <FlatList
         data={posts}
