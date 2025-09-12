@@ -273,7 +273,7 @@ export default function ChatScreen({ route, navigation }) { // 🌟 navigation p
   const handleGoBack = () => {
     // 채팅방 상세 화면에서 채팅 목록 (메인 탭)으로 돌아감
     // 'MainTabs' 내비게이터로 이동하면서 '채팅' 탭이 활성화되도록 함
-    navigation.navigate('MainTabs', { screen: '채팅' });
+    navigation.navigate('BottomTab', { screen: '채팅' });
   };
 
 
