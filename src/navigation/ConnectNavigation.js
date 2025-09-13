@@ -14,7 +14,7 @@ const ConnectNavigation = () => {
       />
       <Stack.Screen
         name="ConnectDetail"
-        options={{ headerShown: true, title: "같이타" }}
+        options={{ headerShown: true, title: "상세" }}
         component={ConnectDetailScreen}
       />
     </Stack.Navigator>

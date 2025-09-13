@@ -3,45 +3,45 @@ import { FlatList, Image, Text, View } from "react-native";
 import icon from "../../../assets/user-icon.jpg";
 import { useState } from "react";
 import { POST_COMMENTS } from "../../mock/data";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 const ConnectDetail = () => {
   const routes = useRoute();
+  const insets = useSafeAreaInsets();
   const [comments, setComments] = useState(POST_COMMENTS);
 
   const renderItem = ({ item }) => {
-    <View style={{ backgroundColor: "red", width: "100%", height: 300 }}>
-      <Text>{item.comment}</Text>;
-    </View>;
+    return (
+      <View style={{ backgroundColor: "blue", height: 100 }}>
+        <Text>{item.comment}</Text>
+      </View>
+    );
   };
 
   return (
-    <View style={{ margin: 10 }}>
-      <View style={{ flex: 1, flexDirection: "row", alignItems: "center" }}>
+    <SafeAreaView
+      edges={["right", "bottom", "left"]}
+      style={{ flex: 1, padding: 10 }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
         <Image
           source={icon}
           style={{ width: 50, height: 50, borderRadius: 50 * 0.4 }}
         />
-        <View style={{ paddingLeft: 7 }}>
-          <Text
-            style={{
-              fontSize: 15,
-              fontWeight: "bold",
-            }}
-          >
+        <View style={{ paddingLeft: 10 }}>
+          <Text style={{ fontSize: 20, fontWeight: "bold", paddingBottom: 3 }}>
             아이디
           </Text>
-          <Text style={{ fontSize: 10 }}>방금</Text>
+          <Text style={{ fontSize: 15 }}>방금</Text>
         </View>
       </View>
-      <View
-        style={{
-          paddingTop: 10,
-          paddingBottom: 10,
-          fontSize: 24,
-          fontWeight: "bold",
-        }}
-      >
-        {routes.params.item.title}
+      <View style={{ paddingTop: 10, paddingBottom: 20 }}>
+        <Text style={{ fontSize: 24, fontWeight: "bold" }}>
+          {routes.params.item.title}
+        </Text>
       </View>
       <View>
         <Text>{routes.params.item.content}</Text>
@@ -51,7 +51,7 @@ const ConnectDetail = () => {
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
