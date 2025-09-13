@@ -1,6 +1,6 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Feather, Entypo } from "@expo/vector-icons";
-import ConnectScreen from "../screens/connectScreen/index.js";
+import ConnectNavigation from "../navigation/ConnectNavigation.js";
 import ChatRoomsListScreen from "../screens/chatScreen/ChatRoomListScreen.js";
 import MyPageScreen from "../screens/MyPageScreen.js";
 
@@ -16,8 +16,9 @@ const BottomTabNavigation = () => {
     >
       <BottomTab.Screen
         name="모집"
-        component={ConnectScreen}
+        component={ConnectNavigation}
         options={{
+          headerShown: false,
           tabBarIcon: () => <Feather name="clipboard" size={20} />,
         }}
       />
