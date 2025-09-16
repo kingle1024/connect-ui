@@ -13,6 +13,64 @@ const ConnectDetail = () => {
   const routes = useRoute();
   const [comments, setComments] = useState(POST_COMMENTS);
 
+  const ListHeaderComponent = () => {
+    return (
+      <>
+        {/* 프로필 */}
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Image
+            source={icon}
+            style={{ width: 50, height: 50, borderRadius: 20 }}
+          />
+          <View style={{ paddingLeft: 10 }}>
+            <Text
+              style={{
+                fontSize: 20,
+                fontWeight: "bold",
+                paddingBottom: 3,
+              }}
+            >
+              아이디
+            </Text>
+            <Text style={{ fontSize: 15 }}>방금</Text>
+          </View>
+        </View>
+
+        {/* 본문 */}
+        <View style={{ marginTop: 10 }}>
+          <View style={{ paddingBottom: 20 }}>
+            <Text style={{ fontSize: 24, fontWeight: "bold" }}>
+              {routes.params.item.title}
+            </Text>
+          </View>
+          <Text>{routes.params.item.content}</Text>
+          <View style={{ height: 200 }} />
+        </View>
+
+        {/* 구분선 + 액션 */}
+        <View style={{ height: 0.5, backgroundColor: "lightgrey" }} />
+        <View
+          style={{
+            flexDirection: "row",
+            gap: 10,
+            paddingTop: 10,
+            paddingBottom: 10,
+          }}
+        >
+          <View style={{ flexDirection: "row" }}>
+            <Ionicons name="chatbubble-ellipses-outline" />
+            <Text style={{ paddingLeft: 4 }}>댓글</Text>
+          </View>
+          <View style={{ flexDirection: "row" }}>
+            <FontAwesome6 name="arrow-right-from-bracket" />
+            <Text style={{ paddingLeft: 4 }}>대화하기</Text>
+          </View>
+        </View>
+        <View style={{ height: 0.5, backgroundColor: "lightgrey" }} />
+      </>
+    );
+  };
+
   const renderItem = ({ item }) => {
     return (
       <View
@@ -50,44 +108,13 @@ const ConnectDetail = () => {
   };
 
   return (
-    <SafeAreaView
-      edges={["right", "bottom", "left"]}
-      style={{ flex: 1, padding: 10 }}
-    >
-      <View style={{ flexDirection: "row", alignItems: "center" }}>
-        <Image
-          source={icon}
-          style={{ width: 50, height: 50, borderRadius: 50 * 0.4 }}
-        />
-        <View style={{ paddingLeft: 10 }}>
-          <Text style={{ fontSize: 20, fontWeight: "bold", paddingBottom: 3 }}>
-            아이디
-          </Text>
-          <Text style={{ fontSize: 15 }}>방금</Text>
-        </View>
-      </View>
-      <View
-        style={{
-          marginTop: 10,
-        }}
-      >
-        <View style={{ paddingBottom: 20 }}>
-          <Text style={{ fontSize: 24, fontWeight: "bold" }}>
-            {routes.params.item.title}
-          </Text>
-        </View>
-        <View>
-          <Text>{routes.params.item.content}</Text>
-        </View>
-        <View style={{ height: 200 }}></View>
-      </View>
+    <SafeAreaView edges={["right", "left"]} style={{ flex: 1, padding: 10 }}>
       <FlatList
         data={comments}
         renderItem={renderItem}
-        style={{ flex: 1 }}
         contentContainerStyle={{ gap: 10 }}
         keyExtractor={(item) => item.id}
-        inverted
+        ListHeaderComponent={ListHeaderComponent}
       />
     </SafeAreaView>
   );

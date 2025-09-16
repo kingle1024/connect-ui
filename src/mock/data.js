@@ -30,4 +30,16 @@ export const POST_COMMENTS = [
     comment: "여기 두 명 있습니다.",
     postId: 1,
   },
+  {
+    id: 3,
+    userId: "UZY",
+    comment: "여기 두 명 있습니다.",
+    postId: 1,
+  },
+  {
+    id: 4,
+    userId: "UZY",
+    comment: "여기 두 명 있습니다.",
+    postId: 1,
+  },
 ];
