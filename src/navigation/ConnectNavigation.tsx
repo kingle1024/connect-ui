@@ -1,6 +1,6 @@
+import ConnectDetailScreen from "@/screens/ConnectScreen/ConnectDetailScreen";
+import ConnectScreen from "@/screens/ConnectScreen/ConnectScreen";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import ConnectScreen from "../screens/connectScreen/ConnectScreen.js";
-import ConnectDetailScreen from "../screens/connectScreen/ConnectDetailScreen.js";
 
 const Stack = createNativeStackNavigator();
 

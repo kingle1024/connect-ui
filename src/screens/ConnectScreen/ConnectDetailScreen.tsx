@@ -1,17 +1,18 @@
-import { useRoute } from "@react-navigation/native";
+import { RouteProp, useRoute } from "@react-navigation/native";
 import { FlatList, Image, Text, View } from "react-native";
 import icon from "../../../assets/user-icon.jpg";
 import { useState } from "react";
-import { POST_COMMENTS } from "../../mock/data";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
+import { Comment, Post } from "@/types";
+import { POST_COMMENTS } from "@/mock/data";
 
-const SNAP_POINTS = [300, 600];
+type ConnectDetailRouteProp = RouteProp<{ params: { item: Post } }, "params">;
 
 const ConnectDetail = () => {
-  const routes = useRoute();
-  const [comments, setComments] = useState(POST_COMMENTS);
+  const routes = useRoute<ConnectDetailRouteProp>();
+  const [comments, setComments] = useState<Comment[]>(POST_COMMENTS);
 
   const ListHeaderComponent = () => {
     return (
@@ -71,7 +72,7 @@ const ConnectDetail = () => {
     );
   };
 
-  const renderItem = ({ item }) => {
+  const renderItem = ({ item }: { item: Comment }) => {
     return (
       <View
         style={{
@@ -113,7 +114,7 @@ const ConnectDetail = () => {
         data={comments}
         renderItem={renderItem}
         contentContainerStyle={{ gap: 10 }}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item.id)}
         ListHeaderComponent={ListHeaderComponent}
       />
     </SafeAreaView>

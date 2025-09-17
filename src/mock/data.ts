@@ -1,4 +1,6 @@
-export const POSTS = [
+import { Comment, Post } from "@/types";
+
+export const POSTS: Post[] = [
   {
     id: 1,
     title: "더존비즈온 -> 강변역",
@@ -17,7 +19,7 @@ export const POSTS = [
   },
 ];
 
-export const POST_COMMENTS = [
+export const POST_COMMENTS: Comment[] = [
   {
     id: 1,
     userId: "HHY",
