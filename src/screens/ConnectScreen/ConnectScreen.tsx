@@ -1,17 +1,18 @@
-import { useNavigation } from "@react-navigation/native";
+import { NavigationProp, useNavigation } from "@react-navigation/native";
 import { useState, useEffect, useCallback } from "react";
 import { Text, View, FlatList, TouchableOpacity, Alert } from "react-native";
 import Constants from "expo-constants";
+import { Post } from "@/types";
+import { POSTS } from "@/mock/data";
 import localStyles from "./ConnectScreen.styles";
-import { POSTS } from "../../mock/data";
 
-const API_BASE_URL = Constants.expoConfig.extra.API_BASE_URL;
+const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL ?? "";
 
 export default function ConnectScreen() {
-  const navigation = useNavigation();
-  const [posts, setPosts] = useState(POSTS);
+  const navigation = useNavigation<NavigationProp<any>>();
+  const [posts, setPosts] = useState<Post[]>(POSTS);
 
-  const onPressListItem = useCallback((item) => {
+  const onPressListItem = useCallback((item: Post) => {
     navigation.navigate("ConnectDetail", { item });
   }, []);
 
@@ -27,7 +28,7 @@ export default function ConnectScreen() {
         const data = await response.json();
         console.log("백엔드에서 가져온 데이터:", data);
 
-        const formattedPosts = data.map((board) => ({
+        const formattedPosts = data.map((board: any) => ({
           id: board.id.toString(),
           title: board.title,
           content: board.content,
@@ -38,7 +39,7 @@ export default function ConnectScreen() {
 
         setPosts(formattedPosts); // 상태 업데이트
         // --- API 호출 부분 끝 ---
-      } catch (error) {
+      } catch (error: any) {
         console.error("게시글 데이터 불러오기 실패:", error);
         Alert.alert(
           "오류",
@@ -49,7 +50,7 @@ export default function ConnectScreen() {
     fetchPosts();
   }, []); // [] : 컴포넌트가 처음 마운트될 때 한 번만 실행
 
-  const renderItem = ({ item }) => (
+  const renderItem = ({ item }: { item: Post }) => (
     <TouchableOpacity
       style={localStyles.postItem}
       onPress={() => onPressListItem(item)}
@@ -68,7 +69,7 @@ export default function ConnectScreen() {
       <FlatList
         data={posts}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item.id)}
         contentContainerStyle={localStyles.listContainer}
       />
     </View>

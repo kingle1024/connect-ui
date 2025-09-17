@@ -1,6 +1,4 @@
-// src/screens/ChatRoomsListScreen.js
-
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Text,
   View,
@@ -8,22 +6,22 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-} from 'react-native';
-import Constants from 'expo-constants';
-import { useFocusEffect } from '@react-navigation/native';
-import { Client } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import localStyles from './chatRoomsListStyles';
+} from "react-native";
+import Constants from "expo-constants";
+import { useFocusEffect } from "@react-navigation/native";
+import { Client } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import localStyles from "./ChatRoomListScreen.styles.ts";
 
 const API_BASE_URL = Constants.expoConfig.extra.API_BASE_URL;
 const SOCKET_URL = API_BASE_URL + "/ws-chat";
 
 const MessageType = {
-  LEAVE: 'LEAVE',
+  LEAVE: "LEAVE",
 };
 
-const USER_ID_KEY = 'chatAppUserId';
+const USER_ID_KEY = "chatAppUserId";
 
 export default function ChatRoomsListScreen({ navigation }) {
   const [userId, setUserId] = useState(null);
@@ -40,10 +38,15 @@ export default function ChatRoomsListScreen({ navigation }) {
         if (storedUserId) {
           setUserId(storedUserId);
         } else {
-          const newId = `user_${Math.random().toString(36).substr(2, 6)}_${Date.now().toString().substr(-4)}`;
+          const newId = `user_${Math.random()
+            .toString(36)
+            .substr(2, 6)}_${Date.now().toString().substr(-4)}`;
           await AsyncStorage.setItem(USER_ID_KEY, newId);
           setUserId(newId);
-          Alert.alert('환영합니다!', `새로운 사용자 ID가 '${newId}'로 생성되었습니다.`);
+          Alert.alert(
+            "환영합니다!",
+            `새로운 사용자 ID가 '${newId}'로 생성되었습니다.`
+          );
         }
       } catch (e) {
         console.error("사용자 ID 로드/생성 실패", e);
@@ -59,10 +62,15 @@ export default function ChatRoomsListScreen({ navigation }) {
   const handleGenerateNewId = async () => {
     setIsUserIdLoading(true); // 🌟 ID 새로 만들 때 로딩
     try {
-      const newId = `user_${Math.random().toString(36).substr(2, 6)}_${Date.now().toString().substr(-4)}`;
+      const newId = `user_${Math.random()
+        .toString(36)
+        .substr(2, 6)}_${Date.now().toString().substr(-4)}`;
       await AsyncStorage.setItem(USER_ID_KEY, newId);
       setUserId(newId);
-      Alert.alert('ID 변경 완료', `새로운 사용자 ID가 '${newId}'으로 생성되었습니다.`);
+      Alert.alert(
+        "ID 변경 완료",
+        `새로운 사용자 ID가 '${newId}'으로 생성되었습니다.`
+      );
       // ID가 바뀌었으니 채팅방 목록 새로고침
       // fetchUserRooms(); // useFocusEffect에서 알아서 호출되도록.
     } catch (e) {
@@ -73,7 +81,6 @@ export default function ChatRoomsListScreen({ navigation }) {
     }
   };
 
-
   const connectWebSocket = useCallback(() => {
     if (stompClient.current && stompClient.current.connected) {
       return;
@@ -81,10 +88,12 @@ export default function ChatRoomsListScreen({ navigation }) {
     stompClient.current = new Client({
       webSocketFactory: () => new SockJS(SOCKET_URL),
       onConnect: () => {
-        console.log('ChatRoomsListScreen: WebSocket connected for leave messages.');
+        console.log(
+          "ChatRoomsListScreen: WebSocket connected for leave messages."
+        );
       },
       onStompError: (frame) => {
-        console.error('ChatRoomsListScreen: WebSocket error', frame);
+        console.error("ChatRoomsListScreen: WebSocket error", frame);
       },
     });
     stompClient.current.activate();
@@ -93,13 +102,14 @@ export default function ChatRoomsListScreen({ navigation }) {
   const disconnectWebSocket = useCallback(() => {
     if (stompClient.current && stompClient.current.connected) {
       stompClient.current.deactivate();
-      console.log('ChatRoomsListScreen: WebSocket disconnected.');
+      console.log("ChatRoomsListScreen: WebSocket disconnected.");
     }
   }, []);
 
   // 🌟 의존성 배열에서 'loading' (isRoomsLoading) 제거 🌟
   const fetchUserRooms = useCallback(async () => {
-    if (!userId || isUserIdLoading) { // 🌟 userId가 없거나 ID 로딩 중이면 바로 리턴
+    if (!userId || isUserIdLoading) {
+      // 🌟 userId가 없거나 ID 로딩 중이면 바로 리턴
       setRooms([]);
       return;
     }
@@ -107,7 +117,9 @@ export default function ChatRoomsListScreen({ navigation }) {
 
     setIsRoomsLoading(true); // 🌟 목록 로딩 시작
     try {
-      const response = await fetch(`${API_BASE_URL}/api/chat/rooms?userId=${userId}`);
+      const response = await fetch(
+        `${API_BASE_URL}/api/chat/rooms?userId=${userId}`
+      );
       if (!response.ok) {
         throw new Error(`HTTP 오류! 상태: ${response.status}`);
       }
@@ -124,7 +136,8 @@ export default function ChatRoomsListScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
-      if (!isUserIdLoading && userId) { // 🌟 ID 로딩 완료 후 userId가 있을 때만 호출
+      if (!isUserIdLoading && userId) {
+        // 🌟 ID 로딩 완료 후 userId가 있을 때만 호출
         connectWebSocket();
         fetchUserRooms();
       }
@@ -136,14 +149,17 @@ export default function ChatRoomsListScreen({ navigation }) {
 
   const handleCreateAndJoinNewRoom = () => {
     if (isUserIdLoading || !userId) {
-      Alert.alert("알림", "사용자 ID를 로드하는 중입니다. 잠시만 기다려주세요.");
+      Alert.alert(
+        "알림",
+        "사용자 ID를 로드하는 중입니다. 잠시만 기다려주세요."
+      );
       return;
     }
 
     const newRoomId = `${userId}_${Date.now()}`;
     const newRoomName = `새 채팅방(${Date.now().toString().slice(-4)})`;
 
-    navigation.navigate('채팅방 상세', {
+    navigation.navigate("채팅방 상세", {
       username: userId,
       roomId: newRoomId,
       roomName: newRoomName,
@@ -152,10 +168,13 @@ export default function ChatRoomsListScreen({ navigation }) {
 
   const handleJoinExistingRoom = (roomItem) => {
     if (isUserIdLoading || !userId) {
-      Alert.alert("알림", "사용자 ID를 로드하는 중입니다. 잠시만 기다려주세요.");
+      Alert.alert(
+        "알림",
+        "사용자 ID를 로드하는 중입니다. 잠시만 기다려주세요."
+      );
       return;
     }
-    navigation.navigate('채팅방 상세', {
+    navigation.navigate("채팅방 상세", {
       username: userId,
       roomId: roomItem.id,
       roomName: roomItem.name,
@@ -167,38 +186,42 @@ export default function ChatRoomsListScreen({ navigation }) {
       Alert.alert("오류", "사용자 ID가 설정되지 않았습니다.");
       return;
     }
-    Alert.alert(
-      "채팅방 나가기",
-      `'${roomName}' 방을 정말 나가시겠습니까?`,
-      [
-        { text: "취소", style: "cancel" },
-        {
-          text: "나가기",
-          onPress: () => {
-            if (stompClient.current && stompClient.current.connected) {
-              stompClient.current.publish({
-                destination: '/app/chat.leaveUser',
-                body: JSON.stringify({
-                  type: MessageType.LEAVE,
-                  roomId: roomIdToLeave,
-                  sender: userId,
-                  content: `${userId}님이 나갔습니다.`,
-                }),
-              });
-              Alert.alert("알림", `'${roomName}' 방에서 나갔습니다.`);
-              fetchUserRooms();
-            } else {
-              Alert.alert("오류", "서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.");
-            }
-          },
+    Alert.alert("채팅방 나가기", `'${roomName}' 방을 정말 나가시겠습니까?`, [
+      { text: "취소", style: "cancel" },
+      {
+        text: "나가기",
+        onPress: () => {
+          if (stompClient.current && stompClient.current.connected) {
+            stompClient.current.publish({
+              destination: "/app/chat.leaveUser",
+              body: JSON.stringify({
+                type: MessageType.LEAVE,
+                roomId: roomIdToLeave,
+                sender: userId,
+                content: `${userId}님이 나갔습니다.`,
+              }),
+            });
+            Alert.alert("알림", `'${roomName}' 방에서 나갔습니다.`);
+            fetchUserRooms();
+          } else {
+            Alert.alert(
+              "오류",
+              "서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요."
+            );
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const renderRoomItem = ({ item }) => (
-    <TouchableOpacity style={localStyles.roomItem} onPress={() => handleJoinExistingRoom(item)}>
-      <Text style={localStyles.roomName}>{item.name} (ID: {item.id})</Text>
+    <TouchableOpacity
+      style={localStyles.roomItem}
+      onPress={() => handleJoinExistingRoom(item)}
+    >
+      <Text style={localStyles.roomName}>
+        {item.name} (ID: {item.id})
+      </Text>
       <TouchableOpacity
         style={localStyles.leaveButton}
         onPress={() => handleLeaveRoom(item.id, item.name)}
@@ -224,13 +247,19 @@ export default function ChatRoomsListScreen({ navigation }) {
 
       <View style={localStyles.usernameDisplayContainer}>
         <Text style={localStyles.usernameText}>내 ID: {userId}</Text>
-        <TouchableOpacity style={localStyles.refreshIdButton} onPress={handleGenerateNewId}>
+        <TouchableOpacity
+          style={localStyles.refreshIdButton}
+          onPress={handleGenerateNewId}
+        >
           <Text style={localStyles.refreshIdButtonText}>ID 새로 만들기</Text>
         </TouchableOpacity>
       </View>
 
       <View style={localStyles.buttonContainer}>
-        <TouchableOpacity style={localStyles.button} onPress={handleCreateAndJoinNewRoom}>
+        <TouchableOpacity
+          style={localStyles.button}
+          onPress={handleCreateAndJoinNewRoom}
+        >
           <Text style={localStyles.buttonText}>새로운 채팅방 만들기</Text>
         </TouchableOpacity>
       </View>
@@ -241,7 +270,9 @@ export default function ChatRoomsListScreen({ navigation }) {
           <Text>채팅방 목록 불러오는 중...</Text>
         </View>
       ) : rooms.length === 0 ? (
-        <Text style={localStyles.emptyListText}>아직 참여하고 있는 채팅방이 없습니다.</Text>
+        <Text style={localStyles.emptyListText}>
+          아직 참여하고 있는 채팅방이 없습니다.
+        </Text>
       ) : (
         <FlatList
           data={rooms}

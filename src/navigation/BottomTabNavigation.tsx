@@ -1,8 +1,8 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Feather, Entypo } from "@expo/vector-icons";
-import ConnectNavigation from "../navigation/ConnectNavigation.js";
-import ChatRoomsListScreen from "../screens/chatScreen/ChatRoomListScreen.js";
-import MyPageScreen from "../screens/MyPageScreen.js";
+import ConnectNavigation from "./ConnectNavigation";
+import ChatRoomsListScreen from "@/screens/ChatScreen/ChatRoomListScreen";
+import MyPageScreen from "@/screens/MyPageScreen";
 
 const BottomTab = createBottomTabNavigator();
 
