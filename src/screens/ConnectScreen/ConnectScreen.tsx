@@ -245,7 +245,6 @@ export default function ConnectScreen() {
                 padding: 10,
                 color: "black",
                 fontSize: 16,
-                fontWeight: "bold",
                 backgroundColor: "white",
                 borderWidth: 1,
                 borderColor: "black",
