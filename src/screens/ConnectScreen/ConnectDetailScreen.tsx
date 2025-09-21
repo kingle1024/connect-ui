@@ -1,12 +1,12 @@
 import { RouteProp, useRoute } from "@react-navigation/native";
-import { FlatList, Image, Text, View } from "react-native";
-import icon from "../../../assets/user-icon.jpg";
-import { useState } from "react";
+import { FlatList, Image, Text, View, StyleSheet } from "react-native";
+import { useCallback, useRef, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import { Comment, Post } from "@/types";
 import { POST_COMMENTS } from "@/mock/data";
+import { MaterialIcons } from "@expo/vector-icons";
 
 type ConnectDetailRouteProp = RouteProp<{ params: { item: Post } }, "params">;
 
@@ -18,56 +18,109 @@ const ConnectDetail = () => {
     return (
       <>
         {/* 프로필 */}
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <Image
-            source={icon}
-            style={{ width: 50, height: 50, borderRadius: 20 }}
-          />
-          <View style={{ paddingLeft: 10 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            marginBottom: 16,
+          }}
+        >
+          <View
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 24,
+              backgroundColor: "#F3F4F6",
+              alignItems: "center",
+              justifyContent: "center",
+              marginRight: 16,
+            }}
+          >
+            <MaterialIcons name="person" size={36} color="#9CA3AF" />
+          </View>
+          <View>
             <Text
               style={{
-                fontSize: 20,
                 fontWeight: "bold",
-                paddingBottom: 3,
+                fontSize: 18,
+                color: "#111827",
               }}
             >
               아이디
             </Text>
-            <Text style={{ fontSize: 15 }}>방금</Text>
+            <Text
+              style={{
+                fontSize: 14,
+                color: "#6B7280",
+                paddingTop: 5,
+              }}
+            >
+              방금
+            </Text>
           </View>
         </View>
 
         {/* 본문 */}
         <View style={{ marginTop: 10 }}>
           <View style={{ paddingBottom: 20 }}>
-            <Text style={{ fontSize: 24, fontWeight: "bold" }}>
+            <Text
+              style={{
+                fontSize: 24,
+                fontWeight: "bold",
+                marginBottom: 8,
+                color: "#111827",
+              }}
+            >
               {routes.params.item.title}
             </Text>
           </View>
-          <Text>{routes.params.item.content}</Text>
+          <Text style={{ fontSize: 16, marginBottom: 24, color: "#6B7280" }}>
+            {routes.params.item.content}
+          </Text>
           <View style={{ height: 200 }} />
         </View>
 
         {/* 구분선 + 액션 */}
-        <View style={{ height: 0.5, backgroundColor: "lightgrey" }} />
         <View
           style={{
+            borderTopWidth: 1,
+            borderBottomWidth: 1,
+            borderColor: "#D1D5DB",
+            paddingVertical: 12,
+            marginBottom: 24,
             flexDirection: "row",
-            gap: 10,
-            paddingTop: 10,
-            paddingBottom: 10,
+            gap: 16,
           }}
         >
-          <View style={{ flexDirection: "row" }}>
-            <Ionicons name="chatbubble-ellipses-outline" />
-            <Text style={{ paddingLeft: 4 }}>댓글</Text>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+            }}
+          >
+            <Ionicons
+              name="chatbubble-outline"
+              size={18}
+              color="#6B7280"
+              style={{ marginRight: 4 }}
+            />
+            <Text style={{ fontSize: 14, color: "#6B7280" }}>댓글</Text>
           </View>
-          <View style={{ flexDirection: "row" }}>
-            <FontAwesome6 name="arrow-right-from-bracket" />
-            <Text style={{ paddingLeft: 4 }}>대화하기</Text>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+            }}
+          >
+            <FontAwesome6
+              name="arrow-right-from-bracket"
+              size={18}
+              color="#6B7280"
+              style={{ marginRight: 4 }}
+            />
+            <Text style={{ fontSize: 14, color: "#6B7280" }}>대화하기</Text>
           </View>
         </View>
-        <View style={{ height: 0.5, backgroundColor: "lightgrey" }} />
       </>
     );
   };
@@ -76,32 +129,62 @@ const ConnectDetail = () => {
     return (
       <View
         style={{
-          backgroundColor: "#fff",
-          padding: 15,
-          borderRadius: 8,
+          backgroundColor: "#F9FAFB",
+          padding: 16,
+          borderRadius: 16,
           shadowColor: "#000",
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.1,
           shadowRadius: 3,
         }}
       >
-        <Text style={{ fontSize: 11, color: "gray" }}>{item.userId}</Text>
-        <View style={{ height: 5 }}></View>
-        <Text style={{ fontSize: 16 }}>{item.comment}</Text>
-        <View style={{ height: 5 }}></View>
-        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <View>
-            <Text style={{ fontSize: 10 }}>30분 전</Text>
+        {/* 사용자 이름 + 시간 */}
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            marginBottom: 8,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 16,
+              fontWeight: "bold",
+              color: "#111827",
+              marginRight: 8,
+            }}
+          >
+            {item.userId}
+          </Text>
+          <Text style={{ fontSize: 12, color: "#6B7280" }}>30분 전</Text>
+        </View>
+
+        {/* 댓글 내용 */}
+        <Text style={{ fontSize: 16, color: "#111827", marginBottom: 12 }}>
+          {item.comment}
+        </Text>
+
+        {/* 버튼 영역 */}
+        <View
+          style={{ flexDirection: "row", justifyContent: "flex-end", gap: 16 }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <Ionicons
+              name="chatbubble-outline"
+              size={16}
+              color="#6B7280"
+              style={{ marginRight: 4 }}
+            />
+            <Text style={{ fontSize: 14, color: "#6B7280" }}>대댓글</Text>
           </View>
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <View style={{ flexDirection: "row" }}>
-              <Ionicons name="chatbubble-ellipses-outline" />
-              <Text style={{ fontSize: 10, paddingLeft: 4 }}>대댓글</Text>
-            </View>
-            <View style={{ flexDirection: "row" }}>
-              <FontAwesome6 name="arrow-right-from-bracket" />
-              <Text style={{ fontSize: 10, paddingLeft: 4 }}>대화하기</Text>
-            </View>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <FontAwesome6
+              name="arrow-right-from-bracket"
+              size={16}
+              color="#6B7280"
+              style={{ marginRight: 4 }}
+            />
+            <Text style={{ fontSize: 14, color: "#6B7280" }}>대화하기</Text>
           </View>
         </View>
       </View>
@@ -109,7 +192,10 @@ const ConnectDetail = () => {
   };
 
   return (
-    <SafeAreaView edges={["right", "left"]} style={{ flex: 1, padding: 10 }}>
+    <SafeAreaView
+      edges={["right", "left"]}
+      style={{ flex: 1, padding: 10, backgroundColor: "white" }}
+    >
       <FlatList
         data={comments}
         renderItem={renderItem}

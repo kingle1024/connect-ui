@@ -19,21 +19,35 @@ const BottomTabNavigation = () => {
         component={ConnectNavigation}
         options={{
           headerShown: false,
-          tabBarIcon: () => <Feather name="clipboard" size={20} />,
+          tabBarIcon: ({ focused, size }) => (
+            <Feather
+              name="clipboard"
+              size={20}
+              color={focused ? "tomato" : "gray"}
+            />
+          ),
         }}
       />
       <BottomTab.Screen
         name="채팅"
         component={ChatRoomsListScreen}
         options={{
-          tabBarIcon: () => <Entypo name="chat" size={20} />,
+          tabBarIcon: ({ focused, size }) => (
+            <Entypo name="chat" size={20} color={focused ? "tomato" : "gray"} />
+          ),
         }}
       />
       <BottomTab.Screen
         name="마이페이지"
         component={MyPageScreen}
         options={{
-          tabBarIcon: () => <Feather name="settings" size={20} />,
+          tabBarIcon: ({ focused, size }) => (
+            <Feather
+              name="settings"
+              size={20}
+              color={focused ? "tomato" : "gray"}
+            />
+          ),
         }}
       />
     </BottomTab.Navigator>
