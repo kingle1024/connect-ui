@@ -211,7 +211,7 @@ const ConnectDetail = () => {
                   name="subdirectory-arrow-right"
                   style={{ fontSize: 16, color: "#6B7280", marginRight: 4 }}
                 />
-                <Text style={{ fontSize: 12, color: "#6B7280" }}>댓글</Text>
+                <Text style={{ fontSize: 12, color: "#6B7280" }}>대댓글</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={{ flexDirection: "row", alignItems: "center" }}
