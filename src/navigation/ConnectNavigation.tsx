@@ -1,4 +1,3 @@
-import ConnectDetailScreen from "@/screens/ConnectScreen/ConnectDetailScreen";
 import ConnectScreen from "@/screens/ConnectScreen/ConnectScreen";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
@@ -11,11 +10,6 @@ const ConnectNavigation = () => {
         name="ConnectList"
         options={{ headerShown: true, title: "모집" }}
         component={ConnectScreen}
-      />
-      <Stack.Screen
-        name="ConnectDetail"
-        options={{ headerShown: true, title: "상세" }}
-        component={ConnectDetailScreen}
       />
     </Stack.Navigator>
   );

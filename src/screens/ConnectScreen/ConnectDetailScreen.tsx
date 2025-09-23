@@ -1,19 +1,45 @@
 import { RouteProp, useRoute } from "@react-navigation/native";
-import { FlatList, Text, View, TouchableOpacity } from "react-native";
-import { useEffect, useState } from "react";
+import {
+  FlatList,
+  Text,
+  View,
+  TouchableOpacity,
+  Dimensions,
+  TextInput,
+  RefreshControl,
+} from "react-native";
+import React, { useEffect, useRef, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import { Reply, Post } from "@/types";
 import { MaterialIcons } from "@expo/vector-icons";
 import { formatRelativeTime } from "@/utils/formatRelativeTime";
 import { useReply } from "@/hooks/useReply";
+import CustomBottomSheet, {
+  CustomBottomSheetRef,
+} from "@/components/CustomBottomSheet";
 
 type ConnectDetailRouteProp = RouteProp<{ params: { item: Post } }, "params">;
 
+const screenHeight = Dimensions.get("window").height;
+
 const ConnectDetail = () => {
   const routes = useRoute<ConnectDetailRouteProp>();
-  const { replies, fetchReply } = useReply();
+  const {
+    replies,
+    fetchReply,
+    replyInput,
+    setReplyInput,
+    replyInputErrorText,
+  } = useReply();
   const [expandedReplies, setExpandedReplies] = useState<number[]>([]);
+  const [replyInputHeight, setReplyInputHeight] = useState(0);
+
+  const refSheet = useRef<CustomBottomSheetRef>(null);
+  const inputRef = useRef<TextInput>(null);
+  const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
+
+  const [refreshing, setRefreshing] = useState(false);
 
   const toggleExpand = (id: number) => {
     setExpandedReplies((prev) =>
@@ -22,8 +48,19 @@ const ConnectDetail = () => {
   };
 
   useEffect(() => {
+    setTimeout(() => {
+      // API refetch 완료되는 시점
+      setRefreshing(false);
+    }, 3000);
+  }, [refreshing]);
+
+  useEffect(() => {
     fetchReply();
   }, []);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+  };
 
   const ListHeaderComponent = () => {
     return (
@@ -111,6 +148,7 @@ const ConnectDetail = () => {
           >
             <TouchableOpacity
               style={{ flexDirection: "row", alignItems: "center" }}
+              onPress={() => inputRef.current?.focus()}
             >
               <MaterialIcons
                 name="subdirectory-arrow-right"
@@ -321,6 +359,17 @@ const ConnectDetail = () => {
     );
   };
 
+  const ListFooterComponent = () => {
+    return (
+      <View
+        style={{
+          height:
+            screenHeight * 0.1 + (refSheet.current?.bottomSheetHeight ?? 0),
+        }}
+      ></View>
+    );
+  };
+
   return (
     <SafeAreaView
       edges={["right", "left"]}
@@ -329,10 +378,58 @@ const ConnectDetail = () => {
       <FlatList
         data={replies}
         renderItem={renderItem}
-        contentContainerStyle={{ gap: 10 }}
         keyExtractor={(item) => String(item.id)}
         ListHeaderComponent={ListHeaderComponent}
+        ListFooterComponent={ListFooterComponent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       />
+      <CustomBottomSheet
+        ref={refSheet}
+        minClosingHeight={screenHeight * 0.1}
+        extraContentHeight={replyInputHeight}
+        onOpen={() => setBottomSheetOpen(true)}
+        onClose={() => setBottomSheetOpen(false)}
+      >
+        <View style={{ padding: 20 }}>
+          <TextInput
+            ref={inputRef}
+            value={replyInput}
+            onChangeText={setReplyInput}
+            placeholder="댓글을 남겨주세요."
+            multiline={true}
+            style={{
+              color: "black",
+              borderRadius: 8,
+            }}
+            onContentSizeChange={(e) => {
+              const height = Math.min(
+                150,
+                Math.max(40, e.nativeEvent.contentSize.height)
+              );
+              setReplyInputHeight(height);
+            }}
+          />
+        </View>
+        {/* 버튼은 절대 위치 고정 */}
+        {bottomSheetOpen && !replyInputErrorText && (
+          <TouchableOpacity
+            style={{
+              position: "absolute",
+              bottom: 40,
+              right: 20,
+              backgroundColor: "rgba(255, 99, 71, 1)",
+              paddingVertical: 8,
+              paddingHorizontal: 16,
+              borderRadius: 8,
+            }}
+            onPress={() => console.log("등록")}
+          >
+            <Text style={{ color: "white", fontWeight: "bold" }}>등록</Text>
+          </TouchableOpacity>
+        )}
+      </CustomBottomSheet>
     </SafeAreaView>
   );
 };
