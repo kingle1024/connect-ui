@@ -42,7 +42,7 @@ module.exports = ({ config }) => {
 
   // EXPO_ENV 환경 변수에 따라 다른 설정을 로드 (빌드 시 사용)
   if (process.env.EXPO_ENV === 'production') {
-    defaultConfig.extra.API_BASE_URL = "https://api.test.com";
+    defaultConfig.extra.API_BASE_URL = "https://port-0-connect-service-mahm3yer16ed563d.sel4.cloudtype.app";
     defaultConfig.extra.ANOTHER_SECRET_KEY = "prod_super_secret_key";
     defaultConfig.android.package = "com.yourcompany.app.prod"; // 패키지명 변경
     defaultConfig.ios.bundleIdentifier = "com.yourcompany.app.prod"; // 번들 ID 변경
