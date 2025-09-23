@@ -1,15 +1,26 @@
 export interface Post {
-  id: number;
-  title: string;
-  content: string;
-  category: string;
-  comments: number;
-  author: string;
+  id: number; // 게시글 ID
+  title: string; // 제목
+  content: string; // 내용
+  category: string; // 카테고리
+  commentCount: number; // 댓글 갯수
+  userId: string; // 작성자 ID
+  userName: string; // 작성자 이름
+  insertDts: string; // 등록일
+  deadlineDts: string; // 마감일
+  destination: string; // 목적지
+  maxCapacity: number; // 최대 모집 인원
+  currentParticipants: number; // 모집 인원
+  replies?: Reply[]; // 댓글
 }
 
-export interface Comment {
-  id: number;
-  userId: string;
-  comment: string;
-  postId: number;
+export interface Reply {
+  id: number; // 댓글/대댓글 고유 ID
+  userId: string; // 댓글 작성자 ID
+  userName: string; // 이름
+  content: string; // 내용
+  insertDts: string; // 작성일
+  parentId?: number; // 대댓글인 경우 부모 댓글 ID
+  postId?: number; // 게시글 ID
+  replies?: Reply[]; // 대댓글 배열 (선택적)
 }

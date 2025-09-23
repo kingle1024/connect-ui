@@ -1,8 +1,9 @@
-import { Alert } from "react-native";
+import { Alert, Platform } from "react-native";
 import Constants from "expo-constants";
 import { POSTS } from "@/mock/data";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Post } from "@/types";
+import dayjs from "dayjs";
 
 const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL ?? "";
 
@@ -10,6 +11,10 @@ export const useBoard = () => {
   const [posts, setPosts] = useState<Post[]>(POSTS);
   const [titleInput, setTitleInput] = useState<string>("");
   const [contentInput, setContentInput] = useState<string>("");
+  const [destinationInput, setDestinationInput] = useState("");
+  const [maxCapacityInput, setMaxCapacityInput] = useState("");
+  const [deadlineDts, setDeadlineDts] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const titleInputErrorText = useMemo(() => {
     if (titleInput.length === 0) {
@@ -25,8 +30,34 @@ export const useBoard = () => {
     return null;
   }, [contentInput]);
 
+  const destinationInputErrorText = useMemo(() => {
+    if (destinationInput.length === 0) {
+      return "도착지를 입력해주세요.";
+    }
+    return null;
+  }, [destinationInput]);
+
+  const maxCapacityInputErrorText = useMemo(() => {
+    if (maxCapacityInput.length === 0) {
+      return "최대 모집 인원을 입력해주세요.";
+    }
+    if (!/^[1-9]\d*$/.test(maxCapacityInput)) {
+      return "1 이상의 정수를 입력해주세요";
+    }
+    return null;
+  }, [maxCapacityInput]);
+
+  const handleDeadlineDtsChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(Platform.OS === "ios");
+    if (selectedDate) {
+      setDeadlineDts(selectedDate);
+    }
+  };
+
   const resetTitleInput = () => setTitleInput("");
   const resetContenInput = () => setContentInput("");
+  const resetDestinationInput = () => setDestinationInput("");
+  const resetMaxCapacityInput = () => setMaxCapacityInput("");
 
   const fetchPosts = async () => {
     try {
@@ -71,5 +102,18 @@ export const useBoard = () => {
     setContentInput,
     contentInputErrorText,
     resetContenInput,
+    destinationInput,
+    setDestinationInput,
+    destinationInputErrorText,
+    resetDestinationInput,
+    maxCapacityInput,
+    setMaxCapacityInput,
+    maxCapacityInputErrorText,
+    resetMaxCapacityInput,
+    deadlineDts,
+    setDeadlineDts,
+    showDatePicker,
+    setShowDatePicker,
+    handleDeadlineDtsChange,
   };
 };
