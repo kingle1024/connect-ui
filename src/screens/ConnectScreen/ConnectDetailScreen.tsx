@@ -17,7 +17,7 @@ import { formatRelativeTime } from "@/utils/formatRelativeTime";
 import { useReply } from "@/hooks/useReply";
 import CustomBottomSheet, {
   CustomBottomSheetRef,
-} from "@/components/CustomBottomSheet";
+} from "@/components/modals/CustomBottomSheet";
 
 type ConnectDetailRouteProp = RouteProp<{ params: { item: Post } }, "params">;
 
