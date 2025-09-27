@@ -10,7 +10,7 @@ export const POSTS: Post[] = [
     userId: "yong7317@douzone.com",
     userName: "HHY",
     insertDts: "2025-09-21T13:59:39.996Z",
-    deadlineDts: "2025-09-21T14:05:00.000Z",
+    deadlineDts: "2025-09-24T14:05:00.000Z",
     destination: "강변역",
     maxCapacity: 4,
     currentParticipants: 4,

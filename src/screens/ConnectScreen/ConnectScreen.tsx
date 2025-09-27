@@ -15,20 +15,26 @@ import {
   Animated,
   PanResponder,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { Post } from "@/types";
 import localStyles from "./ConnectScreen.styles";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import { useBoard } from "@/hooks/useBoard";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import RBSheet from "react-native-raw-bottom-sheet";
-import { MaterialIcons } from "@expo/vector-icons";
+import { Feather, MaterialIcons } from "@expo/vector-icons";
 import {
   formatRelativeTime,
   getDeadlineLabel,
 } from "@/utils/formatRelativeTime";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import dayjs from "dayjs";
+import { useActionSheet } from "@expo/react-native-action-sheet";
+import Toast from "react-native-toast-message";
 
 const screenHeight = Dimensions.get("window").height;
 
@@ -36,6 +42,8 @@ export default function ConnectScreen() {
   const navigation = useNavigation<NavigationProp<any>>();
   const refRBSheet = useRef<any>(null);
   const flatListRef = useRef<FlatList<any>>(null);
+  const insets = useSafeAreaInsets();
+  const { showActionSheetWithOptions } = useActionSheet();
 
   const pan = useRef(new Animated.Value(0)).current;
   const panResponder = useRef(
@@ -108,6 +116,60 @@ export default function ConnectScreen() {
     flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
   };
 
+  const onPressMore = (item: Post) => {
+    const options = ["참여하기", "신고하기", "취소"];
+    const cancelButtonIndex = 2;
+
+    showActionSheetWithOptions(
+      {
+        options,
+        cancelButtonIndex,
+        destructiveButtonIndex: [1, 2],
+        title: item.title,
+        message: `${item.content.substring(0, 50)}...`,
+      },
+      (buttonIndex) => {
+        if (buttonIndex === 0) {
+          Alert.alert("참여하시겠습니까?", "지금 참여하면 합류할 수 있어요!", [
+            {
+              text: "참여",
+              onPress: () => onPressJoin(item),
+            },
+            { text: "다음에" },
+          ]);
+        } else if (buttonIndex === 1) {
+          Alert.alert("신고하시겠습니까?", "신고하면 관리자가 확인합니다.", [
+            {
+              text: "신고",
+              onPress: () => onPressReport(item),
+            },
+            { text: "다음에" },
+          ]);
+        }
+      }
+    );
+  };
+
+  const onPressJoin = (item: Post) => {
+    Toast.show({
+      type: "success",
+      text1: "참여 완료!",
+      text2: `${item.title} 모집에 참여했습니다.`,
+      visibilityTime: 3000,
+      topOffset: insets.top,
+    });
+  };
+
+  const onPressReport = (item: Post) => {
+    Toast.show({
+      type: "info",
+      text1: "신고 완료!",
+      text2: `${item.title} 게시글을 신고했습니다.`,
+      visibilityTime: 3000,
+      topOffset: insets.top,
+    });
+  };
+
   useEffect(() => {
     setTimeout(() => {
       // API refetch 완료되는 시점
@@ -155,31 +217,39 @@ export default function ConnectScreen() {
         style={localStyles.postItem}
         onPress={() => onPressListItem(item)}
       >
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            alignSelf: "flex-start",
-            paddingHorizontal: 10,
-            paddingVertical: 2,
-            borderRadius: 9999,
-            backgroundColor: bgColor,
-          }}
-        >
-          <MaterialIcons
-            name={iconName}
-            size={14}
-            style={{ marginRight: 4, color: textColor }}
-          />
-          <Text
+        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+          <View
             style={{
-              fontSize: 12,
-              fontWeight: "500",
-              color: textColor,
+              flexDirection: "row",
+              alignItems: "center",
+              alignSelf: "flex-start",
+              paddingHorizontal: 10,
+              paddingVertical: 2,
+              borderRadius: 9999,
+              backgroundColor: bgColor,
             }}
           >
-            {label}
-          </Text>
+            <MaterialIcons
+              name={iconName}
+              size={14}
+              style={{ marginRight: 4, color: textColor }}
+            />
+            <Text
+              style={{
+                fontSize: 12,
+                fontWeight: "500",
+                color: textColor,
+              }}
+            >
+              {label}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => onPressMore(item)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Feather name="more-vertical" size={24} color="#6B7280" />
+          </TouchableOpacity>
         </View>
         <View style={{ marginTop: 8, marginBottom: 8 }}>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
