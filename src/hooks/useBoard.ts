@@ -1,14 +1,23 @@
-import { Alert, Platform } from "react-native";
+import { Platform } from "react-native";
 import Constants from "expo-constants";
-import { POSTS } from "@/mock/data";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Post } from "@/types";
-import dayjs from "dayjs";
+import axios from "axios";
+
+type PostListResponse = {
+  nextPageToken: string;
+  posts: Post[];
+};
 
 const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL ?? "";
+const axiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+});
 
 export const useBoard = () => {
-  const [posts, setPosts] = useState<Post[]>(POSTS);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [hasNextPage, setHasNextPage] = useState<boolean>(true);
+  const [nextPageCursor, setNextPageCursor] = useState<string | null>(null);
   const [titleInput, setTitleInput] = useState<string>("");
   const [contentInput, setContentInput] = useState<string>("");
   const [destinationInput, setDestinationInput] = useState("");
@@ -59,32 +68,75 @@ export const useBoard = () => {
   const resetDestinationInput = () => setDestinationInput("");
   const resetMaxCapacityInput = () => setMaxCapacityInput("");
 
-  const fetchPosts = async () => {
+  const loadPosts = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/boards`);
+      const postResults = await axiosInstance.get<PostListResponse>(
+        "/api/boards"
+      );
 
-      if (!response.ok) {
-        throw new Error(`HTTP 오류! 상태: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log("백엔드에서 가져온 데이터:", data);
-
-      const formattedPosts = data.map((board: any) => ({
-        id: board.id.toString(),
-        title: board.title,
-        content: board.content,
-        category: "개발",
-        comments: board.viewCount,
-        author: board.author || "익명",
-      }));
-
-      setPosts(formattedPosts);
-    } catch (error: any) {
-      console.error("게시글 데이터 불러오기 실패:", error);
-      Alert.alert("오류", "게시글을 불러오는데 실패했습니다: " + error.message);
+      const postData = postResults.data;
+      setPosts(
+        postData.posts.map((item) => ({
+          id: item.id,
+          title: item.title,
+          content: item.content,
+          category: item.category,
+          commentCount: item.commentCount,
+          userId: item.userId,
+          userName: item.userName,
+          insertDts: item.insertDts,
+          deadlineDts: item.deadlineDts,
+          destination: item.destination,
+          maxCapacity: item.maxCapacity,
+          currentParticipants: item.currentParticipants,
+        }))
+      );
+      setHasNextPage(typeof postData.nextPageToken !== "undefined");
+      setNextPageCursor(
+        typeof postData.nextPageToken !== "undefined"
+          ? postData.nextPageToken
+          : null
+      );
+    } catch (ex) {
+      console.error(ex);
     }
-  };
+  }, []);
+
+  const loadMorePosts = useCallback(async () => {
+    const postResults = await axiosInstance.get<PostListResponse>(
+      "/api/boards",
+      {
+        params: {
+          pageToken: nextPageCursor,
+        },
+      }
+    );
+    const postData = postResults.data;
+    setPosts((prevData) =>
+      prevData.concat(
+        postData.posts.map((item) => ({
+          id: item.id,
+          title: item.title,
+          content: item.content,
+          category: item.category,
+          commentCount: item.commentCount,
+          userId: item.userId,
+          userName: item.userName,
+          insertDts: item.insertDts,
+          deadlineDts: item.deadlineDts,
+          destination: item.destination,
+          maxCapacity: item.maxCapacity,
+          currentParticipants: item.currentParticipants,
+        }))
+      )
+    );
+    setHasNextPage(typeof postData.nextPageToken !== "undefined");
+    setNextPageCursor(
+      typeof postData.nextPageToken !== "undefined"
+        ? postData.nextPageToken
+        : null
+    );
+  }, [hasNextPage, nextPageCursor]);
 
   const savePost = async () => {
     console.log("데이터 저장");
@@ -93,7 +145,8 @@ export const useBoard = () => {
   return {
     posts,
     setPosts,
-    fetchPosts,
+    loadPosts,
+    loadMorePosts,
     titleInput,
     setTitleInput,
     titleInputErrorText,

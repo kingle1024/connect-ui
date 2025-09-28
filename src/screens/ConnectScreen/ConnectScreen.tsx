@@ -72,7 +72,8 @@ export default function ConnectScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const {
     posts,
-    fetchPosts,
+    loadPosts,
+    loadMorePosts,
     titleInput,
     setTitleInput,
     titleInputErrorText,
@@ -171,11 +172,8 @@ export default function ConnectScreen() {
   };
 
   useEffect(() => {
-    setTimeout(() => {
-      // API refetch 완료되는 시점
-      setNow(dayjs());
-      setRefreshing(false);
-    }, 3000);
+    loadPosts();
+    setNow(dayjs());
   }, [refreshing]);
 
   useEffect(() => {
@@ -190,8 +188,8 @@ export default function ConnectScreen() {
   });
 
   useEffect(() => {
-    fetchPosts();
-  }, []);
+    loadPosts();
+  }, [loadPosts]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -338,6 +336,8 @@ export default function ConnectScreen() {
         renderItem={renderItem}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={localStyles.listContainer}
+        onEndReached={loadMorePosts}
+        onEndReachedThreshold={0.1}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
