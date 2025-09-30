@@ -1,3 +1,4 @@
+import AuthProvider from "@/components/auth/AuthProvider";
 import { DrawNavigation } from "@/navigation/DrawNavigation";
 import { ActionSheetProvider } from "@expo/react-native-action-sheet";
 import { NavigationContainer } from "@react-navigation/native";
@@ -17,8 +18,10 @@ export default function App() {
               backgroundColor="transparent"
               barStyle="dark-content"
             />
-            <DrawNavigation />
-            <Toast />
+            <AuthProvider>
+              <DrawNavigation />
+              <Toast />
+            </AuthProvider>
           </NavigationContainer>
         </ActionSheetProvider>
       </SafeAreaProvider>

@@ -24,3 +24,10 @@ export interface Reply {
   postId?: number; // 게시글 ID
   replies?: Reply[]; // 대댓글 배열 (선택적)
 }
+
+export interface User {
+  userId: string;
+  email: string;
+  name: string;
+  profileUrl?: string;
+}

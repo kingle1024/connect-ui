@@ -4,23 +4,31 @@ import {
   DrawerItem,
 } from "@react-navigation/drawer";
 import { Text, View, Image, StyleSheet, TouchableOpacity } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import {
+  Feather,
+  MaterialCommunityIcons,
+  MaterialIcons,
+} from "@expo/vector-icons";
+import { useCallback } from "react";
+import { NavigationProp, useNavigation } from "@react-navigation/native";
 
 const DrawerContent = (props: DrawerContentComponentProps) => {
-  const navigation = props;
+  const navigation = useNavigation<NavigationProp<any>>();
+
+  const onPressBottomButton = useCallback(() => {
+    navigation.navigate("Signin");
+  }, []);
+
   return (
     <DrawerContentScrollView contentContainerStyle={styles.container}>
       <View style={styles.profileSection}>
         <View style={styles.profileImageContainer}>
-          <Image
-            source={{
-              uri: "https://via.placeholder.com/80x80.png?text=User",
-            }}
-            style={styles.profileImage}
-          />
+          <MaterialIcons name="person" size={64} color="#9CA3AF" />
         </View>
-        <Text style={styles.userName}>HHY</Text>
-        <Text style={styles.userEmail}>yong7317@douzone.com</Text>
+        <Text style={styles.userName}>로그인이 필요합니다.</Text>
+        <Text style={styles.userEmail}>
+          로그인하여 모든 기능을 이용해보세요.
+        </Text>
       </View>
 
       {/* 구분선 */}
@@ -50,13 +58,27 @@ const DrawerContent = (props: DrawerContentComponentProps) => {
           )}
           labelStyle={styles.menuLabel}
         />
+
+        <DrawerItem
+          label="마이페이지"
+          onPress={() => {
+            // 마이페이지 화면으로 이동
+          }}
+          icon={({ color, size }) => (
+            <MaterialCommunityIcons name="account" color="tomato" size={size} />
+          )}
+          labelStyle={styles.menuLabel}
+        />
       </View>
 
       {/* 하단 로그아웃 버튼 */}
       <View style={styles.bottomSection}>
-        <TouchableOpacity style={styles.bottomButton}>
+        <TouchableOpacity
+          style={styles.bottomButton}
+          onPress={onPressBottomButton}
+        >
           <Feather name="log-out" size={20} color="#ff4444" />
-          <Text style={styles.bottomText}>로그아웃</Text>
+          <Text style={styles.bottomText}>로그인</Text>
         </TouchableOpacity>
       </View>
     </DrawerContentScrollView>
@@ -74,10 +96,10 @@ const styles = StyleSheet.create({
   },
   profileImageContainer: {
     marginBottom: 15,
-  },
-  profileImage: {
-    width: 80,
-    height: 80,
+    justifyContent: "center",
+    alignItems: "center",
+    width: 80, // w-32
+    height: 80, // h-32
     borderRadius: 40,
     borderWidth: 3,
     borderColor: "tomato",

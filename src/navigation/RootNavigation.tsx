@@ -5,6 +5,8 @@ import ConnectDetailScreen from "@/screens/ConnectScreen/ConnectDetailScreen";
 import { TouchableOpacity } from "react-native";
 import { DrawerActions } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
+import SigninScreen from "@/screens/SigninScreen/SigninScreen";
+import MyPageScreen from "@/screens/MyPageScreen/MyPageScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -35,6 +37,8 @@ export const RootNavigation = () => (
         ),
       })}
     />
+    <Stack.Screen name="Signin" component={SigninScreen} />
+    <Stack.Screen name="MyPage" component={MyPageScreen} />
     <Stack.Screen name="채팅방 상세" component={EnterChatRoom} />
   </Stack.Navigator>
 );
