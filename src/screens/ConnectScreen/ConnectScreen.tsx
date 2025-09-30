@@ -74,6 +74,7 @@ export default function ConnectScreen() {
     posts,
     loadPosts,
     loadMorePosts,
+    hasNextPage,
     titleInput,
     setTitleInput,
     titleInputErrorText,
@@ -172,9 +173,18 @@ export default function ConnectScreen() {
   };
 
   useEffect(() => {
-    loadPosts();
-    setNow(dayjs());
-  }, [refreshing]);
+    const fetch = async () => {
+      try {
+        await loadPosts();
+        setNow(dayjs());
+      } finally {
+        setRefreshing(false);
+      }
+    };
+    if (refreshing) {
+      fetch();
+    }
+  }, [refreshing, loadPosts]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -193,6 +203,12 @@ export default function ConnectScreen() {
 
   const onRefresh = () => {
     setRefreshing(true);
+  };
+
+  const onEndReached = () => {
+    if (!refreshing && hasNextPage) {
+      loadMorePosts();
+    }
   };
 
   const renderItem = ({ item }: { item: Post }) => {
@@ -336,7 +352,7 @@ export default function ConnectScreen() {
         renderItem={renderItem}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={localStyles.listContainer}
-        onEndReached={loadMorePosts}
+        onEndReached={onEndReached}
         onEndReachedThreshold={0.1}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
