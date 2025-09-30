@@ -91,11 +91,9 @@ export const useBoard = () => {
           currentParticipants: item.currentParticipants,
         }))
       );
-      setHasNextPage(typeof postData.nextPageToken !== "undefined");
+      setHasNextPage(!!postData.nextPageToken);
       setNextPageCursor(
-        typeof postData.nextPageToken !== "undefined"
-          ? postData.nextPageToken
-          : null
+        !!postData.nextPageToken ? postData.nextPageToken : null
       );
     } catch (ex) {
       console.error(ex);
@@ -130,12 +128,8 @@ export const useBoard = () => {
         }))
       )
     );
-    setHasNextPage(typeof postData.nextPageToken !== "undefined");
-    setNextPageCursor(
-      typeof postData.nextPageToken !== "undefined"
-        ? postData.nextPageToken
-        : null
-    );
+    setHasNextPage(!!postData.nextPageToken);
+    setNextPageCursor(!!postData.nextPageToken ? postData.nextPageToken : null);
   }, [hasNextPage, nextPageCursor]);
 
   const savePost = async () => {
@@ -147,6 +141,7 @@ export const useBoard = () => {
     setPosts,
     loadPosts,
     loadMorePosts,
+    hasNextPage,
     titleInput,
     setTitleInput,
     titleInputErrorText,
