@@ -132,13 +132,38 @@ export default function ConnectScreen() {
       },
       (buttonIndex) => {
         if (buttonIndex === 0) {
-          Alert.alert("참여하시겠습니까?", "지금 참여하면 합류할 수 있어요!", [
-            {
-              text: "참여",
-              onPress: () => onPressJoin(item),
-            },
-            { text: "다음에" },
-          ]);
+          if (item.maxCapacity === item.currentParticipants) {
+            Toast.show({
+              type: "error",
+              text1: "모집 마감!",
+              text2: `${item.title} 모집이 마감되었습니다.`,
+              visibilityTime: 3000,
+              topOffset: insets.top,
+            });
+          } else if (
+            dayjs(item.deadlineDts).isSame(now) ||
+            dayjs(item.deadlineDts).isBefore(dayjs())
+          ) {
+            Toast.show({
+              type: "error",
+              text1: "모집 마감!",
+              text2: `${item.title} 모집이 마감되었습니다.`,
+              visibilityTime: 3000,
+              topOffset: insets.top,
+            });
+          } else {
+            Alert.alert(
+              "참여하시겠습니까?",
+              "지금 참여하면 합류할 수 있어요!",
+              [
+                {
+                  text: "참여",
+                  onPress: () => onPressJoin(item),
+                },
+                { text: "다음에" },
+              ]
+            );
+          }
         } else if (buttonIndex === 1) {
           Alert.alert("신고하시겠습니까?", "신고하면 관리자가 확인합니다.", [
             {
