@@ -9,16 +9,30 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import validator from "validator";
 import { SafeAreaView } from "react-native-safe-area-context";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { NavigationProp, useNavigation } from "@react-navigation/native";
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
   },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    position: "relative",
+  },
+  backButton: {
+    position: "absolute",
+    left: 3,
+  },
   center: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -67,9 +81,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  signupButtonContainer: {
+    flexDirection: "row",
+    paddingTop: 20,
+    paddingBottom: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });
 
 const SigninScreen = () => {
+  const navigation = useNavigation<NavigationProp<any>>();
+  const { goBack, canGoBack } = useNavigation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const { signin, processingSignin } = useContext(AuthContext);
@@ -121,53 +144,101 @@ const SigninScreen = () => {
     }
   }, [email, password, signin]);
 
+  const onPressBackButton = useCallback(() => {
+    goBack();
+  }, [goBack]);
+
+  const onPressSignUp = useCallback(() => {
+    navigation.navigate("Signup");
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.center}>
-        <Text style={styles.headerTitle}>로그인</Text>
-      </View>
-      <View>
-        {processingSignin ? (
-          <View style={styles.signingContainer}>
-            <ActivityIndicator />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        <View style={{ flex: 1 }}>
+          <View style={styles.header}>
+            <View style={styles.backButton}>
+              {canGoBack() && (
+                <TouchableOpacity
+                  onPress={onPressBackButton}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <MaterialIcons
+                    name="arrow-back-ios-new"
+                    size={24}
+                    color="black"
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+            <View style={styles.center}>
+              <Text style={styles.headerTitle}>로그인</Text>
+            </View>
           </View>
-        ) : (
-          <>
-            <View style={styles.section}>
-              <Text style={styles.title}>이메일</Text>
-              <TextInput
-                value={email}
-                style={styles.input}
-                onChangeText={onChangeEmailText}
-              />
-              {emailErrorText && (
-                <Text style={styles.errorText}>{emailErrorText}</Text>
-              )}
+        </View>
+        <View>
+          {processingSignin ? (
+            <View style={styles.signingContainer}>
+              <ActivityIndicator />
             </View>
-            <View style={styles.section}>
-              <Text style={styles.title}>비밀번호</Text>
-              <TextInput
-                value={password}
-                style={styles.input}
-                secureTextEntry
-                onChangeText={onChangePasswordText}
-              />
-              {passwordErrorText && (
-                <Text style={styles.errorText}>{passwordErrorText}</Text>
-              )}
-            </View>
-            <View>
-              <TouchableOpacity
-                style={signinButtonStyle}
-                onPress={onPressSigninButton}
-                disabled={!signinButtonEnabled}
-              >
-                <Text style={styles.signinButtonText}>로그인</Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
-      </View>
+          ) : (
+            <>
+              <View style={styles.section}>
+                <Text style={styles.title}>이메일</Text>
+                <TextInput
+                  value={email}
+                  style={styles.input}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  onChangeText={onChangeEmailText}
+                />
+                {emailErrorText && (
+                  <Text style={styles.errorText}>{emailErrorText}</Text>
+                )}
+              </View>
+              <View style={styles.section}>
+                <Text style={styles.title}>비밀번호</Text>
+                <TextInput
+                  value={password}
+                  style={styles.input}
+                  secureTextEntry
+                  onChangeText={onChangePasswordText}
+                />
+                {passwordErrorText && (
+                  <Text style={styles.errorText}>{passwordErrorText}</Text>
+                )}
+              </View>
+              <View>
+                <TouchableOpacity
+                  style={signinButtonStyle}
+                  onPress={onPressSigninButton}
+                  disabled={!signinButtonEnabled}
+                >
+                  <Text style={styles.signinButtonText}>로그인</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.signupButtonContainer}>
+                <TouchableOpacity
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Text style={{ fontSize: 16 }}>비밀번호 찾기</Text>
+                </TouchableOpacity>
+                <View style={{ paddingLeft: 10, paddingRight: 10 }} />
+                <TouchableOpacity
+                  onPress={onPressSignUp}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Text style={{ fontSize: 16 }}>회원가입</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
