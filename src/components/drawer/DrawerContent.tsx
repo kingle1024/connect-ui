@@ -3,17 +3,17 @@ import {
   DrawerContentScrollView,
   DrawerItem,
 } from "@react-navigation/drawer";
-import { Text, View, Image, StyleSheet, TouchableOpacity } from "react-native";
+import { Text, View, StyleSheet, TouchableOpacity } from "react-native";
 import {
   Feather,
   MaterialCommunityIcons,
   MaterialIcons,
 } from "@expo/vector-icons";
 import { useCallback } from "react";
-import { NavigationProp, useNavigation } from "@react-navigation/native";
+import { useRootNavigation } from "@/navigation/RootNavigation";
 
 const DrawerContent = (props: DrawerContentComponentProps) => {
-  const navigation = useNavigation<NavigationProp<any>>();
+  const navigation = useRootNavigation<"Signin">();
 
   const onPressBottomButton = useCallback(() => {
     navigation.navigate("Signin");

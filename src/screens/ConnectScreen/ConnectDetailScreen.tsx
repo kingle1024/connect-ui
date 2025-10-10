@@ -1,4 +1,3 @@
-import { RouteProp, useRoute } from "@react-navigation/native";
 import {
   FlatList,
   Text,
@@ -8,30 +7,25 @@ import {
   TextInput,
   RefreshControl,
 } from "react-native";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
-import { Reply, Post } from "@/types";
+import { Reply } from "@/types";
 import { MaterialIcons } from "@expo/vector-icons";
 import { formatRelativeTime } from "@/utils/formatRelativeTime";
 import { useReply } from "@/hooks/useReply";
 import CustomBottomSheet, {
   CustomBottomSheetRef,
 } from "@/components/modals/CustomBottomSheet";
-
-type ConnectDetailRouteProp = RouteProp<{ params: { item: Post } }, "params">;
+import { useRootNavigation, useRootRoute } from "@/navigation/RootNavigation";
 
 const screenHeight = Dimensions.get("window").height;
 
 const ConnectDetail = () => {
-  const routes = useRoute<ConnectDetailRouteProp>();
-  const {
-    replies,
-    fetchReply,
-    replyInput,
-    setReplyInput,
-    replyInputErrorText,
-  } = useReply();
+  const navigation = useRootNavigation<"ConnectDetail">();
+  const routes = useRootRoute<"ConnectDetail">();
+  const { reply, loadReply, replyInput, setReplyInput, replyInputErrorText } =
+    useReply();
   const [expandedReplies, setExpandedReplies] = useState<number[]>([]);
   const [replyInputHeight, setReplyInputHeight] = useState(0);
 
@@ -55,12 +49,19 @@ const ConnectDetail = () => {
   }, [refreshing]);
 
   useEffect(() => {
-    fetchReply();
-  }, []);
+    loadReply(routes.params.parentId);
+  }, [routes.params.parentId]);
 
   const onRefresh = () => {
     setRefreshing(true);
   };
+
+  const onPressReply = useCallback(
+    (replyId: number) => {
+      navigation.push("ConnectDetail", { parentId: replyId });
+    },
+    [navigation]
+  );
 
   const ListHeaderComponent = () => {
     return (
@@ -94,7 +95,7 @@ const ConnectDetail = () => {
                 color: "#111827",
               }}
             >
-              {routes.params.item.userName}
+              {reply.userName}
             </Text>
             <Text
               style={{
@@ -103,27 +104,29 @@ const ConnectDetail = () => {
                 paddingTop: 5,
               }}
             >
-              {formatRelativeTime(routes.params.item.insertDts)}
+              {formatRelativeTime(reply.insertDts)}
             </Text>
           </View>
         </View>
 
         {/* 본문 */}
         <View style={{ marginTop: 10 }}>
-          <View style={{ paddingBottom: 20 }}>
-            <Text
-              style={{
-                fontSize: 24,
-                fontWeight: "bold",
-                marginBottom: 8,
-                color: "#111827",
-              }}
-            >
-              {routes.params.item.title}
-            </Text>
-          </View>
+          {reply.title && (
+            <View style={{ paddingBottom: 20 }}>
+              <Text
+                style={{
+                  fontSize: 24,
+                  fontWeight: "bold",
+                  marginBottom: 8,
+                  color: "#111827",
+                }}
+              >
+                {reply.title}
+              </Text>
+            </View>
+          )}
           <Text style={{ fontSize: 16, marginBottom: 24, color: "#6B7280" }}>
-            {routes.params.item.content}
+            {reply.content}
           </Text>
           <View style={{ height: 200 }} />
         </View>
@@ -244,6 +247,7 @@ const ConnectDetail = () => {
             >
               <TouchableOpacity
                 style={{ flexDirection: "row", alignItems: "center" }}
+                onPress={() => onPressReply(item.id)}
               >
                 <MaterialIcons
                   name="subdirectory-arrow-right"
@@ -376,7 +380,7 @@ const ConnectDetail = () => {
       style={{ flex: 1, padding: 10, backgroundColor: "white" }}
     >
       <FlatList
-        data={replies}
+        data={reply.replies}
         renderItem={renderItem}
         keyExtractor={(item) => String(item.id)}
         ListHeaderComponent={ListHeaderComponent}

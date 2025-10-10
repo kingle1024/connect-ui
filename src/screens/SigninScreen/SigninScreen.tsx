@@ -15,7 +15,7 @@ import {
 import validator from "validator";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { NavigationProp, useNavigation } from "@react-navigation/native";
+import { useRootNavigation } from "@/navigation/RootNavigation";
 
 const styles = StyleSheet.create({
   container: {
@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "bold",
     color: Colors.BLACK,
   },
@@ -91,8 +91,7 @@ const styles = StyleSheet.create({
 });
 
 const SigninScreen = () => {
-  const navigation = useNavigation<NavigationProp<any>>();
-  const { goBack, canGoBack } = useNavigation();
+  const navigation = useRootNavigation<"Signin">();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const { signin, processingSignin } = useContext(AuthContext);
@@ -145,12 +144,12 @@ const SigninScreen = () => {
   }, [email, password, signin]);
 
   const onPressBackButton = useCallback(() => {
-    goBack();
-  }, [goBack]);
+    navigation.goBack();
+  }, [navigation.goBack]);
 
   const onPressSignUp = useCallback(() => {
     navigation.navigate("Signup");
-  }, []);
+  }, [navigation]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -162,7 +161,7 @@ const SigninScreen = () => {
         <View style={{ flex: 1 }}>
           <View style={styles.header}>
             <View style={styles.backButton}>
-              {canGoBack() && (
+              {navigation.canGoBack() && (
                 <TouchableOpacity
                   onPress={onPressBackButton}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}

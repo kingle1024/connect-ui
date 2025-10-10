@@ -10,12 +10,11 @@ import {
 } from "react-native";
 import validator from "validator";
 import { useCallback, useContext, useMemo, useState } from "react";
-import { NavigationProp, useNavigation } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AuthContext from "@/components/auth/AuthContext";
 import Colors from "@/modules/Color";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { useRootNavigation } from "@/navigation/RootNavigation";
 
 const styles = StyleSheet.create({
   container: {
@@ -37,7 +36,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "bold",
     color: Colors.BLACK,
   },
@@ -97,8 +96,7 @@ const styles = StyleSheet.create({
 });
 
 const SignupScreen = () => {
-  const navigation = useNavigation<NavigationProp<any>>();
-  const { goBack, canGoBack } = useNavigation();
+  const navigation = useRootNavigation<"Signup">();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmedPassword, setConfirmedPassword] = useState("");
@@ -193,18 +191,18 @@ const SignupScreen = () => {
   }, [email, password, name]);
 
   const onPressBackButton = useCallback(() => {
-    goBack();
-  }, [goBack]);
+    navigation.goBack();
+  }, [navigation.goBack]);
 
   const onPressSigninButton = useCallback(() => {
     navigation.navigate("Signin");
-  }, []);
+  }, [navigation]);
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.backButton}>
-          {canGoBack() && (
+          {navigation.canGoBack() && (
             <TouchableOpacity
               onPress={onPressBackButton}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}

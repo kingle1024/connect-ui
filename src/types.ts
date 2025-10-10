@@ -18,10 +18,10 @@ export interface Reply {
   id: number; // 댓글/대댓글 고유 ID
   userId: string; // 댓글 작성자 ID
   userName: string; // 이름
+  title?: string; // 타이틀
   content: string; // 내용
   insertDts: string; // 작성일
   parentId?: number; // 대댓글인 경우 부모 댓글 ID
-  postId?: number; // 게시글 ID
   replies?: Reply[]; // 대댓글 배열 (선택적)
 }
 
