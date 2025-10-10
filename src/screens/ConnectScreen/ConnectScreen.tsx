@@ -1,4 +1,3 @@
-import { NavigationProp, useNavigation } from "@react-navigation/native";
 import { useEffect, useCallback, useRef, useState } from "react";
 import {
   Text,
@@ -17,7 +16,7 @@ import {
   RefreshControl,
   Alert,
 } from "react-native";
-import { Post } from "@/types";
+import { Post, Reply } from "@/types";
 import localStyles from "./ConnectScreen.styles";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import { useBoard } from "@/hooks/useBoard";
@@ -35,11 +34,12 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import dayjs from "dayjs";
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import Toast from "react-native-toast-message";
+import { useRootNavigation } from "@/navigation/RootNavigation";
 
 const screenHeight = Dimensions.get("window").height;
 
 export default function ConnectScreen() {
-  const navigation = useNavigation<NavigationProp<any>>();
+  const navigation = useRootNavigation<"ConnectDetail">();
   const refRBSheet = useRef<any>(null);
   const flatListRef = useRef<FlatList<any>>(null);
   const insets = useSafeAreaInsets();
@@ -97,9 +97,12 @@ export default function ConnectScreen() {
     handleDeadlineDtsChange,
   } = useBoard();
 
-  const onPressListItem = useCallback((item: Post) => {
-    navigation.navigate("ConnectDetail", { item });
-  }, []);
+  const onPressListItem = useCallback(
+    (item: Post) => {
+      navigation.push("ConnectDetail", { parentId: item.id });
+    },
+    [navigation]
+  );
 
   const onPressPost = () => {
     if (

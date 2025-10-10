@@ -1,10 +1,12 @@
 import { REPLY } from "@/mock/data";
 import { Reply } from "@/types";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 export const useReply = () => {
-  const [replies, setReplies] = useState<Reply[]>();
+  const [reply, setReply] = useState<Reply>(REPLY);
   const [replyInput, setReplyInput] = useState<string>("");
+
+  const loadReply = useCallback((parentId: number) => {}, []);
 
   const replyInputErrorText = useMemo(() => {
     if (replyInput.length === 0) {
@@ -13,14 +15,10 @@ export const useReply = () => {
     return null;
   }, [replyInput]);
 
-  const fetchReply = () => {
-    setReplies(REPLY);
-  };
-
   return {
-    replies,
-    setReplies,
-    fetchReply,
+    reply,
+    setReply,
+    loadReply,
     replyInput,
     setReplyInput,
     replyInputErrorText,
