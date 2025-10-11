@@ -17,7 +17,7 @@ import { useReply } from "@/hooks/useReply";
 import CustomBottomSheet, {
   CustomBottomSheetRef,
 } from "@/components/modals/CustomBottomSheet";
-import { useRootNavigation, useRootRoute } from "@/navigation/RootNavigation";
+import { useRootNavigation, useRootRoute } from "@/hooks/useNavigation";
 
 const screenHeight = Dimensions.get("window").height;
 

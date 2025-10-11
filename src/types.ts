@@ -1,3 +1,9 @@
+export type TypeRootStackNavigationParams = {
+  ConnectDetail: { parentId: number };
+  Signup: undefined;
+  Signin: undefined;
+};
+
 export interface Post {
   id: number; // 게시글 ID
   title: string; // 제목

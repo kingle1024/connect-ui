@@ -16,7 +16,7 @@ import {
   RefreshControl,
   Alert,
 } from "react-native";
-import { Post, Reply } from "@/types";
+import { Post } from "@/types";
 import localStyles from "./ConnectScreen.styles";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import { useBoard } from "@/hooks/useBoard";
@@ -34,7 +34,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import dayjs from "dayjs";
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import Toast from "react-native-toast-message";
-import { useRootNavigation } from "@/navigation/RootNavigation";
+import { useRootNavigation } from "@/hooks/useNavigation";
 
 const screenHeight = Dimensions.get("window").height;
 

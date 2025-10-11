@@ -10,7 +10,7 @@ import {
   MaterialIcons,
 } from "@expo/vector-icons";
 import { useCallback } from "react";
-import { useRootNavigation } from "@/navigation/RootNavigation";
+import { useRootNavigation } from "@/hooks/useNavigation";
 
 const DrawerContent = (props: DrawerContentComponentProps) => {
   const navigation = useRootNavigation<"Signin">();
