@@ -14,7 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import AuthContext from "@/components/auth/AuthContext";
 import Colors from "@/modules/Color";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { useRootNavigation } from "@/navigation/RootNavigation";
+import { useRootNavigation } from "@/hooks/useNavigation";
 
 const styles = StyleSheet.create({
   container: {

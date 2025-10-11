@@ -15,7 +15,7 @@ import {
 import validator from "validator";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { useRootNavigation } from "@/navigation/RootNavigation";
+import { useRootNavigation } from "@/hooks/useNavigation";
 
 const styles = StyleSheet.create({
   container: {

@@ -16,12 +16,7 @@ import { Feather } from "@expo/vector-icons";
 import SigninScreen from "@/screens/SigninScreen/SigninScreen";
 import MyPageScreen from "@/screens/MyPageScreen/MyPageScreen";
 import SignupScreen from "@/screens/SignUpScreen/SignupScreen";
-
-export type TypeRootStackNavigationParams = {
-  ConnectDetail: { parentId: number };
-  Signup: undefined;
-  Signin: undefined;
-};
+import { TypeRootStackNavigationParams } from "@/types";
 
 const Stack = createNativeStackNavigator();
 
