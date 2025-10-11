@@ -81,14 +81,3 @@ export const RootNavigation = () => {
     </Stack.Navigator>
   );
 };
-
-export const useRootNavigation = <
-  RouteName extends keyof TypeRootStackNavigationParams
->() =>
-  useNavigation<
-    NativeStackNavigationProp<TypeRootStackNavigationParams, RouteName>
-  >();
-
-export const useRootRoute = <
-  RouteName extends keyof TypeRootStackNavigationParams
->() => useRoute<RouteProp<TypeRootStackNavigationParams, RouteName>>();
