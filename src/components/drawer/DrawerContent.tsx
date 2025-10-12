@@ -9,15 +9,21 @@ import {
   MaterialCommunityIcons,
   MaterialIcons,
 } from "@expo/vector-icons";
-import { useCallback } from "react";
+import { useCallback, useContext } from "react";
 import { useRootNavigation } from "@/hooks/useNavigation";
+import AuthContext from "../auth/AuthContext";
 
 const DrawerContent = (props: DrawerContentComponentProps) => {
   const navigation = useRootNavigation<"Signin">();
+  const { user: me, signout } = useContext(AuthContext);
 
   const onPressBottomButton = useCallback(() => {
-    navigation.navigate("Signin");
-  }, []);
+    if (me) {
+      signout();
+    } else {
+      navigation.navigate("Signin");
+    }
+  }, [me, signout, navigation]);
 
   return (
     <DrawerContentScrollView contentContainerStyle={styles.container}>
@@ -25,9 +31,11 @@ const DrawerContent = (props: DrawerContentComponentProps) => {
         <View style={styles.profileImageContainer}>
           <MaterialIcons name="person" size={64} color="#9CA3AF" />
         </View>
-        <Text style={styles.userName}>로그인이 필요합니다.</Text>
+        {me?.userId ? null : (
+          <Text style={styles.userName}>로그인이 필요합니다.</Text>
+        )}
         <Text style={styles.userEmail}>
-          로그인하여 모든 기능을 이용해보세요.
+          {me?.userId ?? "로그인하여 모든 기능을 이용해보세요."}
         </Text>
       </View>
 
@@ -78,7 +86,7 @@ const DrawerContent = (props: DrawerContentComponentProps) => {
           onPress={onPressBottomButton}
         >
           <Feather name="log-out" size={20} color="#ff4444" />
-          <Text style={styles.bottomText}>로그인</Text>
+          <Text style={styles.bottomText}>{me ? "로그아웃" : "로그인"}</Text>
         </TouchableOpacity>
       </View>
     </DrawerContentScrollView>

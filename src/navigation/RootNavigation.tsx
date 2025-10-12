@@ -1,22 +1,13 @@
-import {
-  createNativeStackNavigator,
-  NativeStackNavigationProp,
-} from "@react-navigation/native-stack";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import BottomTabNavigation from "./BottomTabNavigation";
 import EnterChatRoom from "@/screens/ChatScreen/EnterChatRoom";
 import ConnectDetailScreen from "@/screens/ConnectScreen/ConnectDetailScreen";
 import { TouchableOpacity } from "react-native";
-import {
-  DrawerActions,
-  RouteProp,
-  useNavigation,
-  useRoute,
-} from "@react-navigation/native";
+import { DrawerActions } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 import SigninScreen from "@/screens/SigninScreen/SigninScreen";
 import MyPageScreen from "@/screens/MyPageScreen/MyPageScreen";
 import SignupScreen from "@/screens/SignUpScreen/SignupScreen";
-import { TypeRootStackNavigationParams } from "@/types";
 
 const Stack = createNativeStackNavigator();
 
