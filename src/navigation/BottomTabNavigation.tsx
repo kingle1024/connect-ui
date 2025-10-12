@@ -15,10 +15,11 @@ const BottomTabNavigation = () => {
       }}
     >
       <BottomTab.Screen
-        name="모집"
+        name="Connect"
         component={ConnectNavigation}
         options={{
           headerShown: false,
+          tabBarLabel: "모집",
           tabBarIcon: ({ focused, size }) => (
             <Feather
               name="clipboard"
@@ -29,9 +30,11 @@ const BottomTabNavigation = () => {
         }}
       />
       <BottomTab.Screen
-        name="채팅"
+        name="Chat"
         component={ChatRoomsListScreen}
         options={{
+          headerShown: false,
+          tabBarLabel: "채팅",
           tabBarIcon: ({ focused, size }) => (
             <Entypo name="chat" size={20} color={focused ? "tomato" : "gray"} />
           ),

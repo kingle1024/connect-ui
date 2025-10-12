@@ -131,7 +131,7 @@ export const useBoard = () => {
     );
     setHasNextPage(!!postData.nextPageToken);
     setNextPageCursor(!!postData.nextPageToken ? postData.nextPageToken : null);
-  }, [hasNextPage, nextPageCursor]);
+  }, [nextPageCursor]);
 
   const savePost = async () => {
     console.log("데이터 저장");

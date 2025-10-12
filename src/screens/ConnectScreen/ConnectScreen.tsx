@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef, useState } from "react";
+import { useEffect, useCallback, useRef, useState, useContext } from "react";
 import {
   Text,
   View,
@@ -35,11 +35,13 @@ import dayjs from "dayjs";
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import Toast from "react-native-toast-message";
 import { useRootNavigation } from "@/hooks/useNavigation";
+import AuthContext from "@/components/auth/AuthContext";
 
 const screenHeight = Dimensions.get("window").height;
 
 export default function ConnectScreen() {
-  const navigation = useRootNavigation<"ConnectDetail">();
+  const navigation = useRootNavigation<"ConnectDetail" | "Signin">();
+  const { user: me } = useContext(AuthContext);
   const refRBSheet = useRef<any>(null);
   const flatListRef = useRef<FlatList<any>>(null);
   const insets = useSafeAreaInsets();
@@ -97,12 +99,45 @@ export default function ConnectScreen() {
     handleDeadlineDtsChange,
   } = useBoard();
 
-  const onPressListItem = useCallback(
-    (item: Post) => {
-      navigation.push("ConnectDetail", { parentId: item.id });
-    },
-    [navigation]
-  );
+  const onPressListItem = (postId: number) => {
+    if (me) {
+      navigation.push("ConnectDetail", { parentId: postId });
+    } else {
+      Alert.alert(
+        "로그인이 필요합니다.",
+        "댓글을 보려면 로그인이 필요합니다.",
+        [
+          {
+            text: "로그인",
+            onPress: () => navigation.navigate("Signin"),
+          },
+          { text: "닫기" },
+        ]
+      );
+    }
+  };
+
+  const onPressCancel = () => {
+    refRBSheet.current?.close();
+  };
+
+  const onPressNewPost = () => {
+    if (me) {
+      refRBSheet.current?.open();
+    } else {
+      Alert.alert(
+        "로그인이 필요합니다.",
+        "새 글을 작성하려면 로그인이 필요합니다.",
+        [
+          {
+            text: "로그인",
+            onPress: () => navigation.navigate("Signin"),
+          },
+          { text: "닫기" },
+        ]
+      );
+    }
+  };
 
   const onPressPost = () => {
     if (
@@ -122,62 +157,76 @@ export default function ConnectScreen() {
   };
 
   const onPressMore = (item: Post) => {
-    const options = ["참여하기", "신고하기", "취소"];
-    const cancelButtonIndex = 2;
+    if (me) {
+      const options = ["참여하기", "신고하기", "취소"];
+      const cancelButtonIndex = 2;
 
-    showActionSheetWithOptions(
-      {
-        options,
-        cancelButtonIndex,
-        destructiveButtonIndex: [1, 2],
-        title: item.title,
-        message: `${item.content.substring(0, 50)}...`,
-      },
-      (buttonIndex) => {
-        if (buttonIndex === 0) {
-          if (item.maxCapacity === item.currentParticipants) {
-            Toast.show({
-              type: "error",
-              text1: "모집 마감!",
-              text2: `${item.title} 모집이 마감되었습니다.`,
-              visibilityTime: 3000,
-              topOffset: insets.top,
-            });
-          } else if (
-            dayjs(item.deadlineDts).isSame(now) ||
-            dayjs(item.deadlineDts).isBefore(dayjs())
-          ) {
-            Toast.show({
-              type: "error",
-              text1: "모집 마감!",
-              text2: `${item.title} 모집이 마감되었습니다.`,
-              visibilityTime: 3000,
-              topOffset: insets.top,
-            });
-          } else {
-            Alert.alert(
-              "참여하시겠습니까?",
-              "지금 참여하면 합류할 수 있어요!",
-              [
-                {
-                  text: "참여",
-                  onPress: () => onPressJoin(item),
-                },
-                { text: "다음에" },
-              ]
-            );
+      showActionSheetWithOptions(
+        {
+          options,
+          cancelButtonIndex,
+          destructiveButtonIndex: [1, 2],
+          title: item.title,
+          message: `${item.content.substring(0, 50)}...`,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 0) {
+            if (item.maxCapacity === item.currentParticipants) {
+              Toast.show({
+                type: "error",
+                text1: "모집 마감!",
+                text2: `${item.title} 모집이 마감되었습니다.`,
+                visibilityTime: 3000,
+                topOffset: insets.top,
+              });
+            } else if (
+              dayjs(item.deadlineDts).isSame(now) ||
+              dayjs(item.deadlineDts).isBefore(dayjs())
+            ) {
+              Toast.show({
+                type: "error",
+                text1: "모집 마감!",
+                text2: `${item.title} 모집이 마감되었습니다.`,
+                visibilityTime: 3000,
+                topOffset: insets.top,
+              });
+            } else {
+              Alert.alert(
+                "참여하시겠습니까?",
+                "지금 참여하면 합류할 수 있어요!",
+                [
+                  {
+                    text: "참여",
+                    onPress: () => onPressJoin(item),
+                  },
+                  { text: "다음에" },
+                ]
+              );
+            }
+          } else if (buttonIndex === 1) {
+            Alert.alert("신고하시겠습니까?", "신고하면 관리자가 확인합니다.", [
+              {
+                text: "신고",
+                onPress: () => onPressReport(item),
+              },
+              { text: "다음에" },
+            ]);
           }
-        } else if (buttonIndex === 1) {
-          Alert.alert("신고하시겠습니까?", "신고하면 관리자가 확인합니다.", [
-            {
-              text: "신고",
-              onPress: () => onPressReport(item),
-            },
-            { text: "다음에" },
-          ]);
         }
-      }
-    );
+      );
+    } else {
+      Alert.alert(
+        "로그인이 필요합니다.",
+        "모집에 참여하려면 로그인이 필요합니다.",
+        [
+          {
+            text: "로그인",
+            onPress: () => navigation.navigate("Signin"),
+          },
+          { text: "닫기" },
+        ]
+      );
+    }
   };
 
   const onPressJoin = (item: Post) => {
@@ -257,7 +306,7 @@ export default function ConnectScreen() {
     return (
       <TouchableOpacity
         style={localStyles.postItem}
-        onPress={() => onPressListItem(item)}
+        onPress={() => onPressListItem(item.id)}
       >
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
           <View
@@ -386,7 +435,7 @@ export default function ConnectScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       />
-      <TouchableOpacity onPress={() => refRBSheet.current?.open()}>
+      <TouchableOpacity onPress={onPressNewPost}>
         <View
           style={{
             position: "absolute",
@@ -454,10 +503,24 @@ export default function ConnectScreen() {
                 style={{
                   flexDirection: "row",
                   alignItems: "center",
-                  justifyContent: "flex-end",
+                  justifyContent: "space-between",
                   marginBottom: 10,
                 }}
               >
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: "rgba(255, 99, 71, 1)",
+                    paddingVertical: 8,
+                    paddingHorizontal: 16,
+                    borderRadius: 8,
+                  }}
+                  onPress={onPressCancel}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Text style={{ color: "white", fontWeight: "bold" }}>
+                    취소
+                  </Text>
+                </TouchableOpacity>
                 <Text
                   style={{
                     fontSize: 18,
@@ -465,9 +528,6 @@ export default function ConnectScreen() {
                     marginTop: 10,
                     marginBottom: 5,
                     color: "#333",
-                    position: "absolute",
-                    left: 0,
-                    right: 0,
                     textAlign: "center",
                   }}
                 >
@@ -488,6 +548,7 @@ export default function ConnectScreen() {
                     borderRadius: 8,
                   }}
                   onPress={onPressPost}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
                   <Text style={{ color: "white", fontWeight: "bold" }}>
                     Post

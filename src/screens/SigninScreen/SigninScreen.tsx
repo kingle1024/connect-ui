@@ -94,7 +94,7 @@ const SigninScreen = () => {
   const navigation = useRootNavigation<"Signin">();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { signin, processingSignin } = useContext(AuthContext);
+  const { user, signin, processingSignin } = useContext(AuthContext);
 
   const emailErrorText = useMemo(() => {
     if (email.length === 0) {
@@ -180,62 +180,60 @@ const SigninScreen = () => {
           </View>
         </View>
         <View>
-          {processingSignin ? (
-            <View style={styles.signingContainer}>
-              <ActivityIndicator />
-            </View>
-          ) : (
-            <>
-              <View style={styles.section}>
-                <Text style={styles.title}>이메일</Text>
-                <TextInput
-                  value={email}
-                  style={styles.input}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  onChangeText={onChangeEmailText}
-                />
-                {emailErrorText && (
-                  <Text style={styles.errorText}>{emailErrorText}</Text>
-                )}
+          <View style={styles.section}>
+            <Text style={styles.title}>이메일</Text>
+            <TextInput
+              value={email}
+              style={styles.input}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              onChangeText={onChangeEmailText}
+            />
+            {emailErrorText && (
+              <Text style={styles.errorText}>{emailErrorText}</Text>
+            )}
+          </View>
+          <View style={styles.section}>
+            <Text style={styles.title}>비밀번호</Text>
+            <TextInput
+              value={password}
+              style={styles.input}
+              secureTextEntry
+              onChangeText={onChangePasswordText}
+            />
+            {passwordErrorText && (
+              <Text style={styles.errorText}>{passwordErrorText}</Text>
+            )}
+          </View>
+          <View>
+            {processingSignin ? (
+              <View style={{ padding: 18 }}>
+                <ActivityIndicator />
               </View>
-              <View style={styles.section}>
-                <Text style={styles.title}>비밀번호</Text>
-                <TextInput
-                  value={password}
-                  style={styles.input}
-                  secureTextEntry
-                  onChangeText={onChangePasswordText}
-                />
-                {passwordErrorText && (
-                  <Text style={styles.errorText}>{passwordErrorText}</Text>
-                )}
-              </View>
-              <View>
-                <TouchableOpacity
-                  style={signinButtonStyle}
-                  onPress={onPressSigninButton}
-                  disabled={!signinButtonEnabled}
-                >
-                  <Text style={styles.signinButtonText}>로그인</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.signupButtonContainer}>
-                <TouchableOpacity
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Text style={{ fontSize: 16 }}>비밀번호 찾기</Text>
-                </TouchableOpacity>
-                <View style={{ paddingLeft: 10, paddingRight: 10 }} />
-                <TouchableOpacity
-                  onPress={onPressSignUp}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Text style={{ fontSize: 16 }}>회원가입</Text>
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
+            ) : (
+              <TouchableOpacity
+                style={signinButtonStyle}
+                onPress={onPressSigninButton}
+                disabled={!signinButtonEnabled}
+              >
+                <Text style={styles.signinButtonText}>로그인</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          <View style={styles.signupButtonContainer}>
+            <TouchableOpacity
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Text style={{ fontSize: 16 }}>비밀번호 찾기</Text>
+            </TouchableOpacity>
+            <View style={{ paddingLeft: 10, paddingRight: 10 }} />
+            <TouchableOpacity
+              onPress={onPressSignUp}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Text style={{ fontSize: 16 }}>회원가입</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

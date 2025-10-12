@@ -1,7 +1,21 @@
 export type TypeRootStackNavigationParams = {
+  BottomTab: {
+    screen?: keyof TypeBottomTabNavigationParams;
+  };
   ConnectDetail: { parentId: number };
   Signup: undefined;
   Signin: undefined;
+};
+
+export type TypeBottomTabNavigationParams = {
+  Connect: {
+    screen?: keyof TypeConnectStackNavigationParams;
+  };
+  Chat: undefined;
+};
+
+export type TypeConnectStackNavigationParams = {
+  ConnectList: undefined;
 };
 
 export interface Post {
