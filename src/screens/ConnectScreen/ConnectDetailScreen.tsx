@@ -7,7 +7,13 @@ import {
   TextInput,
   RefreshControl,
 } from "react-native";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import { Reply } from "@/types";
@@ -18,11 +24,13 @@ import CustomBottomSheet, {
   CustomBottomSheetRef,
 } from "@/components/modals/CustomBottomSheet";
 import { useRootNavigation, useRootRoute } from "@/hooks/useNavigation";
+import AuthContext from "@/components/auth/AuthContext";
 
 const screenHeight = Dimensions.get("window").height;
 
 const ConnectDetail = () => {
-  const navigation = useRootNavigation<"ConnectDetail">();
+  const navigation = useRootNavigation<"ConnectDetail" | "BottomTab">();
+  const { user: me } = useContext(AuthContext);
   const routes = useRootRoute<"ConnectDetail">();
   const { reply, loadReply, replyInput, setReplyInput, replyInputErrorText } =
     useReply();
@@ -51,6 +59,14 @@ const ConnectDetail = () => {
   useEffect(() => {
     loadReply(routes.params.parentId);
   }, [routes.params.parentId]);
+
+  useEffect(() => {
+    if (!me) {
+      navigation.navigate("BottomTab", {
+        screen: "Connect",
+      });
+    }
+  }, [me]);
 
   const onRefresh = () => {
     setRefreshing(true);
