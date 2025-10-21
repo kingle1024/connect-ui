@@ -5,7 +5,6 @@ import { User } from "@/types";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRootNavigation } from "@/hooks/useNavigation";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 type SignInResponse = {
   accessToken: string;
@@ -33,11 +32,69 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const response = await axiosInstance.get("/api/auth/me", {
             headers: { Authorization: `Bearer ${accessToken}` },
           });
-          // TODO: setUser
+          console.log("response.status", response.status);
+          console.log("response.data", response.data);
+          if (response.status === 200) {
+            setUser({
+              userId: response.data.userId || "",
+              email: response.data.email || "",
+              name: response.data.name || "",
+              profileUrl: response.data.profileUrl || "",
+            });
+          }
         }
-      } catch {
+      } catch (error: any) {
+        console.log("error", error.response);
         // 토큰 만료 or 유효하지 않음
-        await signout();
+        if (error.response?.status === 400) {
+          const refreshToken = await AsyncStorage.getItem("refreshToken");
+          if (refreshToken) {
+            try {
+              const refreshResponse = await axiosInstance.post(
+                "/api/auth/refresh-token",
+                {
+                  refreshToken,
+                }
+              );
+              console.log("refreshResponse.status", refreshResponse.status);
+              console.log("refreshResponse.data", refreshResponse.data);
+              if (refreshResponse.status === 200) {
+                const {
+                  accessToken: newAccessToken,
+                  refreshToken: newRefreshToken,
+                } = refreshResponse.data;
+
+                await AsyncStorage.setItem("accessToken", newAccessToken);
+                await AsyncStorage.setItem("refreshToken", newRefreshToken);
+
+                const retryResponse = await axiosInstance.get("/api/auth/me", {
+                  headers: { Authorization: `Bearer ${newAccessToken}` },
+                });
+                console.log("retryResponse.status", retryResponse.status);
+                console.log("retryResponse.data", retryResponse.data);
+                if (retryResponse.status === 200) {
+                  setUser({
+                    userId: retryResponse.data.userId || "",
+                    email: retryResponse.data.email || "",
+                    name: retryResponse.data.name || "",
+                    profileUrl: retryResponse.data.profileUrl || "",
+                  });
+                } else {
+                  await signout();
+                }
+              } else {
+                await signout();
+              }
+            } catch (refreshError) {
+              // refreshToken 만료 or 재발급 실패
+              await signout();
+            }
+          } else {
+            await signout();
+          }
+        } else {
+          await signout();
+        }
       } finally {
         setInitialized(true);
       }

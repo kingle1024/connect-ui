@@ -3,7 +3,6 @@ import Constants from "expo-constants";
 import { useCallback, useMemo, useState } from "react";
 import { Post } from "@/types";
 import axios from "axios";
-import { POSTS } from "@/mock/data";
 
 type PostListResponse = {
   nextPageToken: string;
@@ -16,7 +15,7 @@ const axiosInstance = axios.create({
 });
 
 export const useBoard = () => {
-  const [posts, setPosts] = useState<Post[]>(POSTS);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [hasNextPage, setHasNextPage] = useState<boolean>(true);
   const [nextPageCursor, setNextPageCursor] = useState<string | null>(null);
   const [titleInput, setTitleInput] = useState<string>("");
