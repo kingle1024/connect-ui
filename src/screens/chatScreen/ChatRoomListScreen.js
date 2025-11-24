@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useContext, useCallback, useRef } from "react";
 import {
   Text,
   View,
@@ -13,7 +13,7 @@ import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import localStyles from "./ChatRoomListScreen.styles.ts";
-
+import AuthContext from "@/components/auth/AuthContext";
 const API_BASE_URL = Constants.expoConfig.extra.API_BASE_URL;
 const SOCKET_URL = API_BASE_URL + "/ws-chat";
 
@@ -28,14 +28,16 @@ export default function ChatRoomsListScreen({ navigation }) {
   const [isUserIdLoading, setIsUserIdLoading] = useState(true); // 🌟 사용자 ID 로딩 상태
   const [isRoomsLoading, setIsRoomsLoading] = useState(false); // 🌟 채팅방 목록 로딩 상태
   const [rooms, setRooms] = useState([]);
+  const { user: me } = useContext(AuthContext);
 
   const stompClient = useRef(null);
 
   useEffect(() => {
     const loadUserId = async () => {
       try {
-        let storedUserId = await AsyncStorage.getItem(USER_ID_KEY);
-        if (storedUserId) {
+        let storedUserId;
+        if (me) {
+          storedUserId = me.email;
           setUserId(storedUserId);
         } else {
           const newId = `user_${Math.random()
@@ -43,10 +45,6 @@ export default function ChatRoomsListScreen({ navigation }) {
             .substr(2, 6)}_${Date.now().toString().substr(-4)}`;
           await AsyncStorage.setItem(USER_ID_KEY, newId);
           setUserId(newId);
-          Alert.alert(
-            "환영합니다!",
-            `새로운 사용자 ID가 '${newId}'로 생성되었습니다.`
-          );
         }
       } catch (e) {
         console.error("사용자 ID 로드/생성 실패", e);
@@ -117,6 +115,7 @@ export default function ChatRoomsListScreen({ navigation }) {
 
     setIsRoomsLoading(true); // 🌟 목록 로딩 시작
     try {
+      // console.log(me);
       const response = await fetch(
         `${API_BASE_URL}/api/chat/rooms?userId=${userId}`
       );
@@ -244,17 +243,6 @@ export default function ChatRoomsListScreen({ navigation }) {
   return (
     <View style={localStyles.container}>
       <Text style={localStyles.header}>내 채팅방 목록</Text>
-
-      <View style={localStyles.usernameDisplayContainer}>
-        <Text style={localStyles.usernameText}>내 ID: {userId}</Text>
-        <TouchableOpacity
-          style={localStyles.refreshIdButton}
-          onPress={handleGenerateNewId}
-        >
-          <Text style={localStyles.refreshIdButtonText}>ID 새로 만들기</Text>
-        </TouchableOpacity>
-      </View>
-
       <View style={localStyles.buttonContainer}>
         <TouchableOpacity
           style={localStyles.button}
