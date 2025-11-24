@@ -1,5 +1,3 @@
-// src/screens/chatScreen/chatScreenStyles.js
-
 import { StyleSheet, Platform, StatusBar } from 'react-native';
 
 const styles = StyleSheet.create({

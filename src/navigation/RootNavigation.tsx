@@ -1,6 +1,6 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import BottomTabNavigation from "./BottomTabNavigation";
-import EnterChatRoom from "@/screens/ChatScreen/EnterChatRoom";
+import EnterChatRoom from "@/screens/chatScreen/EnterChatRoom";
 import ConnectDetailScreen from "@/screens/ConnectScreen/ConnectDetailScreen";
 import { TouchableOpacity } from "react-native";
 import { DrawerActions } from "@react-navigation/native";

@@ -1,5 +1,3 @@
-// src/screens/chatScreen/ChatScreen.js
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   StyleSheet,
@@ -17,7 +15,6 @@ import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import Constants from "expo-constants";
 import Icon from "react-native-vector-icons/Ionicons"; // 🌟 아이콘 사용을 위해 임포트 🌟
-import localStyles from "./EnterChatRoom.styles.ts";
 
 const SOCKET_URL = Constants.expoConfig.extra.API_BASE_URL + "/ws-chat";
 
@@ -29,7 +26,7 @@ const MessageType = {
   KICK: "KICK",
 };
 
-export default function ChatScreen({ route, navigation }) {
+export default function EnterChatRoom({ route, navigation }) {
   // 🌟 navigation prop을 받도록 추가 🌟
   const { username, roomId, roomName = roomId } = route.params;
 
