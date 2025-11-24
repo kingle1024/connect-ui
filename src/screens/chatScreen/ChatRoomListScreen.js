@@ -57,28 +57,6 @@ export default function ChatRoomsListScreen({ navigation }) {
     loadUserId();
   }, []);
 
-  const handleGenerateNewId = async () => {
-    setIsUserIdLoading(true); // 🌟 ID 새로 만들 때 로딩
-    try {
-      const newId = `user_${Math.random()
-        .toString(36)
-        .substr(2, 6)}_${Date.now().toString().substr(-4)}`;
-      await AsyncStorage.setItem(USER_ID_KEY, newId);
-      setUserId(newId);
-      Alert.alert(
-        "ID 변경 완료",
-        `새로운 사용자 ID가 '${newId}'으로 생성되었습니다.`
-      );
-      // ID가 바뀌었으니 채팅방 목록 새로고침
-      // fetchUserRooms(); // useFocusEffect에서 알아서 호출되도록.
-    } catch (e) {
-      console.error("새 사용자 ID 생성 실패", e);
-      Alert.alert("오류", "새 사용자 ID를 생성하는데 실패했습니다.");
-    } finally {
-      setIsUserIdLoading(false); // 🌟 ID 생성 로딩 완료
-    }
-  };
-
   const connectWebSocket = useCallback(() => {
     if (stompClient.current && stompClient.current.connected) {
       return;
