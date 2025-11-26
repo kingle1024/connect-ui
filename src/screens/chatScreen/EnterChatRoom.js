@@ -15,6 +15,7 @@ import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import Constants from "expo-constants";
 import Icon from "react-native-vector-icons/Ionicons"; // 🌟 아이콘 사용을 위해 임포트 🌟
+import localStyles from "./EnterChatRoom.styles";
 
 const SOCKET_URL = Constants.expoConfig.extra.API_BASE_URL + "/ws-chat";
 
