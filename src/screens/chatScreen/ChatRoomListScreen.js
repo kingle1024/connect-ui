@@ -14,8 +14,13 @@ import SockJS from "sockjs-client";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import localStyles from "./ChatRoomListScreen.styles.ts";
 import AuthContext from "@/components/auth/AuthContext";
+import axios from "axios";
 const API_BASE_URL = Constants.expoConfig.extra.API_BASE_URL;
 const SOCKET_URL = API_BASE_URL + "/ws-chat";
+const axiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+  withCredentials: true
+});
 
 const MessageType = {
   LEAVE: "LEAVE",
@@ -94,9 +99,11 @@ export default function ChatRoomsListScreen({ navigation }) {
     setIsRoomsLoading(true); // 🌟 목록 로딩 시작
     try {
       // console.log(me);
-      const response = await fetch(
-        `${API_BASE_URL}/api/chat/rooms?userId=${userId}`
-      );
+      const refreshToken = await AsyncStorage.getItem("refreshToken");
+      const response = await axiosInstance.get(
+        `${API_BASE_URL}/api/chat/rooms?userId=${userId}`, {
+          headers: { Authorization: `Bearer ${refreshToken}` },
+        });
       if (!response.ok) {
         throw new Error(`HTTP 오류! 상태: ${response.status}`);
       }
