@@ -18,6 +18,7 @@ import Icon from "react-native-vector-icons/Ionicons"; // 🌟 아이콘 사용�
 import localStyles from "./EnterChatRoom.styles";
 
 const SOCKET_URL = Constants.expoConfig.extra.API_BASE_URL + "/ws-chat";
+const API_BASE_URL = SOCKET_URL.substring(0, SOCKET_URL.lastIndexOf('/'));
 
 const MessageType = {
   CHAT: "CHAT",
@@ -58,12 +59,44 @@ export default function EnterChatRoom({ route, navigation }) {
     }
   }, [currentRoomId, currentUser]); // 의존성 추가
 
+  const fetchChatHistory = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/chat/rooms/${currentRoomId}/messages`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const history = await response.json();
+
+      // 불러온 메시지들이 FlatList에서 사용할 수 있도록 'id'를 가지고 있는지 확인합니다.
+      // 백엔드에서 id를 제공한다면 그대로 사용하고, 없다면 고유 id를 생성해줍니다.
+      const formattedHistory = history.map(msg => ({
+        ...msg,
+        id: msg.id || (Date.now().toString() + Math.random().toString(36).substr(2, 9)),
+      }));
+      
+      // 이전 메시지들을 먼저 설정하고, 이후 실시간 메시지가 추가되도록 합니다.
+      setMessages(formattedHistory);
+      
+      // 로딩된 메시지들이 보일 수 있도록 스크롤을 맨 아래로 이동
+      if (flatListRef.current) {
+          flatListRef.current.scrollToEnd({ animated: true });
+      }
+
+    } catch (error) {
+      console.error("채팅 기록 로드에 실패했습니다:", error);
+      Alert.alert("오류", "이전 채팅 기록을 불러오는데 실패했습니다.");
+    }
+  }, [currentRoomId, API_BASE_URL]); 
+    
   useEffect(() => {
     client.current = new Client({
       webSocketFactory: () => new SockJS(SOCKET_URL),
       onConnect: () => {
         console.log("STOMP 연결 성공!");
-        joinRoom();
+        fetchChatHistory().then(() => {
+          joinRoom(); 
+        });
 
         client.current.subscribe(`/topic/chat/${currentRoomId}`, (message) => {
           const receivedMessage = JSON.parse(message.body);
@@ -108,7 +141,7 @@ export default function EnterChatRoom({ route, navigation }) {
       }
       console.log("STOMP 연결 해제 및 퇴장 처리 완료!");
     };
-  }, [currentRoomId, currentUser, sendLeaveMessage]); // sendLeaveMessage도 의존성 추가
+  }, [currentRoomId, currentUser, sendLeaveMessage, fetchChatHistory]);
 
   useEffect(() => {
     if (flatListRef.current && messages.length > 0) {
