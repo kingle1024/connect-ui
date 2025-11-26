@@ -104,10 +104,10 @@ export default function ChatRoomsListScreen({ navigation }) {
         `${API_BASE_URL}/api/chat/rooms?userId=${userId}`, {
           headers: { Authorization: `Bearer ${refreshToken}` },
         });
-      if (!response.ok) {
+      if (!response.data) {
         throw new Error(`HTTP 오류! 상태: ${response.status}`);
       }
-      const data = await response.json();
+      const data = response.data;
       setRooms(data);
     } catch (error) {
       console.error("채팅방 목록 불러오기 실패:", error);
