@@ -1,10 +1,8 @@
 import AuthContext from "@/components/auth/AuthContext";
-import Colors from "@/modules/Color";
 import { useCallback, useContext, useMemo, useState } from "react";
 import {
   Text,
   View,
-  StyleSheet,
   ActivityIndicator,
   TextInput,
   TouchableOpacity,
@@ -16,86 +14,13 @@ import validator from "validator";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRootNavigation } from "@/hooks/useNavigation";
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    position: "relative",
-  },
-  backButton: {
-    position: "absolute",
-    left: 3,
-    zIndex: 999,
-  },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: Colors.BLACK,
-  },
-  section: {
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: Colors.BLACK,
-  },
-  input: {
-    marginTop: 10,
-    borderWidth: 1,
-    padding: 10,
-    borderRadius: 10,
-    borderColor: Colors.GRAY,
-    fontSize: 16,
-  },
-  errorText: {
-    fontSize: 15,
-    color: Colors.RED,
-    marginTop: 4,
-  },
-  signinButton: {
-    backgroundColor: "tomato",
-    borderRadius: 10,
-    alignItems: "center",
-    padding: 20,
-  },
-  signinButtonText: {
-    color: Colors.WHITE,
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  disabledSigninButton: {
-    backgroundColor: Colors.GRAY,
-  },
-  signingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  signupButtonContainer: {
-    flexDirection: "row",
-    paddingTop: 20,
-    paddingBottom: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
+import styles from "./SigninScreen.styles";
 
 const SigninScreen = () => {
   const navigation = useRootNavigation<"Signin">();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { user, signin, processingSignin } = useContext(AuthContext);
+  const { signin, processingSignin } = useContext(AuthContext);
 
   const emailErrorText = useMemo(() => {
     if (email.length === 0) {
