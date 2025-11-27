@@ -4,9 +4,9 @@ import {
   View,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
-  Alert,
+  ActivityIndicator,  
 } from "react-native";
+import Alert from '@blazejkustra/react-native-alert';
 import Constants from "expo-constants";
 import { useFocusEffect } from "@react-navigation/native";
 import { Client } from "@stomp/stompjs";
@@ -186,7 +186,8 @@ export default function ChatRoomsListScreen({ navigation }) {
               }),
             });
             Alert.alert("알림", `'${roomName}' 방에서 나갔습니다.`);
-            fetchUserRooms();
+            setRooms(prevRooms => prevRooms.filter(room => room.id !== roomIdToLeave));
+            fetchUserRooms();            
           } else {
             Alert.alert(
               "오류",
