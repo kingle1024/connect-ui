@@ -30,6 +30,7 @@ const styles = StyleSheet.create({
   backButton: {
     position: "absolute",
     left: 3,
+    zIndex: 999,
   },
   center: {
     flex: 1,
