@@ -8,10 +8,10 @@ import {
   ActivityIndicator,
   TextInput,
   TouchableOpacity,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import Alert from '@blazejkustra/react-native-alert';
 import validator from "validator";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";

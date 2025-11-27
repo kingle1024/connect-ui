@@ -8,9 +8,9 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   StatusBar,
 } from "react-native";
+import Alert from '@blazejkustra/react-native-alert';
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import Constants from "expo-constants";

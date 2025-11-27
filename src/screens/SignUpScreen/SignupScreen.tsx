@@ -1,6 +1,5 @@
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -8,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Alert from '@blazejkustra/react-native-alert';
 import validator from "validator";
 import { useCallback, useContext, useMemo, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";

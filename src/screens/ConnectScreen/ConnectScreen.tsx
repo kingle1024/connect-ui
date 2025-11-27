@@ -14,8 +14,8 @@ import {
   Animated,
   PanResponder,
   RefreshControl,
-  Alert,
 } from "react-native";
+import Alert from '@blazejkustra/react-native-alert';
 import { Post } from "@/types";
 import localStyles from "./ConnectScreen.styles";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
