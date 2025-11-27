@@ -1,7 +1,7 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Feather, Entypo } from "@expo/vector-icons";
 import ConnectNavigation from "./ConnectNavigation";
-import ChatRoomsListScreen from "@/screens/chatScreen/ChatRoomListScreen";
+import ChatNavigation from "./ChatNavigation";
 
 const BottomTab = createBottomTabNavigator();
 
@@ -30,7 +30,7 @@ const BottomTabNavigation = () => {
       />
       <BottomTab.Screen
         name="Chat"
-        component={ChatRoomsListScreen}
+        component={ChatNavigation}
         options={{
           headerShown: false,
           tabBarLabel: "채팅",
