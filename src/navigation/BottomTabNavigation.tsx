@@ -6,6 +6,7 @@ import ConnectNavigation from "./ConnectNavigation";
 import ChatNavigation from "./ChatNavigation";
 import AuthContext from "@/components/auth/AuthContext";
 import { useRootNavigation } from "@/hooks/useNavigation";
+import FriendNavigation from "./FriendNavigation";
 
 const BottomTab = createBottomTabNavigator();
 
@@ -20,6 +21,38 @@ const BottomTabNavigation = () => {
         tabBarInactiveTintColor: "gray",
       }}
     >
+      <BottomTab.Screen
+        name="Friends"
+        component={FriendNavigation}
+        options={{
+          headerShown: false,
+          tabBarLabel: "친구",
+          tabBarIcon: ({ focused, size }) => (
+            <Feather name="users" size={20} color={focused ? "tomato" : "gray"} />
+          ),
+        }}
+        listeners={() => ({
+          tabPress: (e) => {
+            // 로그인 상태 확인
+            if (!me) {
+              e.preventDefault();
+              Alert.alert(
+                "로그인이 필요합니다.",
+                "친구 목록을 보려면 로그인이 필요합니다.",
+                [
+                  {
+                    text: "로그인",
+                    onPress: () => {
+                      rootNavigation.navigate("Signin");
+                    },
+                  },
+                  { text: "닫기" },
+                ]
+              );
+            }
+          },
+        })}
+      />
       <BottomTab.Screen
         name="Connect"
         component={ConnectNavigation}
