@@ -21,6 +21,19 @@ export async function getRoomsForUser(userId: string) {
   return res.data;
 }
 
+export async function getOneToOneRoomsForUser(userId: string) {
+  const token = await getAuthToken();
+  if (!token) throw new Error("Token needed");
+
+  // ChatRoomListScreen.js와 동일하게 쿼리 파라미터 방식 사용
+  const res = await axiosInstance.get("/api/chat/one-to-one-rooms", {
+    params: { userId },
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  return res.data;
+}
+
 export async function createOneToOneRoom(
   currentUserId: string,
   friendId: string,
