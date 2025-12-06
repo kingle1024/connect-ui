@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useContext } from "react";
+import React, { useMemo, useState, useContext, useRef } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,6 @@ import {
   Modal,
   Pressable,
   Alert,
-  NativeSyntheticEvent,
 } from "react-native";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
 import { Feather, AntDesign } from "@expo/vector-icons";
@@ -18,8 +17,12 @@ import FriendItem from "@/components/FriendItem";
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import AuthContext from "@/components/auth/AuthContext";
-import { useRootNavigation } from "@/hooks/useNavigation"; // <-- 추가
-import { getRoomsForUser, createOneToOneRoom } from "@/utils/chat";
+import { useRootNavigation } from "@/hooks/useNavigation";
+import { getRoomsForUser, createOneToOneRoom, getOneToOneRoomsForUser } from "@/utils/chat";
+import { Client } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
+
+const SOCKET_URL = (Constants.expoConfig?.extra?.API_BASE_URL || "") + "/ws-chat";
 
 type Friend = {
   id: string;
@@ -37,7 +40,7 @@ const MOCK_FRIENDS: Friend[] = [
   { id: "2", name: "박영희", avatar: "", status: "운동중", online: false },
   { id: "3", name: "Alice", avatar: "", status: "퇴근했어요", online: false, favorite: true },
   { id: "4", name: "Bob", avatar: "", status: "", online: true },
-  { id: "5", name: "최유리", avatar: "", status: "집에 가는 중", online: true },
+  { id: "hhy1030@douzone.com", name: "최유리", avatar: "", status: "집에 가는 중", online: true },
   { id: "6", name: "이민수", avatar: "", status: "", online: false },
   { id: "7", name: "Charlie", avatar: "", status: "대기중", online: true },
 ];
@@ -72,6 +75,7 @@ const FriendsListScreen = () => {
   const [actionVisible, setActionVisible] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [openingChat, setOpeningChat] = useState(false); // <- 추가: 채팅 열기/생성 중 상태
+  const client = useRef(null);
 
   // 유틸: 방에서 참여자 아이디만 뽑아 비교하기 (응답 구조가 다양할 수 있으므로 유연하게 처리)
   const extractParticipantIds = (room: any): string[] => {
@@ -110,17 +114,17 @@ const FriendsListScreen = () => {
     setOpeningChat(true);
 
     try {
-      const currentUserId = me?.userId || me?.email; // Removed me?.id
+      const currentUserId = me?.userId || me?.email;
       if (!currentUserId) {
         Alert.alert("권한 오류", "로그인이 필요합니다.");
         setOpeningChat(false);
         return;
       }
 
-      // 1) 채팅 목록 조회 (utils 사용)
+      // 1) 서버에서 방 목록 조회
       let rooms;
       try {
-        rooms = await getRoomsForUser(currentUserId);
+        rooms = await getOneToOneRoomsForUser(currentUserId);
       } catch (err) {
         console.error("채팅 목록 조회 실패", err);
         Alert.alert("오류", "채팅 목록을 가져오지 못했습니다.");
@@ -129,15 +133,15 @@ const FriendsListScreen = () => {
       }
 
       const existingOneToOne = findOneToOneRoom(rooms, currentUserId, selectedFriend.id);
-
       let roomToOpen = null;
 
       if (existingOneToOne) {
         roomToOpen = existingOneToOne;
       } else {
-        // 2) 새 1:1 방 생성 (utils 사용)
+        // 2) 서버에 방 생성 API가 없을 수 있으므로 utils.createOneToOneRoom이 로컬 fallback을 반환하도록 되어 있음
         try {
           const created = await createOneToOneRoom(currentUserId, selectedFriend.id, selectedFriend.name);
+          const invited = await publishInvite(created.id, currentUserId, selectedFriend.id, created.id)
           roomToOpen = created;
         } catch (err) {
           console.error("채팅방 생성 실패", err);
@@ -156,15 +160,18 @@ const FriendsListScreen = () => {
       const targetRoomId = roomToOpen.id || roomToOpen.roomId || roomToOpen._id || roomToOpen.uuid;
       const roomName = roomToOpen.name || selectedFriend.name || `채팅 ${targetRoomId}`;
 
-      // ChatRoomListScreen 처럼 "채팅방 상세"로 이동하도록 통일
-      rootNavigation.navigate("Chat" as any, {
-        screen: "채팅방 상세",
-        params: {
+      // ChatRoomListScreen과 동일하게 동작하도록: 먼저 Chat 탭으로 이동한 다음,
+      // 탭 내부에서 "채팅방 상세"로 진입하게 함. (딜레이로 탭 전환 안정화)
+      rootNavigation.navigate("BottomTab" as any, {
+        screen: "Chat",
+      });
+      setTimeout(() => {
+        navigation.navigate("채팅방 상세" as any, {
           username: currentUserId,
           roomId: targetRoomId,
           roomName,
-        },
-      });
+        });
+      }, 50);
 
       closeActions();
     } catch (err) {
@@ -318,6 +325,41 @@ const FriendsListScreen = () => {
   );
 };
 
+const publishInvite = (roomId: string, sender: string, recipient: string, roomName?: string) => {
+  try {
+    const client = new Client({
+      webSocketFactory: () => new SockJS(SOCKET_URL),
+      onConnect: () => {
+        try {
+          client.publish({
+            destination: "/app/chat.inviteUser",
+            body: JSON.stringify({
+              type: "INVITE",
+              roomId,
+              sender,
+              recipient,
+              content: "",
+              roomName: roomName ?? roomId,
+            }),
+          });
+        } catch (e) {
+          console.warn("invite publish failed:", e);
+        }
+        // 짧은 지연 후 연결 종료
+        setTimeout(() => {
+          try { client.deactivate(); } catch (e) {}
+        }, 150);
+      },
+      onStompError: (frame) => {
+        console.warn("STOMP error on invite:", frame);
+      },
+      debug: () => {},
+    });
+    client.activate();
+  } catch (e) {
+    console.warn("publishInvite error:", e);
+  }
+};
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#fff" },
   header: {
