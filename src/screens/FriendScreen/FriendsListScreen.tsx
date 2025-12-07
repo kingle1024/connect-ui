@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useContext, useRef } from "react";
+import React, { useMemo, useState, useContext, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -35,16 +35,6 @@ type Friend = {
 
 const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL || "";
 
-const MOCK_FRIENDS: Friend[] = [
-  { id: "1", name: "김철수", avatar: "", status: "안녕하세요!", online: true, favorite: true },
-  { id: "2", name: "박영희", avatar: "", status: "운동중", online: false },
-  { id: "3", name: "Alice", avatar: "", status: "퇴근했어요", online: false, favorite: true },
-  { id: "4", name: "Bob", avatar: "", status: "", online: true },
-  { id: "hhy1030@douzone.com", name: "최유리", avatar: "", status: "집에 가는 중", online: true },
-  { id: "6", name: "이민수", avatar: "", status: "", online: false },
-  { id: "7", name: "Charlie", avatar: "", status: "대기중", online: true },
-];
-
 const groupFriends = (items: Friend[], query: string) => {
   const filtered = items.filter((f) => f.name.toLowerCase().includes(query.toLowerCase()));
   const favorites = filtered.filter((f) => f.favorite);
@@ -67,15 +57,72 @@ const groupFriends = (items: Friend[], query: string) => {
 
 const FriendsListScreen = () => {
   const navigation = useNavigation<NavigationProp<any>>();
-  const rootNavigation = useRootNavigation(); // <-- 루트 네비게이션 (탭/다른 스택 이동용)
+  const rootNavigation = useRootNavigation();
   const { user: me } = useContext(AuthContext);
-  const [friends, setFriends] = useState<Friend[]>(MOCK_FRIENDS);
+
+  // 초기값을 빈 배열로 변경 (이후 fetch로 채움)
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [isLoadingFriends, setIsLoadingFriends] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [actionVisible, setActionVisible] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [openingChat, setOpeningChat] = useState(false); // <- 추가: 채팅 열기/생성 중 상태
   const client = useRef(null);
+
+  // 친구 목록 API 호출 함수
+  const fetchFriends = async () => {
+    const currentUserId = me?.userId || me?.email;
+    if (!currentUserId) {
+      // 로그인 안된 상태면 빈 목록
+      setFriends([]);
+      return;
+    }
+
+    setIsLoadingFriends(true);
+    try {
+      const accessToken = await AsyncStorage.getItem("accessToken");
+      const refreshToken = await AsyncStorage.getItem("refreshToken");
+      const token = accessToken || refreshToken;
+
+      const res = await fetch(`${API_BASE_URL}/api/friends/${encodeURIComponent(currentUserId)}/friends`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        // 서버 응답 구조에 맞춰 매핑 (유연 처리)
+        const mapped: Friend[] = Array.isArray(data)
+          ? data.map((d: any) => ({
+              id: d.friendUserId,
+              name: d.friendNickname,
+              avatar: undefined,
+              status: 'status',
+              online: !!d.online,
+              favorite: !!d.favorite,
+            }))
+          : [];
+        setFriends(mapped);
+      } else {
+        console.warn("fetchFriends failed:", res.status);
+        // 실패 시 기존 friends 유지 (현재 빈 배열) — 필요하면 fallback 로직 추가
+      }
+    } catch (err) {
+      console.warn("fetchFriends error:", err);
+    } finally {
+      setIsLoadingFriends(false);
+    }
+  };
+
+  // 마운트 시 및 me 변경 시 친구 목록 로드
+  useEffect(() => {
+    fetchFriends();
+  }, [me?.userId, me?.email]);
 
   // 유틸: 방에서 참여자 아이디만 뽑아 비교하기 (응답 구조가 다양할 수 있으므로 유연하게 처리)
   const extractParticipantIds = (room: any): string[] => {
