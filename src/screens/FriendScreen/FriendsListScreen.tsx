@@ -101,8 +101,8 @@ const FriendsListScreen = () => {
           ? data.map((d: any) => ({
               id: d.friendUserId,
               name: d.friendNickname,
-              avatar: undefined,
-              status: 'status',
+              avatar: d.avatar,
+              status: d.status,
               online: !!d.online,
               favorite: !!d.favorite,
             }))
@@ -180,16 +180,14 @@ const FriendsListScreen = () => {
       }
 
       const existingOneToOne = findOneToOneRoom(rooms, currentUserId, selectedFriend.id);
-      let roomToOpen = null;
+      let created;
 
       if (existingOneToOne) {
-        roomToOpen = existingOneToOne;
+        created = existingOneToOne;
       } else {
         // 2) 서버에 방 생성 API가 없을 수 있으므로 utils.createOneToOneRoom이 로컬 fallback을 반환하도록 되어 있음
         try {
-          const created = await createOneToOneRoom(currentUserId, selectedFriend.id, selectedFriend.name);
-          const invited = await publishInvite(created.id, currentUserId, selectedFriend.id, created.id)
-          roomToOpen = created;
+          created = await createOneToOneRoom(currentUserId, selectedFriend.id, selectedFriend.name);
         } catch (err) {
           console.error("채팅방 생성 실패", err);
           Alert.alert("오류", "채팅방 생성에 실패했습니다.");
@@ -198,14 +196,14 @@ const FriendsListScreen = () => {
         }
       }
 
-      if (!roomToOpen) {
+      if (!created) {
         Alert.alert("오류", "채팅방을 열 수 없습니다.");
         setOpeningChat(false);
         return;
       }
 
-      const targetRoomId = roomToOpen.id || roomToOpen.roomId || roomToOpen._id || roomToOpen.uuid;
-      const roomName = roomToOpen.name || selectedFriend.name || `채팅 ${targetRoomId}`;
+      const targetRoomId = created.roomId;
+      const roomName = created.name || selectedFriend.name || `채팅 ${targetRoomId}`;
 
       // ChatRoomListScreen과 동일하게 동작하도록: 먼저 Chat 탭으로 이동한 다음,
       // 탭 내부에서 "채팅방 상세"로 진입하게 함. (딜레이로 탭 전환 안정화)
