@@ -41,12 +41,14 @@ export async function createOneToOneRoom(
 ) {
   // 토큰이 없어도 로컬 fallback을 반환하도록 허용
   const token = await getAuthToken();
-
+  const id = `${currentUserId}_${friendId}_${Date.now()}`;
+  
   // 서버 POST 시도 (토큰이 있을 때만)
   if (token) {
+    
     try {
-      // 기본 후보 body: participants
-      const body = { name: roomName ?? "", isGroup: false, participants: [currentUserId, friendId] };
+      // 기본 후보 body: participants      
+      const body = { roomId: id ?? "", userId: currentUserId + '|' + friendId };
       const res = await axiosInstance.post("/api/chat/rooms", body, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -72,7 +74,7 @@ export async function createOneToOneRoom(
   }
 
   // 로컬 fallback: ChatRoomListScreen과 동일하게 임시 room id/name 생성해서 반환
-  const id = `${currentUserId}_${friendId}_${Date.now()}`;
+  
   const name = roomName || `새 채팅방(${Date.now().toString().slice(-4)})`;
   return {
     id,
