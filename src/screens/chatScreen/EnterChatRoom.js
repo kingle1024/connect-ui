@@ -30,13 +30,14 @@ const MessageType = {
 
 export default function EnterChatRoom({ route, navigation }) {
   // 🌟 navigation prop을 받도록 추가 🌟
-  const { username, roomId, roomName = roomId } = route.params;
+  const { username, roomId, roomName = roomId, roomType } = route.params;
 
   const [messages, setMessages] = useState([]);
   const [currentMessage, setCurrentMessage] = useState("");
   const currentUser = username;
   const currentRoomId = roomId;
   const currentRoomName = roomName;
+  const currentRoomType = roomType;
 
   const client = useRef(null);
   const flatListRef = useRef(null);
@@ -156,6 +157,7 @@ export default function EnterChatRoom({ route, navigation }) {
         body: JSON.stringify({
           type: MessageType.JOIN,
           roomId: currentRoomId,
+          roomType: currentRoomType,
           sender: currentUser,
           content: "",
         }),
