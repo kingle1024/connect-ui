@@ -48,8 +48,11 @@ export async function createOneToOneRoom(
     
     try {
       // 기본 후보 body: participants      
-      const body = { roomId: id ?? "", userId: currentUserId + '|' + friendId };
-      const res = await axiosInstance.post("/api/chat/rooms", body, {
+      const res = await axiosInstance.post("/api/chat/rooms", { 
+        roomId: id ?? "", 
+        userId: currentUserId + '|' + friendId, 
+        roomType: "ONE_TO_ONE"
+      }, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -64,7 +67,7 @@ export async function createOneToOneRoom(
       // 서버에 POST 엔드포인트가 없다거나 405/404인 경우 로컬 생성으로 fallback
       if (status !== 404 && status !== 405) {
         // 401/403 등 인증 문제나 기타 에러인 경우 로깅만 하고 로컬 fallback 진행
-        console.warn("createOneToOneRoom server call failed, falling back to local room:", err?.message || err);
+        throw new Error(`createOneToOneRoom server call failed, falling back to local room: ${err?.message || err}`);
       }
       // fallback: 계속해서 로컬 방 생성
     }
