@@ -33,11 +33,7 @@ export default function EnterChatRoom({ route, navigation }) {
   const { username, roomId, roomName = roomId, roomType } = route.params;
 
   const [messages, setMessages] = useState([]);
-  const [currentMessage, setCurrentMessage] = useState("");
-  const currentUser = username;
-  const currentRoomId = roomId;
-  const currentRoomName = roomName;
-  const currentRoomType = roomType;
+  const [currentMessage, setCurrentMessage] = useState("");  
 
   const client = useRef(null);
   const flatListRef = useRef(null);
@@ -49,20 +45,20 @@ export default function EnterChatRoom({ route, navigation }) {
         destination: "/app/chat.leaveUser", // 백엔드에 구현된 퇴장 엔드포인트
         body: JSON.stringify({
           type: MessageType.LEAVE,
-          roomId: currentRoomId,
-          sender: currentUser,
-          content: `${currentUser}님이 퇴장했습니다.`,
+          roomId: roomId,
+          sender: username,
+          content: `${username}님이 퇴장했습니다.`,
         }),
       });
       console.log(
-        `${currentUser}님이 방 ${currentRoomId}에서 퇴장 메시지 보냄`
+        `${username}님이 방 ${roomId}에서 퇴장 메시지 보냄`
       );
     }
-  }, [currentRoomId, currentUser]); // 의존성 추가
+  }, [roomId, username]); // 의존성 추가
 
   const fetchChatHistory = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/chat/rooms/${currentRoomId}/messages`);
+      const response = await fetch(`${API_BASE_URL}/api/chat/rooms/${roomId}/messages`);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -88,7 +84,7 @@ export default function EnterChatRoom({ route, navigation }) {
       console.error("채팅 기록 로드에 실패했습니다:", error);
       Alert.alert("오류", "이전 채팅 기록을 불러오는데 실패했습니다.");
     }
-  }, [currentRoomId, API_BASE_URL]); 
+  }, [roomId, API_BASE_URL]); 
     
   useEffect(() => {
     client.current = new Client({
@@ -99,7 +95,7 @@ export default function EnterChatRoom({ route, navigation }) {
           joinRoom(); 
         });
 
-        client.current.subscribe(`/topic/chat/${currentRoomId}`, (message) => {
+        client.current.subscribe(`/topic/chat/${roomId}`, (message) => {
           const receivedMessage = JSON.parse(message.body);
           if (!receivedMessage.id) {
             receivedMessage.id =
@@ -142,7 +138,7 @@ export default function EnterChatRoom({ route, navigation }) {
       }
       console.log("STOMP 연결 해제 및 퇴장 처리 완료!");
     };
-  }, [currentRoomId, currentUser, sendLeaveMessage, fetchChatHistory]);
+  }, [roomId, username, sendLeaveMessage, fetchChatHistory]);
 
   useEffect(() => {
     if (flatListRef.current && messages.length > 0) {
@@ -156,10 +152,9 @@ export default function EnterChatRoom({ route, navigation }) {
         destination: "/app/chat.addUser",
         body: JSON.stringify({
           type: MessageType.JOIN,
-          roomId: currentRoomId,
-          roomType: currentRoomType,
-          sender: currentUser,
-          content: "",
+          roomId: roomId,
+          roomType: roomType,
+          sender: username,
         }),
       });
     } else {
@@ -175,8 +170,8 @@ export default function EnterChatRoom({ route, navigation }) {
         destination: "/app/chat.sendMessage",
         body: JSON.stringify({
           type: MessageType.CHAT,
-          roomId: currentRoomId,
-          sender: currentUser,
+          roomId: roomId,
+          sender: username,
           content: currentMessage,
         }),
       });
@@ -209,14 +204,14 @@ export default function EnterChatRoom({ route, navigation }) {
               destination: "/app/chat.inviteUser",
               body: JSON.stringify({
                 type: MessageType.INVITE,
-                roomId: currentRoomId,
-                sender: currentUser,
+                roomId: roomId,
+                sender: username,
                 recipient: inviteeName.trim(),
                 content: "",
               }),
             });
             console.log(
-              `${currentUser}님이 ${inviteeName.trim()}님을 초대 메시지 보냄`
+              `${username}님이 ${inviteeName.trim()}님을 초대 메시지 보냄`
             );
           }
         } else {
@@ -236,14 +231,14 @@ export default function EnterChatRoom({ route, navigation }) {
                   destination: "/app/chat.inviteUser",
                   body: JSON.stringify({
                     type: MessageType.INVITE,
-                    roomId: currentRoomId,
-                    sender: currentUser,
+                    roomId: roomId,
+                    sender: username,
                     recipient: inviteeName.trim(),
                     content: "",
                   }),
                 });
                 console.log(
-                  `${currentUser}님이 ${inviteeName.trim()}님을 초대 메시지 보냄`
+                  `${username}님이 ${inviteeName.trim()}님을 초대 메시지 보냄`
                 );
               }
             } else {
@@ -269,15 +264,15 @@ export default function EnterChatRoom({ route, navigation }) {
               destination: "/app/chat.kickUser",
               body: JSON.stringify({
                 type: MessageType.KICK,
-                roomId: currentRoomId,
-                sender: currentUser,
+                roomId: roomId,
+                sender: username,
                 recipient: kickedUserName.trim(),
                 content: "",
-                roomName: currentRoomName, // 🌟 roomName 추가 🌟
+                roomName: roomName, // 🌟 roomName 추가 🌟
               }),
             });
             console.log(
-              `${currentUser}님이 ${kickedUserName.trim()}님 강퇴 메시지 보냄`
+              `${username}님이 ${kickedUserName.trim()}님 강퇴 메시지 보냄`
             );
           }
         } else {
@@ -297,15 +292,15 @@ export default function EnterChatRoom({ route, navigation }) {
                   destination: "/app/chat.kickUser",
                   body: JSON.stringify({
                     type: MessageType.KICK,
-                    roomId: currentRoomId,
-                    sender: currentUser,
+                    roomId: roomId,
+                    sender: username,
                     recipient: kickedUserName.trim(),
                     content: "",
-                    roomName: currentRoomName, // 🌟 roomName 추가 🌟
+                    roomName: roomName, // 🌟 roomName 추가 🌟
                   }),
                 });
                 console.log(
-                  `${currentUser}님이 ${kickedUserName.trim()}님 강퇴 메시지 보냄`
+                  `${username}님이 ${kickedUserName.trim()}님 강퇴 메시지 보냄`
                 );
               }
             } else {
@@ -343,7 +338,7 @@ export default function EnterChatRoom({ route, navigation }) {
       }
     }
 
-    const isMyMessage = item.sender === currentUser;
+    const isMyMessage = item.sender === username;
     return (
       <View
         style={[
@@ -378,7 +373,7 @@ export default function EnterChatRoom({ route, navigation }) {
           <Icon name="chevron-back" size={28} color="#333" />
         </TouchableOpacity>
         <Text style={localStyles.headerText}>
-          방: {currentRoomName} (나: {currentUser})
+          방: {roomName} (나: {username})
         </Text>
       </View>
 
