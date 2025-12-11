@@ -141,17 +141,11 @@ const FriendsListScreen = () => {
 
   // 클릭한 친구와 1:1 채팅방이 이미 있는지 찾기
   const findOneToOneRoom = (rooms: any[], currentUserId: string, friendId: string) => {
-    if (!Array.isArray(rooms)) return null;
-    return rooms.find(room => {
-      // 이미 group 플래그가 있을 경우 group:false로 걸러내기
-      if ("isGroup" in room && room.isGroup) return false;
-      if (room.type && (room.type === "GROUP" || room.type === "MULTI")) return false;
-
-      const ids = extractParticipantIds(room);
-      // 1:1 방이면 참가자 수가 2 이상이 아니어야 함
-      if (ids.length !== 2) return false;
-      return ids.includes(currentUserId) && ids.includes(friendId);
+    const foundRoom = rooms.find(room => {
+        return room.userId == friendId; 
     });
+
+    return foundRoom; 
   };
 
   const sections = useMemo(() => groupFriends(friends, query), [friends, query]);
