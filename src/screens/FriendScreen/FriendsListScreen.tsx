@@ -196,8 +196,7 @@ const FriendsListScreen = () => {
         return;
       }
 
-      const targetRoomId = created.roomId;
-      const roomName = created.name || selectedFriend.name || `채팅 ${targetRoomId}`;
+      const roomName = created.name || selectedFriend.name;
 
       // ChatRoomListScreen과 동일하게 동작하도록: 먼저 Chat 탭으로 이동한 다음,
       // 탭 내부에서 "채팅방 상세"로 진입하게 함. (딜레이로 탭 전환 안정화)
@@ -207,7 +206,7 @@ const FriendsListScreen = () => {
       setTimeout(() => {
         navigation.navigate("채팅방 상세" as any, {
           username: currentUserId,
-          roomId: targetRoomId,
+          roomId: created.id,
           roomName,
         });
       }, 50);
