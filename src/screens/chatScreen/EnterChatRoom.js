@@ -155,6 +155,7 @@ export default function EnterChatRoom({ route, navigation }) {
           roomId: roomId,
           roomType: roomType,
           sender: username,
+          roomName: roomName,
         }),
       });
     } else {
