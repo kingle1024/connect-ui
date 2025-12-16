@@ -13,6 +13,7 @@ import {
 import Alert from '@blazejkustra/react-native-alert';
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
+import InviteModal from "./InviteModal";
 import Constants from "expo-constants";
 import Icon from "react-native-vector-icons/Ionicons"; // 🌟 아이콘 사용을 위해 임포트 🌟
 import localStyles from "./EnterChatRoom.styles";
@@ -192,64 +193,13 @@ export default function EnterChatRoom({ route, navigation }) {
   };
 
   const inviteUser = () => {
-    if (Platform.OS === "web") {
-      // 웹 환경일 경우
-      const inviteeName = window.prompt(
-        "초대할 사용자의 닉네임 (ID)을 입력하세요."
-      );
-      if (inviteeName !== null) {
-        // 사용자가 취소를 누르지 않았을 경우
-        if (inviteeName.trim() !== "") {
-          if (client.current && client.current.connected) {
-            client.current.publish({
-              destination: "/app/chat.inviteUser",
-              body: JSON.stringify({
-                type: MessageType.INVITE,
-                roomId: roomId,
-                sender: username,
-                recipient: inviteeName.trim(),
-                content: "",
-              }),
-            });
-            console.log(
-              `${username}님이 ${inviteeName.trim()}님을 초대 메시지 보냄`
-            );
-          }
-        } else {
-          Alert.alert("입력 오류", "초대할 닉네임 (ID)을 입력해야 합니다.");
-        }
-      }
-    } else {
-      // 모바일 (iOS/Android) 환경일 경우
-      Alert.prompt("사용자 초대", "초대할 사용자의 닉네임 (ID)을 입력하세요.", [
-        { text: "취소", style: "cancel" },
-        {
-          text: "초대",
-          onPress: (inviteeName) => {
-            if (inviteeName && inviteeName.trim() !== "") {
-              if (client.current && client.current.connected) {
-                client.current.publish({
-                  destination: "/app/chat.inviteUser",
-                  body: JSON.stringify({
-                    type: MessageType.INVITE,
-                    roomId: roomId,
-                    sender: username,
-                    recipient: inviteeName.trim(),
-                    content: "",
-                  }),
-                });
-                console.log(
-                  `${username}님이 ${inviteeName.trim()}님을 초대 메시지 보냄`
-                );
-              }
-            } else {
-              Alert.alert("입력 오류", "초대할 닉네임 (ID)을 입력해야 합니다.");
-            }
-          },
-        },
-      ]);
-    }
+    // Open the friend-selection modal (use same modal for web and mobile).
+    openInviteModal();
   };
+
+  const [inviteModalVisible, setInviteModalVisible] = useState(false);
+  const openInviteModal = () => setInviteModalVisible(true);
+  const closeInviteModal = () => setInviteModalVisible(false);
 
   const kickUser = () => {
     if (Platform.OS === "web") {
@@ -409,6 +359,16 @@ export default function EnterChatRoom({ route, navigation }) {
           <Text style={localStyles.leaderButtonText}>사용자 강퇴</Text>
         </TouchableOpacity>
       </View>
+
+      <InviteModal
+        visible={inviteModalVisible}
+        onClose={closeInviteModal}
+        roomId={roomId}
+        username={username}
+        client={client}
+        SOCKET_URL={SOCKET_URL}
+        API_BASE_URL={API_BASE_URL}
+      />
     </KeyboardAvoidingView>
   );
 }
