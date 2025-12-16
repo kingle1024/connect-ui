@@ -206,7 +206,7 @@ const FriendsListScreen = () => {
       setTimeout(() => {
         navigation.navigate("채팅방 상세" as any, {
           username: currentUserId,
-          roomId: created.id,
+          roomId: created.roomId,
           roomName,
           roomType: "ONE_TO_ONE",
         });
