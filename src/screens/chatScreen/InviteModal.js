@@ -116,14 +116,25 @@ export default function InviteModal({
 
   const publishInvite = (recipient) => {
     try {
+      const invitePublishParams = {
+        destination: "/app/chat.inviteUser",
+        body: JSON.stringify({
+          type: "INVITE",
+          roomId,
+          sender: username,
+          recipient,
+        }),
+      }
+
       if (client && client.current && client.current.connected) {
-        client.current.publish({
-          destination: "/app/chat.inviteUser",
-          body: JSON.stringify({ type: "INVITE", roomId, sender: username, recipient, content: "" }),
-        });
+        client.current.publish(invitePublishParams);
       } else {
         const temp = new Client({ webSocketFactory: () => new SockJS(SOCKET_URL), onConnect: () => {
-          try { temp.publish({ destination: "/app/chat.inviteUser", body: JSON.stringify({ type: "INVITE", roomId, sender: username, recipient, content: "" }) }); } catch(e){console.warn(e)}
+          try { 
+            temp.publish(invitePublishParams); 
+          } catch(e){
+            console.warn(e)
+          }
           setTimeout(()=>{ try{ temp.deactivate() }catch(e){} },150);
         }, onStompError: ()=>{}, debug: ()=>{} });
         temp.activate();
