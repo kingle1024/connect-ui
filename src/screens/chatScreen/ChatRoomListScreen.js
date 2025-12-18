@@ -205,7 +205,7 @@ export default function ChatRoomsListScreen({ navigation }) {
       onPress={() => handleJoinExistingRoom(item)}
     >
       <Text style={localStyles.roomName}>
-        {item.name} (ID: {item.id})
+        {item.name}
       </Text>
       <TouchableOpacity
         style={localStyles.leaveButton}
