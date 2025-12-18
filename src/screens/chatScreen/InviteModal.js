@@ -23,6 +23,8 @@ export default function InviteModal({
   client,
   SOCKET_URL,
   API_BASE_URL,
+  roomName,
+  mode = "invite",
 }) {
   const { user: me } = useContext(AuthContext);
   const [friends, setFriends] = useState([]);
@@ -114,6 +116,32 @@ export default function InviteModal({
     setSelectedFriends(next);
   };
 
+  const publishKick = (recipient) => {
+    try {
+      const kickPublishParams = {
+        destination: "/app/chat.kickUser",
+        body: JSON.stringify({
+          type: "KICK",
+          roomId,
+          sender: username,
+          recipient,
+          content: "",
+          roomName,
+        }),
+      };
+
+      if (client && client.current && client.current.connected) {
+        client.current.publish(kickPublishParams);
+      } else {
+        const temp = new Client({ webSocketFactory: () => new SockJS(SOCKET_URL), onConnect: () => {
+          try { temp.publish(kickPublishParams); } catch(e){ console.warn(e) }
+          setTimeout(()=>{ try{ temp.deactivate() }catch(e){} },150);
+        }, onStompError: ()=>{}, debug: ()=>{} });
+        temp.activate();
+      }
+    } catch (e) { console.warn('publishKick error', e); }
+  };
+
   const publishInvite = (recipient) => {
     try {
       const invitePublishParams = {
@@ -144,7 +172,11 @@ export default function InviteModal({
 
   const confirmInvite = () => {
     if (!selectedFriends || selectedFriends.size === 0) return;
-    Array.from(selectedFriends).forEach(recipient => publishInvite(recipient));
+    if (mode === "invite") {
+      Array.from(selectedFriends).forEach(recipient => publishInvite(recipient));
+    } else if (mode === "kick") {
+      Array.from(selectedFriends).forEach(recipient => publishKick(recipient));
+    }
     onClose();
   };
 
@@ -153,7 +185,7 @@ export default function InviteModal({
       <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }} onPress={onClose}>
         <Pressable style={{ marginTop: '20%', marginHorizontal: 16, backgroundColor: '#fff', borderRadius: 12, padding: 12, maxHeight: '70%' }} onPress={() => {}}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-            <Text style={{ fontSize: 16, fontWeight: '600', flex: 1 }}>친구 초대</Text>
+            <Text style={{ fontSize: 16, fontWeight: '600', flex: 1 }}>{mode === 'invite' ? '친구 초대' : '사용자 강퇴'}</Text>
             <TouchableOpacity onPress={onClose}><Text style={{ color: '#666' }}>취소</Text></TouchableOpacity>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#eee', borderRadius: 8, paddingHorizontal: 8, marginBottom: 8 }}>
@@ -164,9 +196,14 @@ export default function InviteModal({
             <View style={{ padding: 16 }}><ActivityIndicator size="small" /></View>
           ) : (
             <FlatList
-              data={friends.filter(f =>                
-                !participantsSet.has(f.id) // 2. 이미 채팅방 참여자인 친구는 제외
-              )}
+              data={
+                mode === 'invite'
+                  ? friends.filter(f => !participantsSet.has(f.id))
+                  : (roomParticipants || []).filter(p => String(p) !== String(username)).map(pId => {
+                      const found = friends.find(f => (f.identifiers || []).includes(String(pId)) || f.id === String(pId));
+                      return { id: String(pId), name: found ? found.name : String(pId) };
+                    })
+              }
               keyExtractor={item => item.id} // 각 아이템을 식별할 고유 키 지정
               style={{ maxHeight: 300 }} // FlatList의 최대 높이 설정
               renderItem={({ item }) => (
@@ -182,7 +219,7 @@ export default function InviteModal({
                   }}
                 >
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 15 }}>{item.name}</Text> {/* 친구 이름 표시 */}
+                    <Text style={{ fontSize: 15 }}>{item.name}</Text>
                   </View>
                   <View style={{ width: 36, alignItems: 'center' }}>
                     {selectedFriends.has(item.id) ? (

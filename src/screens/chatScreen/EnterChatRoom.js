@@ -194,73 +194,18 @@ export default function EnterChatRoom({ route, navigation }) {
 
   const inviteUser = () => {
     // Open the friend-selection modal (use same modal for web and mobile).
+    setModalMode("invite");
     openInviteModal();
   };
 
   const [inviteModalVisible, setInviteModalVisible] = useState(false);
+  const [modalMode, setModalMode] = useState("invite");
   const openInviteModal = () => setInviteModalVisible(true);
   const closeInviteModal = () => setInviteModalVisible(false);
 
   const kickUser = () => {
-    if (Platform.OS === "web") {
-      // 🌟 웹 환경 추가 🌟
-      const kickedUserName = window.prompt(
-        "강퇴할 사용자의 닉네임 (ID)을 입력하세요."
-      );
-      if (kickedUserName !== null) {
-        // 사용자가 취소를 누르지 않았을 경우
-        if (kickedUserName.trim() !== "") {
-          if (client.current && client.current.connected) {
-            client.current.publish({
-              destination: "/app/chat.kickUser",
-              body: JSON.stringify({
-                type: MessageType.KICK,
-                roomId: roomId,
-                sender: username,
-                recipient: kickedUserName.trim(),
-                content: "",
-                roomName: roomName, // 🌟 roomName 추가 🌟
-              }),
-            });
-            console.log(
-              `${username}님이 ${kickedUserName.trim()}님 강퇴 메시지 보냄`
-            );
-          }
-        } else {
-          Alert.alert("입력 오류", "강퇴할 닉네임 (ID)을 입력해야 합니다.");
-        }
-      }
-    } else {
-      // 모바일 (iOS/Android) 환경일 경우
-      Alert.prompt("사용자 강퇴", "강퇴할 사용자의 닉네임 (ID)을 입력하세요.", [
-        { text: "취소", style: "cancel" },
-        {
-          text: "강퇴",
-          onPress: (kickedUserName) => {
-            if (kickedUserName && kickedUserName.trim() !== "") {
-              if (client.current && client.current.connected) {
-                client.current.publish({
-                  destination: "/app/chat.kickUser",
-                  body: JSON.stringify({
-                    type: MessageType.KICK,
-                    roomId: roomId,
-                    sender: username,
-                    recipient: kickedUserName.trim(),
-                    content: "",
-                    roomName: roomName, // 🌟 roomName 추가 🌟
-                  }),
-                });
-                console.log(
-                  `${username}님이 ${kickedUserName.trim()}님 강퇴 메시지 보냄`
-                );
-              }
-            } else {
-              Alert.alert("입력 오류", "강퇴할 닉네임 (ID)을 입력해야 합니다.");
-            }
-          },
-        },
-      ]);
-    }
+    setModalMode("kick");
+    openInviteModal();
   };
 
   const renderMessageItem = ({ item }) => {
@@ -368,6 +313,8 @@ export default function EnterChatRoom({ route, navigation }) {
         client={client}
         SOCKET_URL={SOCKET_URL}
         API_BASE_URL={API_BASE_URL}
+        roomName={roomName}
+        mode={modalMode}
       />
     </KeyboardAvoidingView>
   );
