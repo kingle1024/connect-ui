@@ -83,11 +83,17 @@ export default function InviteModal({
 
   const fetchRoomParticipants = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/chat/rooms/${encodeURIComponent(roomId)}`);
+      const res = await fetch(`${API_BASE_URL}/api/chat/rooms/participants`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ roomId: roomId }),
+      });
+
       if (!res.ok) return;
       const data = await res.json();
-      const arr = data.participants || data.members || data.userIds || data.participantIds || [];
-      const normalized = Array.isArray(arr) ? arr.map(p => String(p)) : [];
+      const normalized = data ? data.map(p => String(p.userId)) : [];
       setRoomParticipants(normalized);
     } catch (e) {
       console.warn('fetchRoomParticipants failed', e);
@@ -146,15 +152,39 @@ export default function InviteModal({
           {friendsLoading ? (
             <View style={{ padding: 16 }}><ActivityIndicator size="small" /></View>
           ) : (
-            <FlatList data={friends.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()) && !(f.identifiers?.some(id => participantsSet.has(String(id))) || false))}
-              keyExtractor={item => item.id}
-              style={{ maxHeight: 300 }}
+            <FlatList
+              data={friends.filter(f =>                
+                !participantsSet.has(f.id) // 2. 이미 채팅방 참여자인 친구는 제외
+              )}
+              keyExtractor={item => item.id} // 각 아이템을 식별할 고유 키 지정
+              style={{ maxHeight: 300 }} // FlatList의 최대 높이 설정
               renderItem={({ item }) => (
-                <TouchableOpacity onPress={() => toggleSelectFriend(item.id)} style={{ flexDirection: 'row', paddingVertical: 10, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#f4f4f4' }}>
-                  <View style={{ flex: 1 }}><Text style={{ fontSize: 15 }}>{item.name}</Text></View>
-                  <View style={{ width: 36, alignItems: 'center' }}>{selectedFriends.has(item.id) ? <Text style={{ color: 'green', fontWeight: '600' }}>✓</Text> : <Text style={{ color: '#ccc' }}>○</Text>}</View>
+                // 각 친구 아이템 렌더링 방식 정의
+                <TouchableOpacity
+                  onPress={() => toggleSelectFriend(item.id)} // 아이템 클릭 시 친구 선택/해제 토글
+                  style={{
+                    flexDirection: 'row',
+                    paddingVertical: 10,
+                    alignItems: 'center',
+                    borderBottomWidth: 1,
+                    borderBottomColor: '#f4f4f4',
+                  }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 15 }}>{item.name}</Text> {/* 친구 이름 표시 */}
+                  </View>
+                  <View style={{ width: 36, alignItems: 'center' }}>
+                    {selectedFriends.has(item.id) ? (
+                      // 선택된 친구인지 여부에 따라 체크 또는 동그라미 표시
+                      <Text style={{ color: 'green', fontWeight: '600' }}>✓</Text>
+                    ) : (
+                      <Text style={{ color: '#ccc' }}>○</Text>
+                    )}
+                  </View>
                 </TouchableOpacity>
-              )} />
+              )}
+            />
+
           )}
 
           <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 8 }}>
