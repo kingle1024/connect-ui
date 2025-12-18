@@ -237,7 +237,7 @@ export default function InviteModal({
 
           <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 8 }}>
             <TouchableOpacity onPress={confirmInvite} style={{ paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#2e86de', borderRadius: 8 }}>
-              <Text style={{ color: '#fff' }}>초대하기</Text>
+              <Text style={{ color: '#fff' }}>{mode === 'invite' ? '초대하기' : '강퇴하기'}</Text>
             </TouchableOpacity>
           </View>
         </Pressable>
