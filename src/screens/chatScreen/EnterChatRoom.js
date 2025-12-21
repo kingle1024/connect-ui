@@ -17,6 +17,7 @@ import InviteModal from "./InviteModal";
 import Constants from "expo-constants";
 import Icon from "react-native-vector-icons/Ionicons"; // 🌟 아이콘 사용을 위해 임포트 🌟
 import localStyles from "./EnterChatRoom.styles";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const SOCKET_URL = Constants.expoConfig.extra.API_BASE_URL + "/ws-chat";
 const API_BASE_URL = SOCKET_URL.substring(0, SOCKET_URL.lastIndexOf('/'));
@@ -30,8 +31,16 @@ const MessageType = {
 };
 
 export default function EnterChatRoom({ route, navigation }) {
-  // 🌟 navigation prop을 받도록 추가 🌟
-  const { username, roomId, roomName = roomId, roomType } = route.params;
+  const { 
+    username, 
+    roomId, 
+    roomName: initialRoomName, 
+    roomType 
+  } = route.params;
+
+  const [_roomName, set_roomName] = useState(initialRoomName); // 로컬에서 관리할 방 이름
+  const [isEditingRoomName, setIsEditingRoomName] = useState(false); // 방 이름 편집 모드 토글
+  const [tempRoomName, setTempRoomName] = useState(initialRoomName); // 편집 중인 임시 방 이름
 
   const [messages, setMessages] = useState([]);
   const [currentMessage, setCurrentMessage] = useState("");  
@@ -87,7 +96,46 @@ export default function EnterChatRoom({ route, navigation }) {
     }
   }, [roomId, API_BASE_URL]); 
     
+  // 🌟 방 이름 업데이트 API 호출 함수 🌟
+  const handleSaveRoomName = useCallback(async () => {
+    if (tempRoomName.trim() === "" || tempRoomName === _roomName) {
+      setIsEditingRoomName(false);
+      return;
+    }
+
+    try {
+      const refreshToken = await AsyncStorage.getItem("refreshToken");
+      const response = await fetch(`${API_BASE_URL}/api/chat/rooms/name`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${refreshToken}`,
+        },
+        body: JSON.stringify({
+          roomId: roomId,
+          roomName: tempRoomName 
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const updatedRoom = await response.json();
+      set_roomName(updatedRoom.roomName || tempRoomName);
+      setIsEditingRoomName(false); // 편집 모드 종료
+      Alert.alert("알림", "방 제목이 성공적으로 변경되었습니다.");
+
+    } catch (error) {
+      console.error("방 이름 업데이트 실패:", error);
+    }
+  }, [roomId, tempRoomName, _roomName, username, API_BASE_URL]);
+    
   useEffect(() => {
+    navigation.setOptions({
+      headerTitle: _roomName, // 변경된 _roomName을 헤더 타이틀로 설정
+    });
+
     client.current = new Client({
       webSocketFactory: () => new SockJS(SOCKET_URL),
       onConnect: () => {
@@ -139,7 +187,13 @@ export default function EnterChatRoom({ route, navigation }) {
       }
       console.log("STOMP 연결 해제 및 퇴장 처리 완료!");
     };
-  }, [roomId, username, sendLeaveMessage, fetchChatHistory]);
+  }, [roomId,
+    username,
+    sendLeaveMessage,
+    fetchChatHistory,
+    navigation,
+    _roomName
+  ]);
 
   useEffect(() => {
     if (flatListRef.current && messages.length > 0) {
@@ -156,7 +210,7 @@ export default function EnterChatRoom({ route, navigation }) {
           roomId: roomId,
           roomType: roomType,
           sender: username,
-          roomName: roomName,
+          roomName: _roomName,
         }),
       });
     } else {
@@ -268,8 +322,42 @@ export default function EnterChatRoom({ route, navigation }) {
         <TouchableOpacity style={localStyles.backButton} onPress={handleGoBack}>
           <Icon name="chevron-back" size={28} color="#333" />
         </TouchableOpacity>
-        <Text style={localStyles.headerText}>
-          방: {roomName} (나: {username})
+        <View style={localStyles.roomNameEditContainer}>
+          {isEditingRoomName ? (
+            <TextInput
+              style={localStyles.headerTextInput}
+              value={tempRoomName}
+              onChangeText={setTempRoomName}
+              onBlur={handleSaveRoomName}
+              autoFocus={true}
+              onSubmitEditing={handleSaveRoomName}
+              returnKeyType="done"
+            />
+          ) : (
+            <Text style={localStyles.headerText}>
+              방: {_roomName}
+            </Text>
+          )}
+          <TouchableOpacity
+            onPress={() => {
+              if (isEditingRoomName) {
+                handleSaveRoomName(); // 저장 버튼 클릭 시
+              } else {
+                setIsEditingRoomName(true); // 편집 모드 시작
+                setTempRoomName(_roomName); // 현재 방 이름으로 임시 설정
+              }
+            }}
+            style={localStyles.editSaveButton}
+          >
+            <Icon
+              name={isEditingRoomName ? "checkmark-circle" : "create-outline"} // 편집 중이면 체크마크, 아니면 연필 아이콘
+              size={24}
+              color="#333"
+            />
+          </TouchableOpacity>
+        </View>
+        <Text style={localStyles.headerUsername}>
+          (나: {username})
         </Text>
       </View>
 
@@ -313,7 +401,7 @@ export default function EnterChatRoom({ route, navigation }) {
         client={client}
         SOCKET_URL={SOCKET_URL}
         API_BASE_URL={API_BASE_URL}
-        roomName={roomName}
+        roomName={_roomName}
         mode={modalMode}
       />
     </KeyboardAvoidingView>
