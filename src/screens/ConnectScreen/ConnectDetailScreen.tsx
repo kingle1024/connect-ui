@@ -286,7 +286,7 @@ const ConnectDetail = () => {
                 color="#6B7280"
                 style={{ marginRight: 4 }}
               />
-              <Text style={{ fontSize: 14, color: "#6B7280" }}>대화하기1</Text>
+              <Text style={{ fontSize: 14, color: "#6B7280" }}>대화하기</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -372,7 +372,7 @@ const ConnectDetail = () => {
                   name="comment-dots"
                   style={{ fontSize: 16, color: "#6B7280", marginRight: 4 }}
                 />
-                <Text style={{ fontSize: 12, color: "#6B7280" }}>대화하기2</Text>
+                <Text style={{ fontSize: 12, color: "#6B7280" }}>대화하기</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -440,7 +440,7 @@ const ConnectDetail = () => {
                       style={{ fontSize: 14, color: "#6B7280", marginRight: 4 }}
                     />
                     <Text style={{ fontSize: 12, color: "#6B7280" }}>
-                      대화하기3
+                      대화하기
                     </Text>
                   </TouchableOpacity>
                 </View>
