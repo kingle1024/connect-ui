@@ -6,6 +6,7 @@ import {
   Dimensions,
   TextInput,
   RefreshControl,
+  Alert,
 } from "react-native";
 import React, {
   useCallback,
@@ -25,6 +26,7 @@ import CustomBottomSheet, {
 } from "@/components/modals/CustomBottomSheet";
 import { useRootNavigation, useRootRoute } from "@/hooks/useNavigation";
 import AuthContext from "@/components/auth/AuthContext";
+import { createOneToOneRoom, getOneToOneRoomsForUser } from "@/utils/chat";
 
 const screenHeight = Dimensions.get("window").height;
 
@@ -42,6 +44,7 @@ const ConnectDetail = () => {
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
 
   const [refreshing, setRefreshing] = useState(false);
+  const [isStartingChat, setIsStartingChat] = useState(false);
 
   const toggleExpand = (id: number) => {
     setExpandedReplies((prev) =>
@@ -50,15 +53,10 @@ const ConnectDetail = () => {
   };
 
   useEffect(() => {
-    setTimeout(() => {
-      // API refetch 완료되는 시점
-      setRefreshing(false);
-    }, 3000);
-  }, [refreshing]);
-
-  useEffect(() => {
-    loadReply(routes.params.parentId);
-  }, [routes.params.parentId]);
+    if (routes.params.parentId) {
+      loadReply(routes.params.parentId);
+    }
+  }, [routes.params.parentId, loadReply]);
 
   useEffect(() => {
     if (!me) {
@@ -66,11 +64,103 @@ const ConnectDetail = () => {
         screen: "Connect",
       });
     }
-  }, [me]);
+  }, [me, navigation]);
 
-  const onRefresh = () => {
+  const onTextInputContentSizeChange = useCallback((event: any) => {
+    const height = Math.min(
+      150,
+      Math.max(40, event.nativeEvent.contentSize.height)
+    );
+    setReplyInputHeight(height);
+  }, []);
+
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-  };
+    if (routes.params.parentId) {
+      await loadReply(routes.params.parentId);
+    }
+    setRefreshing(false);
+  }, [routes.params.parentId, loadReply]);
+
+  const startPrivateChat = useCallback(async (targetUserId: string, targetUserDisplayName: string) => {
+    if (isStartingChat) return; // 이미 채팅 시작 중이면 무시
+    setIsStartingChat(true);
+
+    const currentUserId = me?.userId || me?.email; // 현재 로그인 유저의 고유 ID (userId나 email 중 하나)
+    if (!currentUserId) {
+      Alert.alert("권한 오류", "로그인이 필요합니다.");
+      setIsStartingChat(false);
+      return;
+    }
+
+    if (targetUserId === currentUserId) {
+      Alert.alert("알림", "자기 자신과는 대화할 수 없습니다.");
+      setIsStartingChat(false);
+      return;
+    }
+
+    try {
+      // 1) 서버에서 방 목록 조회
+      let rooms;
+      try {
+        rooms = await getOneToOneRoomsForUser(currentUserId);
+      } catch (err) {
+        console.error("채팅 목록 조회 실패", err);
+        Alert.alert("오류", "채팅 목록을 가져오지 못했습니다.");
+        setIsStartingChat(false);
+        return;
+      }
+
+      // 2) 기존 1:1 채팅방이 있는지 확인
+      const existingOneToOne = findOneToOneRoom(rooms, currentUserId, targetUserId);
+      let createdRoom;
+
+      if (existingOneToOne) {
+        createdRoom = existingOneToOne;
+      } else {
+        // 3) 없으면 새로운 1:1 채팅방 생성 시도
+        try {
+          createdRoom = await createOneToOneRoom(currentUserId, targetUserId, targetUserDisplayName);
+        } catch (err) {
+          console.error("채팅방 생성 실패", err);
+          Alert.alert("오류", "채팅방 생성에 실패했습니다.");
+          setIsStartingChat(false);
+          return;
+        }
+      }
+
+      if (!createdRoom || !createdRoom.roomId) { // createdRoom이 유효하고 roomId를 가지고 있는지 확인
+        Alert.alert("오류", "채팅방을 열 수 없습니다.");
+        setIsStartingChat(false);
+        return;
+      }
+
+      const roomNameForDetail = targetUserDisplayName; // 채팅방 상세 화면에 표시될 이름
+
+      // ChatRoomListScreen과 동일하게 동작하도록: 먼저 Chat 탭으로 이동한 다음,
+      // 탭 내부에서 "채팅방 상세"로 진입하게 함. (딜레이로 탭 전환 안정화)
+      navigation.navigate("BottomTab", {
+        screen: "Chat",
+      });
+      setTimeout(() => {
+        navigation.navigate("채팅방 상세" as any, { // 🌟 "채팅방 상세"의 정확한 스크린 이름을 사용하세요.
+          username: currentUserId, // 현재 로그인 유저의 ID
+          roomId: createdRoom.roomId,
+          roomName: roomNameForDetail,
+          roomType: "ONE_TO_ONE",
+          // 추가적으로 대화 상대의 ID/이름을 넘겨줄 수 있습니다.
+          targetUserId: targetUserId,
+          targetUserDisplayName: targetUserDisplayName,
+        });
+      }, 50);
+
+    } catch (err) {
+      console.error("채팅 열기/생성 실패:", err);
+      Alert.alert("오류", "채팅방을 열 수 없습니다. 다시 시도해 주세요.");
+    } finally {
+      setIsStartingChat(false);
+    }
+  }, [me?.userId, me?.email, isStartingChat, navigation]); // me.username 대신 me.userId/email 사용
 
   const onPressReply = useCallback(
     (replyId: number) => {
@@ -79,7 +169,9 @@ const ConnectDetail = () => {
     [navigation]
   );
 
-  const ListHeaderComponent = () => {
+  const ListHeaderComponent = useCallback(() => {
+    if (!reply) return null;
+
     return (
       <>
         {/* 프로필 */}
@@ -186,6 +278,7 @@ const ConnectDetail = () => {
           >
             <TouchableOpacity
               style={{ flexDirection: "row", alignItems: "center" }}
+              onPress={() => reply.userId && startPrivateChat(reply.userId, reply.userName)}
             >
               <FontAwesome6
                 name="comment-dots"
@@ -193,15 +286,15 @@ const ConnectDetail = () => {
                 color="#6B7280"
                 style={{ marginRight: 4 }}
               />
-              <Text style={{ fontSize: 14, color: "#6B7280" }}>대화하기</Text>
+              <Text style={{ fontSize: 14, color: "#6B7280" }}>대화하기1</Text>
             </TouchableOpacity>
           </View>
         </View>
       </>
     );
-  };
+  }, [reply, inputRef, startPrivateChat]);
 
-  const renderItem = ({ item }: { item: Reply }) => {
+  const renderItem = useCallback(({ item }: { item: Reply }) => {
     const maxVisibleReplies = 3;
     const isExpanded = expandedReplies.includes(item.id);
     const displayedReplies = isExpanded
@@ -273,12 +366,13 @@ const ConnectDetail = () => {
               </TouchableOpacity>
               <TouchableOpacity
                 style={{ flexDirection: "row", alignItems: "center" }}
+                onPress={() => item.userId && startPrivateChat(item.userId, item.userName)}
               >
                 <FontAwesome6
                   name="comment-dots"
                   style={{ fontSize: 16, color: "#6B7280", marginRight: 4 }}
                 />
-                <Text style={{ fontSize: 12, color: "#6B7280" }}>대화하기</Text>
+                <Text style={{ fontSize: 12, color: "#6B7280" }}>대화하기2</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -339,13 +433,14 @@ const ConnectDetail = () => {
                       alignItems: "center",
                       alignSelf: "flex-end",
                     }}
+                    onPress={() => reply.userId && startPrivateChat(reply.userId, reply.userName)}
                   >
                     <FontAwesome6
                       name="comment-dots"
                       style={{ fontSize: 14, color: "#6B7280", marginRight: 4 }}
                     />
                     <Text style={{ fontSize: 12, color: "#6B7280" }}>
-                      대화하기
+                      대화하기3
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -377,7 +472,7 @@ const ConnectDetail = () => {
         </View>
       </View>
     );
-  };
+  }, [expandedReplies, startPrivateChat]);
 
   const ListFooterComponent = () => {
     return (
@@ -388,6 +483,15 @@ const ConnectDetail = () => {
         }}
       ></View>
     );
+  };
+
+  // 클릭한 친구와 1:1 채팅방이 이미 있는지 찾기
+  const findOneToOneRoom = (rooms: any[], currentUserId: string, friendId: string) => {
+    const foundRoom = rooms.find(room => {
+        return room.userId == friendId; 
+    });
+
+    return foundRoom; 
   };
 
   return (
