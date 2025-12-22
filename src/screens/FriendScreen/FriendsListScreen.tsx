@@ -2,7 +2,6 @@ import React, { useMemo, useState, useContext, useRef, useEffect } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   TextInput,
   SectionList,
@@ -18,11 +17,8 @@ import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import AuthContext from "@/components/auth/AuthContext";
 import { useRootNavigation } from "@/hooks/useNavigation";
-import { getRoomsForUser, createOneToOneRoom, getOneToOneRoomsForUser } from "@/utils/chat";
-import { Client } from "@stomp/stompjs";
-import SockJS from "sockjs-client";
-
-const SOCKET_URL = (Constants.expoConfig?.extra?.API_BASE_URL || "") + "/ws-chat";
+import { createOneToOneRoom, getOneToOneRoomsForUser } from "@/utils/chat";
+import styles from './FriendsListScreen.styles';
 
 type Friend = {
   id: string;
@@ -123,21 +119,6 @@ const FriendsListScreen = () => {
   useEffect(() => {
     fetchFriends();
   }, [me?.userId, me?.email]);
-
-  // 유틸: 방에서 참여자 아이디만 뽑아 비교하기 (응답 구조가 다양할 수 있으므로 유연하게 처리)
-  const extractParticipantIds = (room: any): string[] => {
-    // 유효한 필드들 확인
-    const arr = room.participants || room.members || room.userIds || room.participantIds || [];
-    return arr.map((p: any) => {
-      if (!p) return "";
-      // 객체일 경우 아이디 추출 시도
-      if (typeof p === "object") {
-        return p.id || p.userId || p.email || p.name || JSON.stringify(p);
-      }
-      // 문자열인 경우 그대로
-      return String(p);
-    }).filter(Boolean);
-  };
 
   // 클릭한 친구와 1:1 채팅방이 이미 있는지 찾기
   const findOneToOneRoom = (rooms: any[], currentUserId: string, friendId: string) => {
@@ -363,60 +344,5 @@ const FriendsListScreen = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#fff" },
-  header: {
-    height: 56,
-    paddingHorizontal: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  headerTitle: { fontSize: 20, fontWeight: "700" },
-  headerRight: { flexDirection: "row", alignItems: "center" },
-  iconBtn: { marginLeft: 12 },
-
-  searchWrap: {
-    marginHorizontal: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f2f2f2",
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    height: 42,
-    marginBottom: 8,
-  },
-  searchInput: { flex: 1, marginLeft: 8, fontSize: 15 },
-
-  sectionHeader: { paddingHorizontal: 16, paddingVertical: 6, backgroundColor: "#fff" },
-  sectionTitle: { fontSize: 13, fontWeight: "700", color: "#666" },
-
-  separator: { height: StyleSheet.hairlineWidth, backgroundColor: "#eee", marginLeft: 74 },
-
-  empty: { alignItems: "center", paddingTop: 40 },
-  emptyText: { color: "#888" },
-
-  // Modal / action sheet
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "flex-end",
-  },
-  actionSheet: {
-    padding: 16,
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-  },
-  actionButton: {
-    paddingVertical: 14,
-    alignItems: "center",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#eee",
-  },
-  actionText: { fontSize: 16 },
-  deleteText: { color: "red", fontWeight: "700" },
-});
 
 export default FriendsListScreen;
