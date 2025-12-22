@@ -356,9 +356,6 @@ export default function EnterChatRoom({ route, navigation }) {
             />
           </TouchableOpacity>
         </View>
-        <Text style={localStyles.headerUsername}>
-          (나: {username})
-        </Text>
       </View>
 
       <FlatList

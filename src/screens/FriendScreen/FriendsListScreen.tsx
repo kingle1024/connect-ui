@@ -311,7 +311,7 @@ const FriendsListScreen = () => {
       <View style={styles.searchWrap}>
         <Feather name="search" size={18} color="#777" />
         <TextInput
-          placeholder="친구, 카카오톡 ID 검색"
+          placeholder="친구 검색"
           style={styles.searchInput}
           value={query}
           onChangeText={setQuery}
@@ -364,41 +364,6 @@ const FriendsListScreen = () => {
   );
 };
 
-const publishInvite = (roomId: string, sender: string, recipient: string, roomName?: string) => {
-  try {
-    const client = new Client({
-      webSocketFactory: () => new SockJS(SOCKET_URL),
-      onConnect: () => {
-        try {
-          client.publish({
-            destination: "/app/chat.inviteUser",
-            body: JSON.stringify({
-              type: "INVITE",
-              roomId,
-              sender,
-              recipient,
-              content: "",
-              roomName: roomName ?? roomId,
-            }),
-          });
-        } catch (e) {
-          console.warn("invite publish failed:", e);
-        }
-        // 짧은 지연 후 연결 종료
-        setTimeout(() => {
-          try { client.deactivate(); } catch (e) {}
-        }, 150);
-      },
-      onStompError: (frame) => {
-        console.warn("STOMP error on invite:", frame);
-      },
-      debug: () => {},
-    });
-    client.activate();
-  } catch (e) {
-    console.warn("publishInvite error:", e);
-  }
-};
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#fff" },
   header: {
