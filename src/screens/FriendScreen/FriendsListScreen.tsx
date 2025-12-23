@@ -9,6 +9,7 @@ import {
   Modal,
   Pressable,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
 import { Feather, AntDesign } from "@expo/vector-icons";
@@ -27,9 +28,54 @@ type Friend = {
   status?: string;
   online?: boolean;
   favorite?: boolean;
+
+  requestId?: string;
+  senderId?: string;
+  receiverId?: string;
+  requestStatus?: 'pending' | 'accepted' | 'rejected'; // friend_requests.status
+};
+
+type SectionData = {
+  title: string;
+  data: Friend[];
+  type: 'friend' | 'request'; // 섹션 타입 추가
 };
 
 const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL || "";
+
+const groupAllContacts = (friends: Friend[], pendingRequests: Friend[], query: string): SectionData[] => {
+  const filteredFriends = friends.filter((f) => f.name.toLowerCase().includes(query.toLowerCase()));
+  const filteredRequests = pendingRequests;
+
+  const sections: SectionData[] = [];
+
+  // 1. 친구 요청 섹션
+  // friend_requests.sender_id를 사용하고, 해당 sender_id에 대한 닉네임과 아바타를 백엔드에서 가져와야 함.
+  if (filteredRequests.length > 0) {
+    sections.push({ title: "친구 요청", data: filteredRequests, type: 'request' });
+  }
+
+  // 2. 즐겨찾기 친구
+  const favoriteFriends = filteredFriends.filter((f) => f.favorite);
+  if (favoriteFriends.length > 0) {
+    sections.push({ title: "즐겨찾기", data: favoriteFriends, type: 'friend' });
+  }
+
+  // 3. 일반 친구 (가나다순)
+  const otherFriends = filteredFriends.filter((f) => !f.favorite);
+  const friendMap: Record<string, Friend[]> = {};
+  otherFriends.forEach((f) => {
+    const key = f.name.charAt(0).toUpperCase();
+    if (!friendMap[key]) friendMap[key] = [];
+    friendMap[key].push(f); // Fix: friendMap[key].push(f);
+  });
+  // Fixed typo: map -> friendMap
+  Object.keys(friendMap)
+    .sort()
+    .forEach((k) => sections.push({ title: k, data: friendMap[k], type: 'friend' }));
+
+  return sections;
+};
 
 const groupFriends = (items: Friend[], query: string) => {
   const filtered = items.filter((f) => f.name.toLowerCase().includes(query.toLowerCase()));
@@ -59,12 +105,20 @@ const FriendsListScreen = () => {
   // 초기값을 빈 배열로 변경 (이후 fetch로 채움)
   const [friends, setFriends] = useState<Friend[]>([]);
   const [isLoadingFriends, setIsLoadingFriends] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState<Friend[]>([]); // 친구 요청 목록 상태
+
   const [query, setQuery] = useState("");
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [actionVisible, setActionVisible] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [openingChat, setOpeningChat] = useState(false); // <- 추가: 채팅 열기/생성 중 상태
-  const client = useRef(null);
+  const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);
+
+  const getAuthToken = async () => {
+    const accessToken = await AsyncStorage.getItem("accessToken");
+    const refreshToken = await AsyncStorage.getItem("refreshToken");
+    return accessToken || refreshToken;
+  };
 
   // 친구 목록 API 호출 함수
   const fetchFriends = async () => {
@@ -77,9 +131,7 @@ const FriendsListScreen = () => {
 
     setIsLoadingFriends(true);
     try {
-      const accessToken = await AsyncStorage.getItem("accessToken");
-      const refreshToken = await AsyncStorage.getItem("refreshToken");
-      const token = accessToken || refreshToken;
+      const token = await getAuthToken();
 
       const res = await fetch(`${API_BASE_URL}/api/friends/${encodeURIComponent(currentUserId)}/friends`, {
         method: "GET",
@@ -115,9 +167,48 @@ const FriendsListScreen = () => {
     }
   };
 
+  const fetchFriendRequests = async () => {
+    const currentUserId = me?.userId || me?.email;
+    if (!currentUserId) { 
+      setPendingRequests([]); return; 
+    }
+
+    try {
+      const token = await getAuthToken();
+      const res = await fetch(`${API_BASE_URL}/api/friends/${encodeURIComponent(currentUserId)}/friend-requests/received`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const mapped: Friend[] = Array.isArray(data)
+          ? data.map((d: any) => ({
+              id: String(d.id),
+              name: d.name,
+              avatar: d.avatar,
+              senderUserId: d.senderUserId,
+              receiverId: d.receiverId,
+              status: d.status,
+            }))
+          : [];
+        setPendingRequests(mapped);
+      } else {
+        console.warn("fetchFriendRequests failed:", res.status);
+      }
+    } catch (err) {
+      console.warn("fetchFriendRequests error:", err);
+    }
+  };
+
   // 마운트 시 및 me 변경 시 친구 목록 로드
   useEffect(() => {
     fetchFriends();
+    fetchFriendRequests();
   }, [me?.userId, me?.email]);
 
   // 클릭한 친구와 1:1 채팅방이 이미 있는지 찾기
@@ -129,7 +220,7 @@ const FriendsListScreen = () => {
     return foundRoom; 
   };
 
-  const sections = useMemo(() => groupFriends(friends, query), [friends, query]);
+  const sections = useMemo(() => groupAllContacts(friends, pendingRequests, query), [friends, pendingRequests, query]);
 
   const handleChat = async () => {
     if (!selectedFriend || openingChat) return;
@@ -207,55 +298,145 @@ const FriendsListScreen = () => {
     if (!selectedFriend || deleting) return;
     setDeleting(true);
 
+    Alert.alert(
+      "친구 삭제",
+      `'${selectedFriend.name}' 님을 친구 목록에서 삭제하시겠습니까?`,
+      [
+        {
+          text: "취소",
+          style: "cancel",
+          onPress: () => setDeleting(false),
+        },
+        {
+          text: "삭제",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const currentUserId = me?.userId;
+              if (!currentUserId) {
+                Alert.alert("권한 오류", "작업을 수행하려면 로그인되어 있어야 합니다.");
+                setDeleting(false);
+                return;
+              }
+
+              const token = await getAuthToken();
+              if (!token) {
+                Alert.alert("권한 오류", "작업을 수행하려면 로그인되어 있어야 합니다.");
+                setDeleting(false);
+                return;
+              }
+
+              const endpoint = `${API_BASE_URL}/api/friends/${currentUserId}/friends/${selectedFriend.id}`;
+
+              const res = await fetch(endpoint, {
+                method: "DELETE",
+                headers:
+                  {
+                    Accept: "application/json",
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                  },
+              });
+
+              if (res.ok) {
+                setFriends((prev) => prev.filter((f) => f.id !== selectedFriend.id));
+                closeActions();
+              } else if (res.status === 401 || res.status === 403) {
+                Alert.alert("권한 오류", "로그인이 필요하거나 권한이 없습니다.");
+              } else {
+                const json = await res.json().catch(() => null);
+                const message = json?.error || json?.message || "친구 삭제에 실패했습니다.";
+                Alert.alert("오류", message);
+              }
+            } catch (err) {
+              console.error("친구 삭제 실패:", err);
+              Alert.alert("네트워크 오류", "서버에 연결할 수 없습니다. 다시 시도해 주세요.");
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleAcceptRequest = async (item: Friend) => {
+    // 요청 ID와 현재 로그인한 사용자가 일치하는지 추가 확인 (선택 사항이지만 안전함)
+    if (!item.requestId || !item.senderId || !item.receiverId || item.receiverId !== me?.userId || processingRequestId) return;
+    setProcessingRequestId(item.requestId);
+
     try {
-      // 현재 로그인 사용자 ID 확인
-      const currentUserId = me?.userId;
-      if (!currentUserId) {
-        Alert.alert("권한 오류", "작업을 수행하려면 로그인되어 있어야 합니다.");
-        setDeleting(false);
-        return;
-      }
+      const currentUserId = me?.userId || me?.email;
+      if (!currentUserId) { Alert.alert("권한 오류", "로그인이 필요합니다."); setProcessingRequestId(null); return; }
+      const token = await getAuthToken();
+      if (!token) { Alert.alert("권한 오류", "작업을 수행하려면 로그인되어 있어야 합니다."); setProcessingRequestId(null); return; }
 
-      // 토큰 획득: accessToken 우선, 없으면 refreshToken 사용
-      const accessToken = await AsyncStorage.getItem("accessToken");
-      const refreshToken = await AsyncStorage.getItem("refreshToken");
-      const token = accessToken || refreshToken;
-
-      if (!token) {
-        Alert.alert("권한 오류", "작업을 수행하려면 로그인되어 있어야 합니다.");
-        setDeleting(false);
-        return;
-      }
-
-      // API 경로: /api/friends/{currentUserId}/friends/{friendId}
-      const endpoint = `${API_BASE_URL}/api/friends/${currentUserId}/friends/${selectedFriend.id}`;
+      // DB 구조에 따라, requestId는 friend_requests 테이블의 id입니다.
+      // receiver_id가 현재 사용자와 일치하는지 백엔드에서 반드시 확인해야 합니다.
+      const endpoint = `${API_BASE_URL}/api/friends/${currentUserId}/requests/${item.requestId}/accept`;
 
       const res = await fetch(endpoint, {
-        method: "DELETE",
-        headers:
-          {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
+        method: "PUT", // friend_requests.status를 accepted로 변경
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (res.ok) {
-        // 성공하면 로컬에서 제거
-        setFriends((prev) => prev.filter((f) => f.id !== selectedFriend.id));
-        closeActions();
-      } else if (res.status === 401 || res.status === 403) {
-        Alert.alert("권한 오류", "로그인이 필요하거나 권한이 없습니다.");
+        Alert.alert("알림", `'${item.name}' 님의 친구 요청을 수락했습니다.`);
+        setPendingRequests(prev => prev.filter(req => req.requestId !== item.requestId)); // 요청 목록에서 제거
+        fetchFriends(); // 친구 목록을 다시 불러와서 새로 추가된 친구를 반영
       } else {
         const json = await res.json().catch(() => null);
-        const message = json?.error || json?.message || "친구 삭제에 실패했습니다.";
+        const message = json?.error || json?.message || "친구 요청 수락에 실패했습니다.";
         Alert.alert("오류", message);
       }
     } catch (err) {
-      console.error("친구 삭제 실패:", err);
-      Alert.alert("네트워크 오류", "서버에 연결할 수 없습니다. 다시 시도해 주세요.");
+      console.error("친구 요청 수락 실패:", err);
+      Alert.alert("네트워크 오류", "서버에 연결할 수 없습니다.");
     } finally {
-      setDeleting(false);
+      setProcessingRequestId(null);
+    }
+  };
+
+  // 친구 요청 거절 핸들러
+  const handleDeclineRequest = async (item: Friend) => {
+    // 요청 ID와 현재 로그인한 사용자가 일치하는지 추가 확인 (선택 사항이지만 안전함)
+    if (!item.requestId || !item.senderId || !item.receiverId || item.receiverId !== me?.userId || processingRequestId) return;
+    setProcessingRequestId(item.requestId);
+
+    try {
+      const currentUserId = me?.userId || me?.email;
+      if (!currentUserId) { Alert.alert("권한 오류", "로그인이 필요합니다."); setProcessingRequestId(null); return; }
+      const token = await getAuthToken();
+      if (!token) { Alert.alert("권한 오류", "작업을 수행하려면 로그인되어 있어야 합니다."); setProcessingRequestId(null); return; }
+
+      const endpoint = `${API_BASE_URL}/api/friends/${currentUserId}/requests/${item.requestId}/decline`;
+
+      const res = await fetch(endpoint, {
+        method: "PUT", // friend_requests.status를 rejected로 변경 또는 DELETE
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.ok) {
+        Alert.alert("알림", `'${item.name}' 님의 친구 요청을 거절했습니다.`);
+        setPendingRequests(prev => prev.filter(req => req.requestId !== item.requestId)); // 요청 목록에서 제거
+      } else {
+        const json = await res.json().catch(() => null);
+        const message = json?.error || json?.message || "친구 요청 거절에 실패했습니다.";
+        Alert.alert("오류", message);
+      }
+    } catch (err) {
+      console.error("친구 요청 거절 실패:", err);
+      Alert.alert("네트워크 오류", "서버에 연결할 수 없습니다.");
+    } finally {
+      setProcessingRequestId(null);
     }
   };
 
@@ -266,6 +447,9 @@ const FriendsListScreen = () => {
   );
 
   function openActions(item: Friend): void {
+    if (item.requestStatus === 'pending') {
+      return; // 친구 요청인 경우 액션 시트 안 띄움
+    }
     setSelectedFriend(item);
     setActionVisible(true);
   }
@@ -300,13 +484,21 @@ const FriendsListScreen = () => {
         />
       </View>
 
+      <View style={{ paddingVertical: 10 }}>
+        <ActivityIndicator size="small" color="#0000ff" />
+      </View>
+      
       <SectionList
         sections={sections}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
+        keyExtractor={(item, index) => item.requestId ? `req-${item.requestId}` : `friend-${item.id}-${index}`}
+        renderItem={({ item, section }) => (
           <FriendItem
             friend={item}
-            onPress={() => openActions(item)} // 클릭 시 액션 시트 표시
+            onPress={() => openActions(item)}
+            type={section.type} // FriendItem에 섹션 타입을 전달하여 렌더링을 제어
+            onAccept={section.type === 'request' ? () => handleAcceptRequest(item) : undefined}
+            onDecline={section.type === 'request' ? () => handleDeclineRequest(item) : undefined}
+            isProcessing={item.requestId === processingRequestId} // 해당 요청이 처리 중인지 전달
           />
         )}
         renderSectionHeader={renderSectionHeader}
