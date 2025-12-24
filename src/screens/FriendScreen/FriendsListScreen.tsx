@@ -464,9 +464,11 @@ const FriendsListScreen = () => {
         />
       </View>
 
-      <View style={{ paddingVertical: 10 }}>
-        <ActivityIndicator size="small" color="#0000ff" />
-      </View>
+      {(isLoadingFriends) && (
+        <View style={{ paddingVertical: 10 }}>
+          <ActivityIndicator size="small" color="#0000ff" />
+        </View>
+      )}
       
       <SectionList
         sections={sections}
