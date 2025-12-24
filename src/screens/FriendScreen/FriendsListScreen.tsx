@@ -77,26 +77,6 @@ const groupAllContacts = (friends: Friend[], pendingRequests: Friend[], query: s
   return sections;
 };
 
-const groupFriends = (items: Friend[], query: string) => {
-  const filtered = items.filter((f) => f.name.toLowerCase().includes(query.toLowerCase()));
-  const favorites = filtered.filter((f) => f.favorite);
-  const rest = filtered.filter((f) => !f.favorite);
-
-  const map: Record<string, Friend[]> = {};
-  rest.forEach((f) => {
-    const key = f.name.charAt(0).toUpperCase();
-    if (!map[key]) map[key] = [];
-    map[key].push(f);
-  });
-
-  const sections: { title: string; data: Friend[] }[] = [];
-  if (favorites.length) sections.push({ title: "즐겨찾기", data: favorites });
-  Object.keys(map)
-    .sort()
-    .forEach((k) => sections.push({ title: k, data: map[k] }));
-  return sections;
-};
-
 const FriendsListScreen = () => {
   const navigation = useNavigation<NavigationProp<any>>();
   const rootNavigation = useRootNavigation();
