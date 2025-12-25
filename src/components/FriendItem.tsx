@@ -21,12 +21,19 @@ type FriendItemProps = {
   onPress: (friend: Friend) => void; // Friend 타입 사용
   type?: 'friend' | 'request';
   onAccept?: () => void;
-  onDecline?: () => void;
+  onReject?: () => void;
   isProcessing?: boolean;
 };
 
 
-const FriendItem = ({ friend, onPress, type = 'friend', onAccept, onDecline, isProcessing }: FriendItemProps) => {
+const FriendItem = ({
+  friend,
+  onPress,
+  type = 'friend',
+  onAccept,
+  onReject,
+  isProcessing
+}: FriendItemProps) => {
   const isFriendRequest = type === 'request';
 
   return (
@@ -65,7 +72,7 @@ const FriendItem = ({ friend, onPress, type = 'friend', onAccept, onDecline, isP
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, styles.declineButton]}
-            onPress={onDecline}
+            onPress={onReject}
             disabled={isProcessing}
           >
             {isProcessing ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.buttonText}>거절</Text>}
