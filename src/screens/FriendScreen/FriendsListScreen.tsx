@@ -8,9 +8,9 @@ import {
   TouchableOpacity,
   Modal,
   Pressable,
-  Alert,
   ActivityIndicator,
 } from "react-native";
+import Alert from '@blazejkustra/react-native-alert';
 import { useNavigation, NavigationProp } from "@react-navigation/native";
 import { Feather, AntDesign } from "@expo/vector-icons";
 import FriendItem from "@/components/FriendItem";
@@ -171,7 +171,7 @@ const FriendsListScreen = () => {
               id: String(d.id),
               name: d.name,
               avatar: d.avatar,
-              senderUserId: d.senderUserId,
+              senderId: d.senderId,
               receiverId: d.receiverId,
               status: d.status,
             }))
@@ -340,34 +340,60 @@ const FriendsListScreen = () => {
     );
   };
 
-  const handleAcceptRequest = async (item: Friend) => {
+  type FriendRequestStatus = "ACCEPTED" | "REJECTED";
+  const handleProcessFriendRequest = async (item: Friend, status: FriendRequestStatus) => {
     // 요청 ID와 현재 로그인한 사용자가 일치하는지 추가 확인 (선택 사항이지만 안전함)
-    if (!item.requestId || !item.senderId || !item.receiverId || item.receiverId !== me?.userId || processingRequestId) return;
-    setProcessingRequestId(item.requestId);
+    if (!item.senderId) {
+      return;
+    }
+    setProcessingRequestId(item.senderId);
 
     try {
       const currentUserId = me?.userId || me?.email;
-      if (!currentUserId) { Alert.alert("권한 오류", "로그인이 필요합니다."); setProcessingRequestId(null); return; }
+      if (!currentUserId) {
+        Alert.alert("권한 오류", "로그인이 필요합니다.");
+        setProcessingRequestId(null);
+        return;
+      }
       const token = await getAuthToken();
-      if (!token) { Alert.alert("권한 오류", "작업을 수행하려면 로그인되어 있어야 합니다."); setProcessingRequestId(null); return; }
+      if (!token) {
+        Alert.alert("권한 오류", "작업을 수행하려면 로그인되어 있어야 합니다.");
+        setProcessingRequestId(null);
+        return;
+      }
+      if (!item.senderId) {
+        Alert.alert("오류", "친구의 아이디가 잘못되었습니다.");
+        setProcessingRequestId(null);
+        return;
+      }
 
       // DB 구조에 따라, requestId는 friend_requests 테이블의 id입니다.
       // receiver_id가 현재 사용자와 일치하는지 백엔드에서 반드시 확인해야 합니다.
-      const endpoint = `${API_BASE_URL}/api/friends/${currentUserId}/requests/${item.requestId}/accept`;
+      const endpoint = `${API_BASE_URL}/api/friends/${currentUserId}/friend-requests/${item.senderId}/process`
 
       const res = await fetch(endpoint, {
-        method: "PUT", // friend_requests.status를 accepted로 변경
+        method: "PUT",
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
+        // 백엔드의 FriendRequestProcessDto에 맞게 body 구성
+        body: JSON.stringify({
+          status: status, // 친구 요청 수락 또는 거절을 의미하는 상태
+        }),
       });
 
+
       if (res.ok) {
-        Alert.alert("알림", `'${item.name}' 님의 친구 요청을 수락했습니다.`);
-        setPendingRequests(prev => prev.filter(req => req.requestId !== item.requestId)); // 요청 목록에서 제거
-        fetchFriends(); // 친구 목록을 다시 불러와서 새로 추가된 친구를 반영
+        if (status === "ACCEPTED") {
+          Alert.alert("알림", `'${item.name}' 님의 친구 요청을 수락했습니다.`);
+        } else {
+          Alert.alert("알림", `'${item.name}' 님의 친구 요청을 거절했습니다.`);
+        }
+        
+        setPendingRequests(prev => prev.filter(req => req.requestId !== item.requestId));
+        fetchFriends();
       } else {
         const json = await res.json().catch(() => null);
         const message = json?.error || json?.message || "친구 요청 수락에 실패했습니다.";
@@ -375,45 +401,6 @@ const FriendsListScreen = () => {
       }
     } catch (err) {
       console.error("친구 요청 수락 실패:", err);
-      Alert.alert("네트워크 오류", "서버에 연결할 수 없습니다.");
-    } finally {
-      setProcessingRequestId(null);
-    }
-  };
-
-  // 친구 요청 거절 핸들러
-  const handleDeclineRequest = async (item: Friend) => {
-    // 요청 ID와 현재 로그인한 사용자가 일치하는지 추가 확인 (선택 사항이지만 안전함)
-    if (!item.requestId || !item.senderId || !item.receiverId || item.receiverId !== me?.userId || processingRequestId) return;
-    setProcessingRequestId(item.requestId);
-
-    try {
-      const currentUserId = me?.userId || me?.email;
-      if (!currentUserId) { Alert.alert("권한 오류", "로그인이 필요합니다."); setProcessingRequestId(null); return; }
-      const token = await getAuthToken();
-      if (!token) { Alert.alert("권한 오류", "작업을 수행하려면 로그인되어 있어야 합니다."); setProcessingRequestId(null); return; }
-
-      const endpoint = `${API_BASE_URL}/api/friends/${currentUserId}/requests/${item.requestId}/decline`;
-
-      const res = await fetch(endpoint, {
-        method: "PUT", // friend_requests.status를 rejected로 변경 또는 DELETE
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (res.ok) {
-        Alert.alert("알림", `'${item.name}' 님의 친구 요청을 거절했습니다.`);
-        setPendingRequests(prev => prev.filter(req => req.requestId !== item.requestId)); // 요청 목록에서 제거
-      } else {
-        const json = await res.json().catch(() => null);
-        const message = json?.error || json?.message || "친구 요청 거절에 실패했습니다.";
-        Alert.alert("오류", message);
-      }
-    } catch (err) {
-      console.error("친구 요청 거절 실패:", err);
       Alert.alert("네트워크 오류", "서버에 연결할 수 없습니다.");
     } finally {
       setProcessingRequestId(null);
@@ -477,10 +464,10 @@ const FriendsListScreen = () => {
           <FriendItem
             friend={item}
             onPress={() => openActions(item)}
-            type={section.type} // FriendItem에 섹션 타입을 전달하여 렌더링을 제어
-            onAccept={section.type === 'request' ? () => handleAcceptRequest(item) : undefined}
-            onDecline={section.type === 'request' ? () => handleDeclineRequest(item) : undefined}
-            isProcessing={item.requestId === processingRequestId} // 해당 요청이 처리 중인지 전달
+            type={section.type}
+            onAccept={section.type === 'request' ? () => handleProcessFriendRequest(item, "ACCEPTED") : undefined}
+            onReject={section.type === 'request' ? () => handleProcessFriendRequest(item, "REJECTED") : undefined}
+            isProcessing={item.requestId === processingRequestId}
           />
         )}
         renderSectionHeader={renderSectionHeader}
