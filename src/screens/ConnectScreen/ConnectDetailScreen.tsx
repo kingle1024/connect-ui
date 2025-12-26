@@ -34,7 +34,7 @@ const ConnectDetail = () => {
   const navigation = useRootNavigation<"ConnectDetail" | "BottomTab">();
   const { user: me } = useContext(AuthContext);
   const routes = useRootRoute<"ConnectDetail">();
-  const { reply, loadReply, replyInput, setReplyInput, replyInputErrorText } =
+  const { reply, loadReply, replyInput, setReplyInput, replyInputErrorText, submitReply } =
     useReply();
   const [expandedReplies, setExpandedReplies] = useState<number[]>([]);
   const [replyInputHeight, setReplyInputHeight] = useState(0);
@@ -45,6 +45,29 @@ const ConnectDetail = () => {
 
   const [refreshing, setRefreshing] = useState(false);
   const [isStartingChat, setIsStartingChat] = useState(false);
+  const currentBoardId = routes.params.parentId;
+
+  const handleRegisterReply = useCallback(async () => {
+    const parentReplyIdForSubmit = null;
+
+    if (!currentBoardId) {
+      Alert.alert("오류", "게시글 ID를 찾을 수 없습니다.");
+      return;
+    }
+    if (!replyInput.trim()) {
+      Alert.alert("알림", "댓글 내용을 입력해주세요.");
+      return;
+    }
+
+    try {
+      await submitReply(currentBoardId, parentReplyIdForSubmit, replyInput);
+      if (refSheet.current) {
+        refSheet.current.close();
+      }
+    } catch (error) {
+      console.error("댓글 등록 중 최종 에러:", error);
+    }
+  }, [currentBoardId, replyInput, submitReply]);
 
   const toggleExpand = (id: number) => {
     setExpandedReplies((prev) =>
@@ -500,7 +523,7 @@ const ConnectDetail = () => {
       style={{ flex: 1, padding: 10, backgroundColor: "white" }}
     >
       <FlatList
-        data={reply.replies}
+        data={reply?.replies}
         renderItem={renderItem}
         keyExtractor={(item) => String(item.id)}
         ListHeaderComponent={ListHeaderComponent}
@@ -537,7 +560,9 @@ const ConnectDetail = () => {
           />
         </View>
         {/* 버튼은 절대 위치 고정 */}
-        {bottomSheetOpen && !replyInputErrorText && (
+        {
+        // bottomSheetOpen && !replyInputErrorText && 
+        (
           <TouchableOpacity
             style={{
               position: "absolute",
@@ -548,7 +573,7 @@ const ConnectDetail = () => {
               paddingHorizontal: 16,
               borderRadius: 8,
             }}
-            onPress={() => console.log("등록")}
+            onPress={handleRegisterReply}
           >
             <Text style={{ color: "white", fontWeight: "bold" }}>등록</Text>
           </TouchableOpacity>
