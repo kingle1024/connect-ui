@@ -27,6 +27,7 @@ import CustomBottomSheet, {
 import { useRootNavigation, useRootRoute } from "@/hooks/useNavigation";
 import AuthContext from "@/components/auth/AuthContext";
 import { createOneToOneRoom, getOneToOneRoomsForUser } from "@/utils/chat";
+import { useDetailBoard } from "@/hooks/useDetailBoard";
 
 const screenHeight = Dimensions.get("window").height;
 
@@ -34,6 +35,7 @@ const ConnectDetail = () => {
   const navigation = useRootNavigation<"ConnectDetail" | "BottomTab">();
   const { user: me } = useContext(AuthContext);
   const routes = useRootRoute<"ConnectDetail">();
+  const { boardDetail, loadingBoardDetail, boardDetailError, loadBoardDetail } = useDetailBoard();
   const { reply, loadReply, replyInput, setReplyInput, replyInputErrorText, submitReply } =
     useReply();
   const [expandedReplies, setExpandedReplies] = useState<number[]>([]);
@@ -77,9 +79,10 @@ const ConnectDetail = () => {
 
   useEffect(() => {
     if (routes.params.parentId) {
+      loadBoardDetail(routes.params.parentId);
       loadReply(routes.params.parentId);
     }
-  }, [routes.params.parentId, loadReply]);
+  }, [routes.params.parentId, loadBoardDetail, loadReply]);
 
   useEffect(() => {
     if (!me) {
@@ -103,7 +106,7 @@ const ConnectDetail = () => {
       await loadReply(routes.params.parentId);
     }
     setRefreshing(false);
-  }, [routes.params.parentId, loadReply]);
+  }, [routes.params.parentId, loadBoardDetail, loadReply]);
 
   const startPrivateChat = useCallback(async (targetUserId: string, targetUserDisplayName: string) => {
     if (isStartingChat) return; // 이미 채팅 시작 중이면 무시
@@ -226,7 +229,7 @@ const ConnectDetail = () => {
                 color: "#111827",
               }}
             >
-              {reply.userName}
+              {boardDetail?.userName}              
             </Text>
             <Text
               style={{
@@ -235,14 +238,14 @@ const ConnectDetail = () => {
                 paddingTop: 5,
               }}
             >
-              {formatRelativeTime(reply.insertDts)}
+              {boardDetail && formatRelativeTime(boardDetail.insertDts)}
             </Text>
           </View>
         </View>
 
         {/* 본문 */}
         <View style={{ marginTop: 10 }}>
-          {reply.title && (
+          {boardDetail?.title && (
             <View style={{ paddingBottom: 20 }}>
               <Text
                 style={{
@@ -252,12 +255,12 @@ const ConnectDetail = () => {
                   color: "#111827",
                 }}
               >
-                {reply.title}
+                {boardDetail.title}
               </Text>
             </View>
           )}
           <Text style={{ fontSize: 16, marginBottom: 24, color: "#6B7280" }}>
-            {reply.content}
+            {boardDetail?.content}
           </Text>
           <View style={{ height: 200 }} />
         </View>
@@ -301,7 +304,7 @@ const ConnectDetail = () => {
           >
             <TouchableOpacity
               style={{ flexDirection: "row", alignItems: "center" }}
-              onPress={() => reply.userId && startPrivateChat(reply.userId, reply.userName)}
+              onPress={() => boardDetail?.userId && startPrivateChat(boardDetail.userId, boardDetail.userName)}
             >
               <FontAwesome6
                 name="comment-dots"
@@ -523,7 +526,7 @@ const ConnectDetail = () => {
       style={{ flex: 1, padding: 10, backgroundColor: "white" }}
     >
       <FlatList
-        data={reply?.replies}
+        data={reply}
         renderItem={renderItem}
         keyExtractor={(item) => String(item.id)}
         ListHeaderComponent={ListHeaderComponent}
