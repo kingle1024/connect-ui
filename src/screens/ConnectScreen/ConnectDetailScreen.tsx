@@ -5,8 +5,7 @@ import {
   TouchableOpacity,
   Dimensions,
   TextInput,
-  RefreshControl,
-  Alert,
+  RefreshControl,  
 } from "react-native";
 import React, {
   useCallback,
@@ -15,6 +14,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import Alert from '@blazejkustra/react-native-alert';
 import { SafeAreaView } from "react-native-safe-area-context";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import { Reply } from "@/types";
@@ -27,6 +27,7 @@ import CustomBottomSheet, {
 import { useRootNavigation, useRootRoute } from "@/hooks/useNavigation";
 import AuthContext from "@/components/auth/AuthContext";
 import { createOneToOneRoom, getOneToOneRoomsForUser } from "@/utils/chat";
+import { useDetailBoard } from "@/hooks/useDetailBoard";
 
 const screenHeight = Dimensions.get("window").height;
 
@@ -34,7 +35,8 @@ const ConnectDetail = () => {
   const navigation = useRootNavigation<"ConnectDetail" | "BottomTab">();
   const { user: me } = useContext(AuthContext);
   const routes = useRootRoute<"ConnectDetail">();
-  const { reply, loadReply, replyInput, setReplyInput, replyInputErrorText } =
+  const { boardDetail, loadingBoardDetail, boardDetailError, loadBoardDetail } = useDetailBoard();
+  const { reply, loadReply, replyInput, setReplyInput, replyInputErrorText, submitReply, deleteComment } =
     useReply();
   const [expandedReplies, setExpandedReplies] = useState<number[]>([]);
   const [replyInputHeight, setReplyInputHeight] = useState(0);
@@ -45,6 +47,29 @@ const ConnectDetail = () => {
 
   const [refreshing, setRefreshing] = useState(false);
   const [isStartingChat, setIsStartingChat] = useState(false);
+  const currentBoardId = routes.params.parentId;
+
+  const handleRegisterReply = useCallback(async () => {
+    const parentReplyIdForSubmit = null;
+
+    if (!currentBoardId) {
+      Alert.alert("오류", "게시글 ID를 찾을 수 없습니다.");
+      return;
+    }
+    if (!replyInput.trim()) {
+      Alert.alert("알림", "댓글 내용을 입력해주세요.");
+      return;
+    }
+
+    try {
+      await submitReply(currentBoardId, parentReplyIdForSubmit, replyInput);
+      if (refSheet.current) {
+        refSheet.current.close();
+      }
+    } catch (error) {
+      console.error("댓글 등록 중 최종 에러:", error);
+    }
+  }, [currentBoardId, replyInput, submitReply]);
 
   const toggleExpand = (id: number) => {
     setExpandedReplies((prev) =>
@@ -54,9 +79,10 @@ const ConnectDetail = () => {
 
   useEffect(() => {
     if (routes.params.parentId) {
+      loadBoardDetail(routes.params.parentId);
       loadReply(routes.params.parentId);
     }
-  }, [routes.params.parentId, loadReply]);
+  }, [routes.params.parentId, loadBoardDetail, loadReply]);
 
   useEffect(() => {
     if (!me) {
@@ -80,7 +106,7 @@ const ConnectDetail = () => {
       await loadReply(routes.params.parentId);
     }
     setRefreshing(false);
-  }, [routes.params.parentId, loadReply]);
+  }, [routes.params.parentId, loadBoardDetail, loadReply]);
 
   const startPrivateChat = useCallback(async (targetUserId: string, targetUserDisplayName: string) => {
     if (isStartingChat) return; // 이미 채팅 시작 중이면 무시
@@ -203,7 +229,7 @@ const ConnectDetail = () => {
                 color: "#111827",
               }}
             >
-              {reply.userName}
+              {boardDetail?.userName}              
             </Text>
             <Text
               style={{
@@ -212,14 +238,14 @@ const ConnectDetail = () => {
                 paddingTop: 5,
               }}
             >
-              {formatRelativeTime(reply.insertDts)}
+              {boardDetail && formatRelativeTime(boardDetail.insertDts)}
             </Text>
           </View>
         </View>
 
         {/* 본문 */}
         <View style={{ marginTop: 10 }}>
-          {reply.title && (
+          {boardDetail?.title && (
             <View style={{ paddingBottom: 20 }}>
               <Text
                 style={{
@@ -229,12 +255,12 @@ const ConnectDetail = () => {
                   color: "#111827",
                 }}
               >
-                {reply.title}
+                {boardDetail.title}
               </Text>
             </View>
           )}
           <Text style={{ fontSize: 16, marginBottom: 24, color: "#6B7280" }}>
-            {reply.content}
+            {boardDetail?.content}
           </Text>
           <View style={{ height: 200 }} />
         </View>
@@ -278,7 +304,7 @@ const ConnectDetail = () => {
           >
             <TouchableOpacity
               style={{ flexDirection: "row", alignItems: "center" }}
-              onPress={() => reply.userId && startPrivateChat(reply.userId, reply.userName)}
+              onPress={() => boardDetail?.userId && startPrivateChat(boardDetail.userId, boardDetail.userName)}
             >
               <FontAwesome6
                 name="comment-dots"
@@ -354,6 +380,15 @@ const ConnectDetail = () => {
                 gap: 16,
               }}
             >
+            {me?.userId === item.userId && ( // ✨ 현재 로그인 사용자와 최상위 댓글 작성자 ID 일치 여부 확인
+              <TouchableOpacity
+                style={{ flexDirection: "row", alignItems: "center" }}
+                onPress={() => deleteComment(currentBoardId, item.id)}
+              >
+                <MaterialIcons name="delete" style={{ fontSize: 16, color: "#EF4444", marginRight: 4 }} />
+                <Text style={{ fontSize: 12, color: "#EF4444" }}>삭제</Text>
+              </TouchableOpacity>
+            )}
               <TouchableOpacity
                 style={{ flexDirection: "row", alignItems: "center" }}
                 onPress={() => onPressReply(item.id)}
@@ -500,7 +535,7 @@ const ConnectDetail = () => {
       style={{ flex: 1, padding: 10, backgroundColor: "white" }}
     >
       <FlatList
-        data={reply.replies}
+        data={reply}
         renderItem={renderItem}
         keyExtractor={(item) => String(item.id)}
         ListHeaderComponent={ListHeaderComponent}
@@ -537,7 +572,9 @@ const ConnectDetail = () => {
           />
         </View>
         {/* 버튼은 절대 위치 고정 */}
-        {bottomSheetOpen && !replyInputErrorText && (
+        {
+        // bottomSheetOpen && !replyInputErrorText && 
+        (
           <TouchableOpacity
             style={{
               position: "absolute",
@@ -548,7 +585,7 @@ const ConnectDetail = () => {
               paddingHorizontal: 16,
               borderRadius: 8,
             }}
-            onPress={() => console.log("등록")}
+            onPress={handleRegisterReply}
           >
             <Text style={{ color: "white", fontWeight: "bold" }}>등록</Text>
           </TouchableOpacity>
