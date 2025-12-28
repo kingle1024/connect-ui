@@ -3,6 +3,8 @@ import axios from "axios"; // axios 라이브러리 임포트
 import { Reply, CreateCommentRequest, ReplyDto } from "@/types"; // 새로 정의한 타입 임포트
 import AuthContext from "@/components/auth/AuthContext"; // 사용자 정보를 가져오기 위함
 import Constants from "expo-constants";
+import Alert from '@blazejkustra/react-native-alert';
+import axiosInstance from "@/utils/api";
 
 const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL;
 export const useReply = () => {
@@ -64,12 +66,47 @@ export const useReply = () => {
     [me, loadReply] // me (사용자 정보)와 loadReply가 변경될 때 함수 재생성
   );
 
+  const deleteComment = useCallback(async (boardId: number, replyId: number) => {
+    Alert.alert(
+      "댓글 삭제",
+      "정말로 이 댓글을 삭제하시겠습니까? 관련 대댓글도 모두 삭제됩니다.",
+      [
+        {
+          text: "취소",
+          style: "cancel"
+        },
+        {
+          text: "삭제",
+          onPress: async () => {
+            try {
+              const requestUrl = `${API_BASE_URL}/api/boards/${boardId}/comments/${replyId}`;
+              console.log("deleteComment - Calling API:", requestUrl);
+
+              await axiosInstance.delete(requestUrl);
+              console.log(`댓글 ID ${replyId} 삭제 성공`);
+
+              Alert.alert("알림", "댓글이 삭제되었습니다.");
+              await loadReply(boardId);
+
+            } catch (error: any) {
+              console.error(`댓글 ID ${replyId} 삭제 실패:`, error);
+              Alert.alert("오류", error.response?.data?.message || "댓글 삭제에 실패했습니다.");
+            }
+          },
+          style: "destructive"
+        }
+      ],
+      { cancelable: false }
+    );
+  }, [loadReply]);
+
   return {
     reply,
     loadReply,
     replyInput,
     setReplyInput,
     replyInputErrorText,
-    submitReply, // ✨ 새로 추가한 함수
+    submitReply,
+    deleteComment,
   };
 };

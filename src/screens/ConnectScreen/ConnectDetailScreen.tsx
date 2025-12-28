@@ -5,8 +5,7 @@ import {
   TouchableOpacity,
   Dimensions,
   TextInput,
-  RefreshControl,
-  Alert,
+  RefreshControl,  
 } from "react-native";
 import React, {
   useCallback,
@@ -15,6 +14,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import Alert from '@blazejkustra/react-native-alert';
 import { SafeAreaView } from "react-native-safe-area-context";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import { Reply } from "@/types";
@@ -36,7 +36,7 @@ const ConnectDetail = () => {
   const { user: me } = useContext(AuthContext);
   const routes = useRootRoute<"ConnectDetail">();
   const { boardDetail, loadingBoardDetail, boardDetailError, loadBoardDetail } = useDetailBoard();
-  const { reply, loadReply, replyInput, setReplyInput, replyInputErrorText, submitReply } =
+  const { reply, loadReply, replyInput, setReplyInput, replyInputErrorText, submitReply, deleteComment } =
     useReply();
   const [expandedReplies, setExpandedReplies] = useState<number[]>([]);
   const [replyInputHeight, setReplyInputHeight] = useState(0);
@@ -380,6 +380,15 @@ const ConnectDetail = () => {
                 gap: 16,
               }}
             >
+            {me?.userId === item.userId && ( // ✨ 현재 로그인 사용자와 최상위 댓글 작성자 ID 일치 여부 확인
+              <TouchableOpacity
+                style={{ flexDirection: "row", alignItems: "center" }}
+                onPress={() => deleteComment(currentBoardId, item.id)}
+              >
+                <MaterialIcons name="delete" style={{ fontSize: 16, color: "#EF4444", marginRight: 4 }} />
+                <Text style={{ fontSize: 12, color: "#EF4444" }}>삭제</Text>
+              </TouchableOpacity>
+            )}
               <TouchableOpacity
                 style={{ flexDirection: "row", alignItems: "center" }}
                 onPress={() => onPressReply(item.id)}
