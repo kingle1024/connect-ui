@@ -113,10 +113,8 @@ const ConnectDetail = () => {
       return;
     }
     try {
-      const response = await tempAxiosInstance.post(`/api/friends/request`, {
-        fromUserId: currentUserId,
-        toUserId: targetUserId,
-        status: "PENDING",
+      const response = await tempAxiosInstance.post(`/api/friends/${currentUserId}/friend-requests`, {
+        receiverUserId: targetUserId,
       });
 
       if (response.status === 200 || response.status === 201) {
