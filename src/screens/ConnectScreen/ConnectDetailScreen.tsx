@@ -6,6 +6,7 @@ import {
   Dimensions,
   TextInput,
   RefreshControl,  
+  ActivityIndicator,
 } from "react-native";
 import React, {
   useCallback,
@@ -28,20 +29,36 @@ import { useRootNavigation, useRootRoute } from "@/hooks/useNavigation";
 import AuthContext from "@/components/auth/AuthContext";
 import { createOneToOneRoom, getOneToOneRoomsForUser } from "@/utils/chat";
 import { useDetailBoard } from "@/hooks/useDetailBoard";
+import Constants from "expo-constants";
+import axios from "axios";
 
 const screenHeight = Dimensions.get("window").height;
 
 const ConnectDetail = () => {
   const navigation = useRootNavigation<"ConnectDetail" | "BottomTab">();
   const { user: me } = useContext(AuthContext);
+  const [isSendingFriendRequest, setIsSendingFriendRequest] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<{
+    userId: string;
+    userName: string;
+  } | null>(null);
   const routes = useRootRoute<"ConnectDetail">();
   const { boardDetail, loadingBoardDetail, boardDetailError, loadBoardDetail } = useDetailBoard();
   const { reply, loadReply, replyInput, setReplyInput, replyInputErrorText, submitReply, deleteComment } =
     useReply();
   const [expandedReplies, setExpandedReplies] = useState<number[]>([]);
   const [replyInputHeight, setReplyInputHeight] = useState(0);
-
   const refSheet = useRef<CustomBottomSheetRef>(null);
+  const openProfileBottomSheet = useCallback(
+    (userId: string, userName: string) => {
+      setSelectedUser({ userId, userName });
+      refSheet.current?.open();
+    },
+    []
+  );
+  const closeProfileBottomSheet = useCallback(() => {
+    setSelectedUser(null);
+  }, []);
   const inputRef = useRef<TextInput>(null);
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
 
@@ -76,6 +93,44 @@ const ConnectDetail = () => {
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   };
+  const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL ?? "";
+  const tempAxiosInstance = axios.create({ baseURL: API_BASE_URL });
+
+  const sendFriendRequest = useCallback(async (targetUserId: string, targetUserDisplayName: string) => {
+    if (isSendingFriendRequest) return;
+    setIsSendingFriendRequest(true);
+
+    const currentUserId = me?.userId || me?.email;
+    if (!currentUserId) {
+      Alert.alert("권한 오류", "로그인이 필요합니다.");
+      setIsSendingFriendRequest(false);
+      return;
+    }
+
+    if (targetUserId === currentUserId) {
+      Alert.alert("알림", "자기 자신에게는 친구 요청을 보낼 수 없습니다.");
+      setIsSendingFriendRequest(false);
+      return;
+    }
+    try {
+      const response = await tempAxiosInstance.post(`/api/friends/${currentUserId}/friend-requests`, {
+        receiverUserId: targetUserId,
+      });
+
+      if (response.status === 200 || response.status === 201) {
+        Alert.alert("친구 요청 완료", `${targetUserDisplayName}님에게 친구 요청을 보냈습니다.`);
+      } else {
+        Alert.alert("친구 요청 실패", "친구 요청 전송에 실패했습니다.");
+      }
+    } catch (error: any) {
+      console.error("친구 요청 실패:", error);
+      Alert.alert("오류", error.response?.data?.message || "친구 요청 중 오류가 발생했습니다.");
+    } finally {
+      setIsSendingFriendRequest(false);
+      setSelectedUser(null); // 요청 후 바텀시트 닫기
+      refSheet.current?.close(); // 요청 후 바텀시트 닫기
+    }
+  }, [isSendingFriendRequest, me]);
 
   useEffect(() => {
     if (routes.params.parentId) {
@@ -222,15 +277,19 @@ const ConnectDetail = () => {
             <MaterialIcons name="person" size={36} color="#9CA3AF" />
           </View>
           <View>
-            <Text
-              style={{
-                fontWeight: "bold",
-                fontSize: 18,
-                color: "#111827",
-              }}
+            <TouchableOpacity
+             onPress={() => boardDetail?.userId && boardDetail?.userName && openProfileBottomSheet(boardDetail.userId, boardDetail.userName)}
             >
-              {boardDetail?.userName}              
-            </Text>
+              <Text
+                style={{
+                  fontWeight: "bold",
+                  fontSize: 18,
+                  color: "#111827",
+                }}
+              >
+                {boardDetail?.userName}              
+              </Text>
+            </TouchableOpacity>
             <Text
               style={{
                 fontSize: 14,
@@ -350,6 +409,9 @@ const ConnectDetail = () => {
                   marginBottom: 8,
                 }}
               >
+                <TouchableOpacity
+                  onPress={() => item.userId && item.userName && openProfileBottomSheet(item.userId, item.userName)}
+                >
                 <Text
                   style={{
                     fontSize: 16,
@@ -360,6 +422,7 @@ const ConnectDetail = () => {
                 >
                   {item.userName}
                 </Text>
+                </TouchableOpacity>
                 <Text style={{ fontSize: 12, color: "#6B7280" }}>
                   {formatRelativeTime(item.insertDts)}
                 </Text>
@@ -443,6 +506,9 @@ const ConnectDetail = () => {
                         marginBottom: 4,
                       }}
                     >
+                      <TouchableOpacity
+                        onPress={() => reply.userId && reply.userName && openProfileBottomSheet(reply.userId, reply.userName)}
+                      >
                       <Text
                         style={{
                           fontSize: 14,
@@ -453,6 +519,7 @@ const ConnectDetail = () => {
                       >
                         {reply.userName}
                       </Text>
+                      </TouchableOpacity>
                       <Text style={{ fontSize: 12, color: "#6B7280" }}>
                         {formatRelativeTime(reply.insertDts)}
                       </Text>
@@ -547,34 +614,116 @@ const ConnectDetail = () => {
       <CustomBottomSheet
         ref={refSheet}
         minClosingHeight={screenHeight * 0.1}
-        extraContentHeight={replyInputHeight}
-        onOpen={() => setBottomSheetOpen(true)}
-        onClose={() => setBottomSheetOpen(false)}
+        extraContentHeight={selectedUser ? 200 : replyInputHeight}
+        onOpen={() => {
+            if (selectedUser) {
+            } else {
+                inputRef.current?.focus();
+            }
+        }}
+        onClose={() => {
+
+        }}
       >
-        <View style={{ padding: 20 }}>
-          <TextInput
-            ref={inputRef}
-            value={replyInput}
-            onChangeText={setReplyInput}
-            placeholder="댓글을 남겨주세요."
-            multiline={true}
-            style={{
-              color: "black",
-              borderRadius: 8,
-            }}
-            onContentSizeChange={(e) => {
-              const height = Math.min(
-                150,
-                Math.max(40, e.nativeEvent.contentSize.height)
-              );
-              setReplyInputHeight(height);
-            }}
-          />
-        </View>
-        {/* 버튼은 절대 위치 고정 */}
+        {selectedUser ? ( // ✨ selectedUser가 있으면 프로필 액션 모드
+          <View style={{ padding: 20, gap: 15 }}>
+            <TouchableOpacity
+              onPress={closeProfileBottomSheet} // closeProfileBottomSheet 함수 호출
+              style={{ position: 'absolute', top: 15, right: 20, zIndex: 1 }} // 오른쪽 상단에 위치
+            >
+              <MaterialIcons name="close" size={24} color="#6B7280" />
+            </TouchableOpacity>
+            <Text style={{ fontSize: 20, fontWeight: "bold", marginBottom: 10 }}>
+              {selectedUser.userName}님의 프로필
+            </Text>
+
+            {me?.userId !== selectedUser.userId && ( // 본인 프로필이 아닐 때만
+              <>
+                {/* 친구 요청 버튼 */}
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: '#007bff',
+                    padding: 15,
+                    borderRadius: 10,
+                    alignItems: 'center',
+                  }}
+                  onPress={() => sendFriendRequest(selectedUser.userId, selectedUser.userName)}
+                  disabled={isSendingFriendRequest}
+                >
+                  {isSendingFriendRequest ? (
+                    <ActivityIndicator color="white" />
+                  ) : (
+                    <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>
+                      친구 요청
+                    </Text>
+                  )}
+                </TouchableOpacity>
+
+                {/* 1:1 대화하기 버튼 */}
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: '#6c757d',
+                    padding: 15,
+                    borderRadius: 10,
+                    alignItems: 'center',
+                  }}
+                  onPress={() => startPrivateChat(selectedUser.userId, selectedUser.userName)}
+                  disabled={isStartingChat}
+                >
+                  {isStartingChat ? (
+                    <ActivityIndicator color="white" />
+                  ) : (
+                    <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>
+                      1:1 대화하기
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
+            {me?.userId === selectedUser.userId && ( // 본인 프로필일 경우
+                <Text style={{ fontSize: 16, color: '#6c757d', textAlign: 'center', marginTop: 10 }}>
+                    나의 프로필
+                </Text>
+            )}
+
+          </View>
+        ) : ( // ✨ selectedUser가 없으면 댓글 입력 모드
+          <View style={{ padding: 20 }}>
+            <TextInput
+              ref={inputRef}
+              value={replyInput}
+              onChangeText={(text) => {
+                  setReplyInput(text);
+              }}
+              placeholder="댓글을 남겨주세요."
+              multiline={true}
+              style={{
+                color: "black",
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: replyInputErrorText ? "red" : "#D1D5DB",
+                padding: 10,
+                minHeight: 40,
+                maxHeight: 150,
+              }}
+              onContentSizeChange={(e) => {
+                const height = Math.min(
+                  150,
+                  Math.max(40, e.nativeEvent.contentSize.height)
+                );
+                setReplyInputHeight(height);
+              }}
+            />
+            {replyInputErrorText && (
+              <Text style={{ color: "red", marginTop: 5 }}>
+                {replyInputErrorText}
+              </Text>
+            )}
+          </View>
+        )}
         {
-        // bottomSheetOpen && !replyInputErrorText && 
-        (
+        // 바텀시트가 열려 있고, selectedUser가 없으며, 댓글 입력 모드일 때만 등록 버튼 표시
+        bottomSheetOpen && !selectedUser && (
           <TouchableOpacity
             style={{
               position: "absolute",
@@ -584,8 +733,10 @@ const ConnectDetail = () => {
               paddingVertical: 8,
               paddingHorizontal: 16,
               borderRadius: 8,
+              opacity: (replyInput.trim() && boardDetail) ? 1 : 0.5,
             }}
             onPress={handleRegisterReply}
+            disabled={!replyInput.trim() || !boardDetail}
           >
             <Text style={{ color: "white", fontWeight: "bold" }}>등록</Text>
           </TouchableOpacity>
