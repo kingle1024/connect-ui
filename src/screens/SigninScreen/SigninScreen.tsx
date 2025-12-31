@@ -77,6 +77,10 @@ const SigninScreen = () => {
     navigation.navigate("Signup");
   }, [navigation]);
 
+  const onPressFindPassword = useCallback(() => {
+    navigation.navigate("FindPassword");
+  }, [navigation]);
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -148,6 +152,7 @@ const SigninScreen = () => {
           </View>
           <View style={styles.signupButtonContainer}>
             <TouchableOpacity
+              onPress={onPressFindPassword}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <Text style={{ fontSize: 16 }}>비밀번호 찾기</Text>

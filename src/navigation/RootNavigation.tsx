@@ -8,6 +8,7 @@ import { Feather } from "@expo/vector-icons";
 import SigninScreen from "@/screens/SigninScreen/SigninScreen";
 import MyPageScreen from "@/screens/MyPageScreen/MyPageScreen";
 import SignupScreen from "@/screens/SignUpScreen/SignupScreen";
+import FindPasswordScreen from "@/screens/FindAccountScreen/FindPasswordScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -67,6 +68,7 @@ export const RootNavigation = () => {
           },
         })}
       />
+      <Stack.Screen name="FindPassword" component={FindPasswordScreen} />
       <Stack.Screen name="MyPage" component={MyPageScreen} />
       <Stack.Screen name="채팅방 상세" component={EnterChatRoom} />
     </Stack.Navigator>
