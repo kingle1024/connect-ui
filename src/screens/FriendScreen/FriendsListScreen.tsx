@@ -431,12 +431,12 @@ const FriendsListScreen = () => {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>친구</Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconBtn}>
+          {/* <TouchableOpacity style={styles.iconBtn}>
             <Feather name="user-plus" size={20} color="#333" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconBtn}>
             <AntDesign name="setting" size={20} color="#333" />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       </View>
 
