@@ -130,6 +130,12 @@ const SigninScreen = () => {
               style={styles.input}
               secureTextEntry
               onChangeText={onChangePasswordText}
+              returnKeyType="done"
+              onSubmitEditing={() => {
+                if (signinButtonEnabled) {
+                  onPressSigninButton();
+                }
+              }}
             />
             {passwordErrorText && (
               <Text style={styles.errorText}>{passwordErrorText}</Text>
