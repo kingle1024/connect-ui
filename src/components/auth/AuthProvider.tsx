@@ -5,7 +5,7 @@ import { User } from "@/types";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRootNavigation } from "@/hooks/useNavigation";
-import { Alert } from 'react-native';
+import Alert from '@blazejkustra/react-native-alert';
 
 type SignInResponse = {
   accessToken: string;
@@ -156,13 +156,13 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setUser(null);
           Alert.alert(
             "로그인 실패",
-            "로그인에 실패했습니다. 다시 시도해주세요."              
+            "아이디 또는 비밀번호를 확인해주세요."              
           );
         }
       } catch(error) {
         Alert.alert(
           "로그인 에러",
-          "로그인에 실패했습니다. 다시 시도해주세요."              
+          "아이디 또는 비밀번호를 확인해주세요."              
         );
       } finally {
         setProcessingSignin(false);
