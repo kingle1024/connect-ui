@@ -5,6 +5,7 @@ export type TypeRootStackNavigationParams = {
   ConnectDetail: { parentId: number };
   Signup: undefined;
   Signin: undefined;
+  FindPassword: undefined;
 };
 
 export type TypeBottomTabNavigationParams = {
