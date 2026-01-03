@@ -14,6 +14,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
+import Constants from "expo-constants";
 
 type RootStackParamList = {
   BottomTab: undefined;
@@ -30,49 +32,68 @@ type FindPasswordScreenNavigationProp = NativeStackNavigationProp<RootStackParam
 
 // --- 가상의 API 호출 함수들 (!!! 실제로는 백엔드 API와 연동해야 합니다 !!!) ---
 // 이 함수들은 백엔드 로직이 필요하며, 보안을 위해 클라이언트에서 직접 처리하면 안 됩니다.
+const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL || "";
 
 const sendVerificationCodeAPI = async (email: string): Promise<boolean> => {
-  console.log(`Sending verification code to: ${email}`);
-  // 실제 API 호출 로직: 백엔드에서 인증번호를 생성하여 이메일로 발송합니다.
-  // 이메일 전송에 성공하면 true, 실패하면 false 또는 에러를 throw 합니다.
-  await new Promise(resolve => setTimeout(resolve, 2000)); // API 호출 흉내 (2초 지연)
-  if (!email || !email.includes('@')) {
-    throw new Error('유효한 이메일 주소를 입력해주세요.');
+  console.log(`Sending verification code to backend for email: ${email}`);
+  try {
+    const response = await axios.post(`${API_BASE_URL}/api/account/find-password/send-code`, { email });
+    
+    // 백엔드의 ApiResponse 구조에 따라 성공 여부를 판단
+    if (response.data.success) {
+      console.log(`Verification code sent successfully for ${email}. Message: ${response.data.message}`);
+      return true;
+    } else {
+      // 백엔드에서 success: false로 응답을 보냈을 경우
+      throw new Error(response.data.message || '인증번호 전송에 실패했습니다.');
+    }
+  } catch (error: any) {
+    console.error('Error sending verification code:', error.response?.data || error.message);
+    if (error.response?.data?.message) {
+        throw new Error(error.response.data.message); // 백엔드에서 전달된 오류 메시지 사용
+    }
+    // 네트워크 오류, 서버 응답 없음 등 처리
+    throw new Error('네트워크 오류가 발생했거나 서버에 연결할 수 없습니다. 다시 시도해주세요.');
   }
-  // 백엔드에서 이메일이 등록된 사용자인지 확인하는 로직 추가 필요
-  console.log(`Verification code sent to ${email} successfully (mock).`);
-  return true; // 성공 가정
 };
 
 const verifyCodeAPI = async (email: string, code: string): Promise<boolean> => {
-  console.log(`Verifying code ${code} for email: ${email}`);
-  // 실제 API 호출 로직: 백엔드에서 해당 이메일로 발송된 인증번호와 비교합니다.
-  await new Promise(resolve => setTimeout(resolve, 2000)); // API 호출 흉내 (2초 지연)
-  if (!code || code.length !== 6) { // 예시: 6자리 코드
-    throw new Error('유효한 6자리 인증번호를 입력해주세요.');
-  }
-  // 실제로는 백엔드에서 이메일과 코드를 검증해야 합니다. (여기서는 '123456'으로 가정)
-  if (code === '123456') { // 예시용 하드코딩
-    console.log(`Verification code for ${email} matched (mock).`);
-    return true; // 성공 가정
-  }
-  throw new Error('인증번호가 일치하지 않습니다.');
+    console.log(`Verifying code ${code} for email: ${email} with backend.`);
+    try {
+        const response = await axios.post(`${API_BASE_URL}/api/account/find-password/verify-code`, { email, code });
+        if (response.data.success) {
+            console.log(`Verification successful for ${email}. Message: ${response.data.message}`);
+            return true;
+        } else {
+            throw new Error(response.data.message || '인증번호 확인에 실패했습니다.');
+        }
+    } catch (error: any) {
+        console.error('Error verifying code:', error.response?.data || error.message);
+        if (error.response?.data?.message) {
+            throw new Error(error.response.data.message);
+        }
+        throw new Error('네트워크 오류가 발생했거나 서버에 연결할 수 없습니다. 다시 시도해주세요.');
+    }
 };
 
 const resetPasswordAPI = async (email: string, newPassword: string): Promise<boolean> => {
-  console.log(`Resetting password for email: ${email} with new password (masked)`);
-  // 실제 API 호출 로직: 백엔드에서 사용자 비밀번호를 업데이트합니다.
-  // 이 때, 새 비밀번호는 반드시 해싱되어 저장되어야 합니다.
-  await new Promise(resolve => setTimeout(resolve, 2000)); // API 호출 흉내 (2초 지연)
-
-  // 비밀번호 유효성 검사 (클라이언트에서도 하지만, 백엔드에서도 반드시 해야 함)
-  if (newPassword.length < 8 || !/[a-zA-Z]/.test(newPassword) || !/[0-9]/.test(newPassword) || !/[!@#$%^&*()]/.test(newPassword)) {
-    throw new Error('비밀번호는 8자 이상이며, 영문, 숫자, 특수문자를 포함해야 합니다.');
-  }
-  console.log(`Password for ${email} reset successfully (mock).`);
-  return true; // 성공 가정
+    console.log(`Resetting password for email: ${email} with backend.`);
+    try {
+        const response = await axios.post(`${API_BASE_URL}/api/account/find-password/reset-password`, { email, newPassword });
+        if (response.data.success) {
+            console.log(`Password reset successful for ${email}. Message: ${response.data.message}`);
+            return true;
+        } else {
+            throw new Error(response.data.message || '비밀번호 재설정에 실패했습니다.');
+        }
+    } catch (error: any) {
+        console.error('Error resetting password:', error.response?.data || error.message);
+        if (error.response?.data?.message) {
+            throw new Error(error.response.data.message);
+        }
+        throw new Error('네트워크 오류가 발생했거나 서버에 연결할 수 없습니다. 다시 시도해주세요.');
+    }
 };
-// --- 가상의 API 호출 함수 끝 ---
 
 const FindPasswordScreen = () => {
   const navigation = useNavigation<FindPasswordScreenNavigationProp>();
