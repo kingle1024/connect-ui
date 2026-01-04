@@ -16,6 +16,9 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import Constants from "expo-constants";
+import { SafeAreaView } from "react-native-safe-area-context";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import styles from "./FindPasswordScreen.styles";
 
 type RootStackParamList = {
   BottomTab: undefined;
@@ -25,13 +28,10 @@ type RootStackParamList = {
   FindPassword: undefined;
   MyPage: undefined;  
   '채팅방 상세': undefined;
-  // 다른 스크린들도 여기에 정의
 };
 
 type FindPasswordScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'FindPassword'>;
 
-// --- 가상의 API 호출 함수들 (!!! 실제로는 백엔드 API와 연동해야 합니다 !!!) ---
-// 이 함수들은 백엔드 로직이 필요하며, 보안을 위해 클라이언트에서 직접 처리하면 안 됩니다.
 const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL || "";
 
 const sendVerificationCodeAPI = async (email: string): Promise<boolean> => {
@@ -39,20 +39,17 @@ const sendVerificationCodeAPI = async (email: string): Promise<boolean> => {
   try {
     const response = await axios.post(`${API_BASE_URL}/api/account/find-password/send-code`, { email });
     
-    // 백엔드의 ApiResponse 구조에 따라 성공 여부를 판단
     if (response.data.success) {
       console.log(`Verification code sent successfully for ${email}. Message: ${response.data.message}`);
       return true;
     } else {
-      // 백엔드에서 success: false로 응답을 보냈을 경우
       throw new Error(response.data.message || '인증번호 전송에 실패했습니다.');
     }
   } catch (error: any) {
     console.error('Error sending verification code:', error.response?.data || error.message);
     if (error.response?.data?.message) {
-        throw new Error(error.response.data.message); // 백엔드에서 전달된 오류 메시지 사용
+        throw new Error(error.response.data.message);
     }
-    // 네트워크 오류, 서버 응답 없음 등 처리
     throw new Error('네트워크 오류가 발생했거나 서버에 연결할 수 없습니다. 다시 시도해주세요.');
   }
 };
@@ -97,6 +94,30 @@ const resetPasswordAPI = async (email: string, newPassword: string): Promise<boo
 
 const FindPasswordScreen = () => {
   const navigation = useNavigation<FindPasswordScreenNavigationProp>();
+
+  const onPressBackButton = () => {
+    try {
+      const canGoBack = typeof navigation.canGoBack === "function" ? navigation.canGoBack() : false;
+      if (canGoBack) {
+        navigation.goBack();
+        return;
+      }
+    } catch (err) {
+      console.log("[FindPassword] canGoBack check error", err);
+    }
+
+    if (Platform.OS === 'web') {
+      try {
+        // @ts-ignore
+        window.history.back();
+        return;
+      } catch (e) {
+        console.log('[FindPassword] window.history.back error', e);
+      }
+    }
+
+    navigation.goBack();
+  };
 
   const [email, setEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
@@ -147,7 +168,6 @@ const FindPasswordScreen = () => {
     setError(null);
     setLoading(true);
     try {
-      // 클라이언트 측 비밀번호 유효성 검사 (백엔드에서도 반드시 수행해야 함)
       if (newPassword.length < 8 || !/[a-zA-Z]/.test(newPassword) || !/[0-9]/.test(newPassword) || !/[!@#$%^&*()]/.test(newPassword)) {
         throw new Error('비밀번호는 8자 이상이며, 영문, 숫자, 특수문자를 포함해야 합니다.');
       }
@@ -157,7 +177,7 @@ const FindPasswordScreen = () => {
 
       await resetPasswordAPI(email, newPassword);
       Alert.alert('성공', '비밀번호가 성공적으로 변경되었습니다. 로그인해주세요.');
-      navigation.navigate('Signin'); // 로그인 화면으로 이동
+      navigation.navigate('Signin');
     } catch (e: any) {
       setError(e.message || '비밀번호 재설정에 실패했습니다. 다시 시도해주세요.');
     } finally {
@@ -166,24 +186,37 @@ const FindPasswordScreen = () => {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="black" />
-          </TouchableOpacity>
-          <Text style={styles.title}>비밀번호 찾기</Text>
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        <View style={{ flex: 1 }}>
+          <View style={styles.header}>
+            <View style={styles.backButton}>
+              {navigation.canGoBack() && (
+                <TouchableOpacity
+                  onPress={onPressBackButton}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <MaterialIcons
+                    name="arrow-back-ios-new"
+                    size={24}
+                    color="black"
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+            <View style={styles.center}>
+              <Text style={styles.headerTitle}>비밀번호 찾기</Text>
+            </View>
+          </View>
         </View>
-
-        {error && <Text style={styles.errorText}>{error}</Text>}
-
         {/* 1단계: 이메일 입력 */}
         {stage === 'email' && (
-          <View style={styles.stageContainer}>
-            <Text style={styles.label}>이메일 주소</Text>
+          <View style={styles.section}>
+            <Text style={styles.title}>이메일</Text>
             <TextInput
               style={styles.input}
               placeholder="가입 시 사용한 이메일을 입력해주세요."
@@ -208,9 +241,9 @@ const FindPasswordScreen = () => {
         )}
 
         {/* 2단계: 인증번호 확인 */}
-        {stage === 'verifyCode' && (
-          <View style={styles.stageContainer}>
-            <Text style={styles.label}>인증번호</Text>
+         {stage === 'verifyCode' && (
+          <View style={styles.section}>
+            <Text style={styles.title}>인증번호</Text>
             <TextInput
               style={styles.input}
               placeholder="이메일로 전송된 인증번호를 입력하세요."
@@ -231,16 +264,18 @@ const FindPasswordScreen = () => {
                 <Text style={styles.buttonText}>인증번호 확인</Text>
               )}
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setStage('email')} style={styles.linkButton}>
-              <Text style={styles.linkText}>이메일 다시 입력하기</Text>
-            </TouchableOpacity>
+            <View style={styles.signupButtonContainer}>
+              <TouchableOpacity onPress={() => setStage('email')}>
+                <Text style={{fontSize: 16}}>이메일 다시 입력하기</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
         {/* 3단계: 새 비밀번호 설정 */}
         {stage === 'resetPassword' && (
-          <View style={styles.stageContainer}>
-            <Text style={styles.label}>새 비밀번호</Text>
+          <View style={styles.section}>
+            <Text style={styles.title}>새 비밀번호</Text>
             <View style={styles.passwordInputContainer}>
               <TextInput
                 style={styles.passwordInput}
@@ -257,7 +292,7 @@ const FindPasswordScreen = () => {
             </View>
             <Text style={styles.passwordHint}>8자 이상, 영문, 숫자, 특수문자를 포함해야 합니다.</Text>
 
-            <Text style={styles.label}>새 비밀번호 확인</Text>
+            <Text style={styles.title}>새 비밀번호 확인</Text>
             <View style={styles.passwordInputContainer}>
               <TextInput
                 style={styles.passwordInput}
@@ -284,133 +319,16 @@ const FindPasswordScreen = () => {
                 <Text style={styles.buttonText}>비밀번호 재설정</Text>
               )}
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setStage('email')} style={styles.linkButton}>
-              <Text style={styles.linkText}>처음부터 다시 시작</Text>
-            </TouchableOpacity>
+            <View style={styles.signupButtonContainer}>
+              <TouchableOpacity onPress={() => setStage('email')}>
+                <Text style={{fontSize: 16}}>처음부터 다시 시작</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    backgroundColor: '#f8f8f8',
-    paddingHorizontal: 20,
-    paddingVertical: 40,
-    justifyContent: 'center', // 세로 중앙 정렬
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 30,
-    marginTop: Platform.OS === 'ios' ? 0 : 20, // iOS는 상단에 Safe Area 고려
-  },
-  backButton: {
-    marginRight: 15,
-    padding: 5,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  stageContainer: {
-    width: '100%',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#555',
-    alignSelf: 'flex-start',
-    marginBottom: 8,
-    marginTop: 15,
-  },
-  input: {
-    width: '100%',
-    height: 50,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    paddingHorizontal: 15,
-    fontSize: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  passwordInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    height: 50,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    paddingHorizontal: 15,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  passwordInput: {
-    flex: 1,
-    fontSize: 16,
-    paddingRight: 10, // 아이콘과의 간격
-  },
-  eyeIcon: {
-    padding: 5,
-  },
-  passwordHint: {
-    fontSize: 12,
-    color: 'gray',
-    alignSelf: 'flex-start',
-    marginBottom: 20,
-    paddingHorizontal: 5,
-  },
-  button: {
-    width: '100%',
-    height: 50,
-    backgroundColor: '#007bff',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  buttonDisabled: {
-    backgroundColor: '#a0c7ff',
-  },
-  linkButton: {
-    marginTop: 20,
-    padding: 5,
-  },
-  linkText: {
-    color: '#007bff',
-    fontSize: 14,
-  },
-  errorText: {
-    color: '#dc3545',
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 20,
-    backgroundColor: '#f8d7da',
-    borderColor: '#f5c6cb',
-    borderWidth: 1,
-    borderRadius: 5,
-    padding: 10,
-  },
-});
 
 export default FindPasswordScreen;
