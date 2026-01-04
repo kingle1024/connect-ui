@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   TextInput,
   Dimensions,
-  TouchableWithoutFeedback,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -472,7 +471,6 @@ export default function ConnectScreen() {
           enabled: false,
         }}
       >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
           <KeyboardAvoidingView
             style={{ flex: 1 }}
             behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -497,7 +495,7 @@ export default function ConnectScreen() {
 
             <ScrollView
               style={{ padding: 10 }}
-              keyboardShouldPersistTaps="handled"
+              keyboardShouldPersistTaps="always"
             >
               <View
                 style={{
@@ -684,7 +682,6 @@ export default function ConnectScreen() {
               )}
             </ScrollView>
           </KeyboardAvoidingView>
-        </TouchableWithoutFeedback>
       </RBSheet>
     </SafeAreaView>
   );
