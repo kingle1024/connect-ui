@@ -6,6 +6,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Platform,
 } from "react-native";
 import Alert from '@blazejkustra/react-native-alert';
 import validator from "validator";
@@ -29,6 +30,7 @@ const styles = StyleSheet.create({
   backButton: {
     position: "absolute",
     left: 3,
+    zIndex: 999,
   },
   center: {
     flex: 1,
@@ -191,8 +193,30 @@ const SignupScreen = () => {
   }, [email, password, name, signup]);
 
   const onPressBackButton = useCallback(() => {
+    try {
+      const canGoBack = typeof navigation.canGoBack === "function" ? navigation.canGoBack() : false;
+      console.log("[Signup] onPressBackButton - Platform", Platform.OS, "canGoBack", canGoBack);
+      if (canGoBack) {
+        navigation.goBack();
+        return;
+      }
+    } catch (err) {
+      console.log("[Signup] onPressBackButton - canGoBack error", err);
+    }
+
+    if (Platform.OS === "web") {
+      try {
+        console.log("[Signup] onPressBackButton - window.history.back()");
+        // @ts-ignore
+        window.history.back();
+        return;
+      } catch (e) {
+        console.log("[Signup] onPressBackButton - window.history.back error", e);
+      }
+    }
+
     navigation.goBack();
-  }, [navigation.goBack]);
+  }, [navigation]);
 
   const onPressSigninButton = useCallback(() => {
     navigation.navigate("Signin");
@@ -202,18 +226,12 @@ const SignupScreen = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.backButton}>
-          {navigation.canGoBack() && (
-            <TouchableOpacity
-              onPress={onPressBackButton}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <MaterialIcons
-                name="arrow-back-ios-new"
-                size={24}
-                color="black"
-              />
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            onPress={onPressBackButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <MaterialIcons name="arrow-back-ios-new" size={24} color="black" />
+          </TouchableOpacity>
         </View>
         <View style={styles.center}>
           <Text style={styles.headerTitle}>회원가입</Text>
