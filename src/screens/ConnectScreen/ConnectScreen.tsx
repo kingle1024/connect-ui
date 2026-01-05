@@ -7,9 +7,7 @@ import {
   TextInput,
   Dimensions,
   Keyboard,
-  KeyboardAvoidingView,
   Platform,
-  ScrollView,
   Animated,
   PanResponder,
   RefreshControl,
@@ -29,7 +27,6 @@ import {
   formatRelativeTime,
   getDeadlineLabel,
 } from "@/utils/formatRelativeTime";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import dayjs from "dayjs";
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import Toast from "react-native-toast-message";
@@ -101,6 +98,7 @@ export default function ConnectScreen() {
     showDatePicker,
     setShowDatePicker,
     handleDeadlineDtsChange,
+    savePost,
   } = useBoard();
 
   const onPressListItem = (postId: number) => {
@@ -143,7 +141,7 @@ export default function ConnectScreen() {
     }
   };
 
-  const onPressPost = () => {
+  const onPressPost = async () => {
     if (
       titleInputErrorText ||
       contentInputErrorText ||
@@ -152,12 +150,29 @@ export default function ConnectScreen() {
     ) {
       return;
     }
-    resetTitleInput();
-    resetContenInput();
-    resetDestinationInput();
-    resetMaxCapacityInput();
-    refRBSheet.current?.close();
-    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+    try {
+      await savePost();
+      resetTitleInput();
+      resetContenInput();
+      resetDestinationInput();
+      resetMaxCapacityInput();
+      refRBSheet.current?.close();
+      flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+      Toast.show({
+        type: 'success',
+        text1: '게시글 등록 완료',
+        visibilityTime: 2000,
+        topOffset: insets.top,
+      });
+    } catch (ex) {
+      Toast.show({
+        type: 'error',
+        text1: '등록 실패',
+        text2: '게시글 등록 중 오류가 발생했습니다.',
+        visibilityTime: 3000,
+        topOffset: insets.top,
+      });
+    }
   };
 
   const onPressMore = (item: Post) => {
