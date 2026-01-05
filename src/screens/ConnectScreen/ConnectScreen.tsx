@@ -35,6 +35,7 @@ import { useActionSheet } from "@expo/react-native-action-sheet";
 import Toast from "react-native-toast-message";
 import { useRootNavigation } from "@/hooks/useNavigation";
 import AuthContext from "@/components/auth/AuthContext";
+import NewPostSheet from "./NewPostSheet";
 
 const screenHeight = Dimensions.get("window").height;
 
@@ -80,18 +81,22 @@ export default function ConnectScreen() {
     setTitleInput,
     titleInputErrorText,
     resetTitleInput,
+    validateTitle,
     contentInput,
     setContentInput,
     contentInputErrorText,
     resetContenInput,
+    validateContent,
     destinationInput,
     setDestinationInput,
     destinationInputErrorText,
     resetDestinationInput,
+    validateDestination,
     maxCapacityInput,
     setMaxCapacityInput,
     maxCapacityInputErrorText,
     resetMaxCapacityInput,
+    validateMaxCapacity,
     deadlineDts,
     showDatePicker,
     setShowDatePicker,
@@ -471,217 +476,38 @@ export default function ConnectScreen() {
           enabled: false,
         }}
       >
-          <KeyboardAvoidingView
-            style={{ flex: 1 }}
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
-          >
-            <Animated.View
-              {...panResponder.panHandlers}
-              style={{
-                height: 30,
-                justifyContent: "center",
-                alignItems: "center",
-              }}
-            >
-              <View
-                style={{
-                  width: 50,
-                  height: 5,
-                  backgroundColor: "#ccc",
-                  borderRadius: 2.5,
-                }}
-              />
-            </Animated.View>
+        <NewPostSheet
+          screenHeight={screenHeight}
+          pan={pan}
+          panResponder={panResponder}
+          onPressCancel={onPressCancel}
+          onPressPost={onPressPost}
 
-            <ScrollView
-              style={{ padding: 10 }}
-              keyboardShouldPersistTaps="always"
-            >
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginBottom: 10,
-                }}
-              >
-                <TouchableOpacity
-                  style={{
-                    backgroundColor: "rgba(255, 99, 71, 1)",
-                    paddingVertical: 8,
-                    paddingHorizontal: 16,
-                    borderRadius: 8,
-                  }}
-                  onPress={onPressCancel}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Text style={{ color: "white", fontWeight: "bold" }}>
-                    취소
-                  </Text>
-                </TouchableOpacity>
-                <Text
-                  style={{
-                    fontSize: 18,
-                    fontWeight: "bold",
-                    marginTop: 10,
-                    marginBottom: 5,
-                    color: "#333",
-                    textAlign: "center",
-                  }}
-                >
-                  새 글
-                </Text>
-                <TouchableOpacity
-                  style={{
-                    backgroundColor: `${
-                      titleInputErrorText ||
-                      contentInputErrorText ||
-                      destinationInputErrorText ||
-                      maxCapacityInputErrorText
-                        ? "rgba(255, 99, 71, 0.5)"
-                        : "rgba(255, 99, 71, 1)"
-                    }`,
-                    paddingVertical: 8,
-                    paddingHorizontal: 16,
-                    borderRadius: 8,
-                  }}
-                  onPress={onPressPost}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Text style={{ color: "white", fontWeight: "bold" }}>
-                    Post
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              {/* 제목 */}
-              <TextInput
-                value={titleInput}
-                placeholder="제목"
-                onChangeText={setTitleInput}
-                placeholderTextColor="#999"
-                style={{
-                  marginBottom: 10,
-                  padding: 10,
-                  color: "black",
-                  fontSize: 18,
-                  fontWeight: "bold",
-                  backgroundColor: "white",
-                  borderWidth: 1,
-                  borderColor: "black",
-                  borderRadius: 8,
-                }}
-                returnKeyType="done"
-              />
-              {titleInputErrorText && (
-                <View style={{ marginBottom: 10 }}>
-                  <Text style={{ color: "red" }}>{titleInputErrorText}</Text>
-                </View>
-              )}
-              {/* 내용 */}
-              <TextInput
-                value={contentInput}
-                onChangeText={setContentInput}
-                placeholder="내용을 입력하세요"
-                placeholderTextColor="#999"
-                multiline={true}
-                textAlignVertical="top"
-                style={{
-                  height: 150,
-                  padding: 10,
-                  color: "black",
-                  fontSize: 16,
-                  backgroundColor: "white",
-                  borderWidth: 1,
-                  borderColor: "black",
-                  borderRadius: 8,
-                  marginBottom: 10,
-                }}
-              />
-              {contentInputErrorText && (
-                <View style={{ marginBottom: 10 }}>
-                  <Text style={{ color: "red" }}>{contentInputErrorText}</Text>
-                </View>
-              )}
-              {/* 도착지 */}
-              <TextInput
-                value={destinationInput}
-                placeholder="도착지 입력"
-                onChangeText={setDestinationInput}
-                placeholderTextColor="#999"
-                style={{
-                  marginBottom: 10,
-                  padding: 10,
-                  color: "black",
-                  fontSize: 16,
-                  backgroundColor: "white",
-                  borderWidth: 1,
-                  borderColor: "black",
-                  borderRadius: 8,
-                }}
-                returnKeyType="done"
-              />
-              {destinationInputErrorText && (
-                <View style={{ marginBottom: 10 }}>
-                  <Text style={{ color: "red" }}>
-                    {destinationInputErrorText}
-                  </Text>
-                </View>
-              )}
-              {/* 최대 모집 인원 */}
-              <TextInput
-                value={maxCapacityInput}
-                onChangeText={setMaxCapacityInput}
-                placeholder="최대 모집 인원 입력"
-                placeholderTextColor="#999"
-                keyboardType="numeric"
-                style={{
-                  padding: 10,
-                  color: "black",
-                  fontSize: 16,
-                  backgroundColor: "white",
-                  borderWidth: 1,
-                  borderColor: "black",
-                  borderRadius: 8,
-                  marginBottom: 10,
-                }}
-                returnKeyType="done"
-              />
-              {maxCapacityInputErrorText && (
-                <View style={{ marginBottom: 10 }}>
-                  <Text style={{ color: "red" }}>
-                    {maxCapacityInputErrorText}
-                  </Text>
-                </View>
-              )}
-              {/* 마감일 DateTimePicker */}
-              <TouchableOpacity
-                onPress={() => setShowDatePicker(true)}
-                style={{
-                  padding: 10,
-                  backgroundColor: "white",
-                  borderWidth: 1,
-                  borderColor: "black",
-                  borderRadius: 8,
-                  marginBottom: 10,
-                }}
-              >
-                <Text style={{ fontSize: 16 }}>
-                  {deadlineDts
-                    ? dayjs(deadlineDts).format("YYYY-MM-DD (ddd)")
-                    : "마감일 선택"}
-                </Text>
-              </TouchableOpacity>
-              {showDatePicker && (
-                <DateTimePicker
-                  testID="dateTimePicker"
-                  value={deadlineDts}
-                  mode="date"
-                  is24Hour={true}
-                  onChange={handleDeadlineDtsChange}
-                />
-              )}
-            </ScrollView>
-          </KeyboardAvoidingView>
+          titleInput={titleInput}
+          setTitleInput={setTitleInput}
+          titleInputErrorText={titleInputErrorText}
+          validateTitle={validateTitle}
+
+          contentInput={contentInput}
+          setContentInput={setContentInput}
+          contentInputErrorText={contentInputErrorText}
+          validateContent={validateContent}
+
+          destinationInput={destinationInput}
+          setDestinationInput={setDestinationInput}
+          destinationInputErrorText={destinationInputErrorText}
+          validateDestination={validateDestination}
+
+          maxCapacityInput={maxCapacityInput}
+          setMaxCapacityInput={setMaxCapacityInput}
+          maxCapacityInputErrorText={maxCapacityInputErrorText}
+          validateMaxCapacity={validateMaxCapacity}
+
+          deadlineDts={deadlineDts}
+          showDatePicker={showDatePicker}
+          setShowDatePicker={setShowDatePicker}
+          handleDeadlineDtsChange={handleDeadlineDtsChange}
+        />
       </RBSheet>
     </SafeAreaView>
   );
