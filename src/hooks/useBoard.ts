@@ -1,18 +1,16 @@
 import { Platform } from "react-native";
-import Constants from "expo-constants";
 import { useCallback, useMemo, useState } from "react";
 import { Post } from "@/types";
-import axios from "axios";
+
+import { useContext } from "react";
+import AuthContext from "@/components/auth/AuthContext";
+import { axiosInstance } from "@/utils/api";
+import dayjs from "dayjs";
 
 type PostListResponse = {
   nextPageToken: string;
   posts: Post[];
 };
-
-const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL ?? "";
-const axiosInstance = axios.create({
-  baseURL: API_BASE_URL,
-});
 
 export const useBoard = () => {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -149,9 +147,54 @@ export const useBoard = () => {
     setNextPageCursor(!!postData.nextPageToken ? postData.nextPageToken : null);
   }, [nextPageCursor]);
 
-  const savePost = async () => {
-    console.log("데이터 저장");
-  };
+  const { user } = useContext(AuthContext);
+
+  const savePost = useCallback(async () => {
+    try {
+      const payload = {
+        title: titleInput,
+        content: contentInput,
+        category: "기타",
+        userId: user?.userId ?? "anonymous",
+        userName: user?.name ?? "익명",
+        deadlineDts: dayjs(deadlineDts).format("YYYY-MM-DDTHH:mm:ss"),
+        destination: destinationInput,
+        maxCapacity: parseInt(maxCapacityInput || "0", 10) || 0,
+        currentParticipants: 1,
+      };
+
+      const resp = await axiosInstance.post("/api/boards", payload);
+      const created = resp.data;
+
+      const newPost: Post = {
+        id: created.id,
+        title: created.title,
+        content: created.content,
+        category: created.category ?? "기타",
+        commentCount: created.commentCount ?? 0,
+        userId: created.userId ?? payload.userId,
+        userName: created.userName ?? payload.userName,
+        insertDts: created.insertDts ?? new Date().toISOString(),
+        deadlineDts: created.deadlineDts ?? payload.deadlineDts,
+        destination: created.destination ?? payload.destination,
+        maxCapacity: created.maxCapacity ?? payload.maxCapacity,
+        currentParticipants: created.currentParticipants ?? payload.currentParticipants,
+      };
+
+      setPosts((prev) => [newPost, ...prev]);
+      return newPost;
+    } catch (ex) {
+      console.error("savePost failed", ex);
+      throw ex;
+    }
+  }, [
+    titleInput,
+    contentInput,
+    destinationInput,
+    maxCapacityInput,
+    deadlineDts,
+    user,
+  ]);
 
   return {
     posts,
@@ -184,5 +227,6 @@ export const useBoard = () => {
     showDatePicker,
     setShowDatePicker,
     handleDeadlineDtsChange,
+    savePost,
   };
 };
