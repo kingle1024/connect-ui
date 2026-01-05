@@ -196,6 +196,21 @@ export const useBoard = () => {
     user,
   ]);
 
+  const deletePost = useCallback(
+    async (id: number) => {
+      try {
+        await axiosInstance.delete(`/api/boards/${id}`, {
+          headers: { "X-User-Id": user?.userId ?? "anonymous" },
+        });
+        setPosts((prev) => prev.filter((p) => p.id !== id));
+      } catch (ex) {
+        console.error("deletePost failed", ex);
+        throw ex;
+      }
+    },
+    [user]
+  );
+
   return {
     posts,
     setPosts,
@@ -228,5 +243,6 @@ export const useBoard = () => {
     setShowDatePicker,
     handleDeadlineDtsChange,
     savePost,
+    deletePost,
   };
 };

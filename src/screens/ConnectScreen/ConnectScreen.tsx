@@ -99,7 +99,28 @@ export default function ConnectScreen() {
     setShowDatePicker,
     handleDeadlineDtsChange,
     savePost,
+    deletePost,
   } = useBoard();
+
+  const handleDelete = async (id: number) => {
+    try {
+      await deletePost(id);
+      Toast.show({
+        type: 'success',
+        text1: '게시글 삭제 완료',
+        visibilityTime: 2000,
+        topOffset: insets.top,
+      });
+    } catch (ex) {
+      Toast.show({
+        type: 'error',
+        text1: '삭제 실패',
+        text2: '게시글 삭제 중 오류가 발생했습니다.',
+        visibilityTime: 3000,
+        topOffset: insets.top,
+      });
+    }
+  };
 
   const onPressListItem = (postId: number) => {
     if (me) {
@@ -177,19 +198,30 @@ export default function ConnectScreen() {
 
   const onPressMore = (item: Post) => {
     if (me) {
-      const options = ["참여하기", "신고하기", "취소"];
-      const cancelButtonIndex = 2;
+      // Build action sheet options conditionally: include "삭제" only for the author
+      const baseOptions = ["참여하기"];
+      const authorOptions: string[] = me && item.userId === me.userId ? ["삭제"] : [];
+      const otherOptions = ["신고하기", "취소"];
+      const options = [...baseOptions, ...authorOptions, ...otherOptions];
+      const cancelButtonIndex = options.length - 1;
+
+      const destructiveIndexes: number[] = [];
+      const deleteIndex = options.indexOf("삭제");
+      const reportIndex = options.indexOf("신고하기");
+      if (deleteIndex !== -1) destructiveIndexes.push(deleteIndex);
+      if (reportIndex !== -1) destructiveIndexes.push(reportIndex);
 
       showActionSheetWithOptions(
         {
           options,
           cancelButtonIndex,
-          destructiveButtonIndex: [1, 2],
+          destructiveButtonIndex: destructiveIndexes,
           title: item.title,
           message: `${item.content.substring(0, 50)}...`,
         },
         (buttonIndex) => {
-          if (buttonIndex === 0) {
+          const joinIndex = options.indexOf("참여하기");
+          if (buttonIndex === joinIndex) {
             if (item.maxCapacity === item.currentParticipants) {
               Toast.show({
                 type: "error",
@@ -222,7 +254,12 @@ export default function ConnectScreen() {
                 ]
               );
             }
-          } else if (buttonIndex === 1) {
+          } else if (buttonIndex === deleteIndex) {
+            Alert.alert("게시글 삭제", "게시글을 삭제하시겠습니까?", [
+              { text: "삭제", onPress: () => handleDelete(item.id) },
+              { text: "취소" },
+            ]);
+          } else if (buttonIndex === reportIndex) {
             Alert.alert("신고하시겠습니까?", "신고하면 관리자가 확인합니다.", [
               {
                 text: "신고",
