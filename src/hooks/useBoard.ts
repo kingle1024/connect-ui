@@ -5,7 +5,10 @@ import { Post } from "@/types";
 import { useContext } from "react";
 import AuthContext from "@/components/auth/AuthContext";
 import { axiosInstance } from "@/utils/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import dayjs from "dayjs";
+import axios from "axios";
+import Constants from "expo-constants";
 
 type PostListResponse = {
   nextPageToken: string;
@@ -22,6 +25,10 @@ export const useBoard = () => {
   const [maxCapacityInput, setMaxCapacityInput] = useState("");
   const [deadlineDts, setDeadlineDts] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL ?? "";
+  const axiosInstance = axios.create({
+    baseURL: API_BASE_URL,
+  });
 
   const titleInputErrorText = useMemo(() => {
     if (titleInput.length === 0) {
@@ -199,8 +206,12 @@ export const useBoard = () => {
   const deletePost = useCallback(
     async (id: number) => {
       try {
+        const accessToken = await AsyncStorage.getItem("accessToken");
         await axiosInstance.delete(`/api/boards/${id}`, {
-          headers: { "X-User-Id": user?.userId ?? "anonymous" },
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
         });
         setPosts((prev) => prev.filter((p) => p.id !== id));
       } catch (ex) {
