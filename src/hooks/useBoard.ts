@@ -29,21 +29,21 @@ export const useBoard = () => {
     if (titleInput.length === 0) {
       return "제목을 입력해주세요.";
     }
-    return null;
+    return "";
   }, [titleInput]);
 
   const contentInputErrorText = useMemo(() => {
     if (contentInput.length === 0) {
       return "내용을 입력해주세요.";
     }
-    return null;
+    return "";
   }, [contentInput]);
 
   const destinationInputErrorText = useMemo(() => {
     if (destinationInput.length === 0) {
       return "도착지를 입력해주세요.";
     }
-    return null;
+    return "";
   }, [destinationInput]);
 
   const maxCapacityInputErrorText = useMemo(() => {
@@ -53,8 +53,25 @@ export const useBoard = () => {
     if (!/^[1-9]\d*$/.test(maxCapacityInput)) {
       return "1 이상의 정수를 입력해주세요";
     }
-    return null;
+    return "";
   }, [maxCapacityInput]);
+
+  const validateTitle = useCallback(() => {
+    // titleInputErrorText가 존재하지 않으면 유효함
+    return titleInputErrorText === '';
+  }, [titleInputErrorText]);
+
+  const validateContent = useCallback(() => {
+    return contentInputErrorText === '';
+  }, [contentInputErrorText]);
+
+  const validateDestination = useCallback(() => {
+    return destinationInputErrorText === '';
+  }, [destinationInputErrorText]);
+
+  const validateMaxCapacity = useCallback(() => {
+    return maxCapacityInputErrorText === '';
+  }, [maxCapacityInputErrorText]);
 
   const handleDeadlineDtsChange = (event: any, selectedDate?: Date) => {
     setShowDatePicker(Platform.OS === "ios");
@@ -146,18 +163,22 @@ export const useBoard = () => {
     setTitleInput,
     titleInputErrorText,
     resetTitleInput,
+    validateTitle,
     contentInput,
     setContentInput,
     contentInputErrorText,
     resetContenInput,
+    validateContent,
     destinationInput,
     setDestinationInput,
     destinationInputErrorText,
     resetDestinationInput,
+    validateDestination,
     maxCapacityInput,
     setMaxCapacityInput,
     maxCapacityInputErrorText,
     resetMaxCapacityInput,
+    validateMaxCapacity,
     deadlineDts,
     setDeadlineDts,
     showDatePicker,
