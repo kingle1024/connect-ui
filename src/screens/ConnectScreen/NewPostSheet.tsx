@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -9,12 +9,9 @@ import {
   ScrollView,
   Animated,
   PanResponder,
-  Keyboard,
   StyleSheet,
-  Dimensions
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import dayjs from 'dayjs';
+import CustomDateTimePicker from '../../components/CustomDateTimePicker';
 
 interface NewPostSheetProps {
   screenHeight: number;
@@ -56,8 +53,9 @@ const NewPostSheet: React.FC<NewPostSheetProps> = React.memo((props) => {
     contentInput, setContentInput, contentInputErrorText, validateContent,
     destinationInput, setDestinationInput, destinationInputErrorText, validateDestination,
     maxCapacityInput, setMaxCapacityInput, maxCapacityInputErrorText, validateMaxCapacity,
-    deadlineDts, showDatePicker, setShowDatePicker, handleDeadlineDtsChange,
+    deadlineDts, handleDeadlineDtsChange, showDatePicker, setShowDatePicker
   } = props;
+
 
   // TextInput 오류 여부에 따라 Post 버튼의 배경색 결정 (props로 받은 에러 텍스트 사용)
   const isPostButtonDisabled =
@@ -162,21 +160,17 @@ const NewPostSheet: React.FC<NewPostSheetProps> = React.memo((props) => {
           </View>
         )}
 
-        {/* 마감일 DateTimePicker */}
-        <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.datePickerButton}>
-          <Text style={styles.datePickerText}>
-            {deadlineDts ? dayjs(deadlineDts).format('YYYY-MM-DD (ddd)') : '마감일 선택'}
-          </Text>
-        </TouchableOpacity>
-        {showDatePicker && (
-          <DateTimePicker
-            testID="dateTimePicker"
-            value={deadlineDts}
-            mode="date"
-            is24Hour={true}
-            onChange={handleDeadlineDtsChange}
-          />
-        )}
+        <CustomDateTimePicker
+          testID="dateTimePicker"
+          value={deadlineDts}
+          mode="date"
+          is24Hour={true}
+          onChange={handleDeadlineDtsChange}
+          datePickerButtonComponentStyle={styles.datePickerButton}
+          datePickerTextComponentStyle={styles.datePickerText}
+          showDatePicker={showDatePicker}
+          setShowDatePicker={setShowDatePicker}
+        />
       </ScrollView>
     </KeyboardAvoidingView>
   );
