@@ -55,8 +55,8 @@ export const useBoard = () => {
     if (maxCapacityInput.length === 0) {
       return "최대 모집 인원을 입력해주세요.";
     }
-    if (!/^[1-9]\d*$/.test(maxCapacityInput)) {
-      return "1 이상의 정수를 입력해주세요";
+    if (!/^[2-9]\d*$/.test(maxCapacityInput)) {
+      return "2명 이상의 인원을 입력해주세요";
     }
     return "";
   }, [maxCapacityInput]);
