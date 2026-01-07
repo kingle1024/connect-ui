@@ -103,23 +103,7 @@ export default function ConnectScreen() {
   } = useBoard();
 
   const handleDelete = async (id: number) => {
-    try {
-      await deletePost(id);
-      Toast.show({
-        type: 'success',
-        text1: '게시글 삭제 완료',
-        visibilityTime: 2000,
-        topOffset: insets.top,
-      });
-    } catch (ex) {
-      Toast.show({
-        type: 'error',
-        text1: '삭제 실패',
-        text2: '게시글 삭제 중 오류가 발생했습니다.',
-        visibilityTime: 3000,
-        topOffset: insets.top,
-      });
-    }
+    await deletePost(id);
   };
 
   const onPressListItem = (postId: number) => {
