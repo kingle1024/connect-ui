@@ -4,11 +4,14 @@ import { Post } from "@/types";
 
 import { useContext } from "react";
 import AuthContext from "@/components/auth/AuthContext";
-import { axiosInstance } from "@/utils/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import dayjs from "dayjs";
 import axios from "axios";
 import Constants from "expo-constants";
+import Toast from "react-native-toast-message";
+import {
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 type PostListResponse = {
   nextPageToken: string;
@@ -25,6 +28,7 @@ export const useBoard = () => {
   const [maxCapacityInput, setMaxCapacityInput] = useState("");
   const [deadlineDts, setDeadlineDts] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const insets = useSafeAreaInsets();
   const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL ?? "";
   const axiosInstance = axios.create({
     baseURL: API_BASE_URL,
@@ -214,9 +218,33 @@ export const useBoard = () => {
           },
         });
         setPosts((prev) => prev.filter((p) => p.id !== id));
-      } catch (ex) {
-        console.error("deletePost failed", ex);
-        throw ex;
+        Toast.show({
+          type: 'success',
+          text1: '게시글 삭제 완료',
+          visibilityTime: 2000,
+          topOffset: insets.top,
+        });
+      } catch (ex: any) {
+        switch (ex.response.data.code) {
+          case 'AUTHENTICATION_REQUIRED': {
+            Toast.show({
+              type: 'error',
+              text1: '삭제 실패',
+              text2: ex.response.data.message,
+              visibilityTime: 3000,
+              topOffset: insets.top,
+            });
+          }
+          default: {
+            Toast.show({
+              type: 'error',
+              text1: '삭제 실패',
+              text2: '게시글 삭제 중 오류가 발생했습니다.',
+              visibilityTime: 3000,
+              topOffset: insets.top,
+            });
+          }
+        }
       }
     },
     [user]
