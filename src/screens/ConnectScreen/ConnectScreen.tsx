@@ -202,7 +202,15 @@ export default function ConnectScreen() {
         (buttonIndex) => {
           const joinIndex = options.indexOf("참여하기");
           if (buttonIndex === joinIndex) {
-            if (item.maxCapacity === item.currentParticipants) {
+            // If this is the user's own post, inform already participating
+            if (item.userId === me?.userId) {
+              Toast.show({
+                type: "info",
+                text1: "이미 참여되어 있습니다",
+                visibilityTime: 2000,
+                topOffset: insets.top,
+              });
+            } else if (item.maxCapacity === item.currentParticipants) {
               Toast.show({
                 type: "error",
                 text1: "모집 마감!",
