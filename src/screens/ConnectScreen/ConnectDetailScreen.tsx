@@ -377,7 +377,7 @@ const ConnectDetail = () => {
         </View>
       </>
     );
-  }, [reply, inputRef, startPrivateChat]);
+  }, [boardDetail, reply, inputRef, startPrivateChat]);
 
   const renderItem = useCallback(({ item }: { item: Reply }) => {
     const maxVisibleReplies = 3;
