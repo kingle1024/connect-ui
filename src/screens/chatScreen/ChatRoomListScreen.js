@@ -14,13 +14,9 @@ import SockJS from "sockjs-client";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import localStyles from "./ChatRoomListScreen.styles.ts";
 import AuthContext from "@/components/auth/AuthContext";
-import axios from "axios";
+import { getRoomsForUser } from "@/utils/chat";
 const API_BASE_URL = Constants.expoConfig.extra.API_BASE_URL;
 const SOCKET_URL = API_BASE_URL + "/ws-chat";
-const axiosInstance = axios.create({
-  baseURL: API_BASE_URL,
-  withCredentials: true
-});
 
 const MessageType = {
   LEAVE: "LEAVE",
@@ -90,33 +86,23 @@ export default function ChatRoomsListScreen({ navigation }) {
   // 🌟 의존성 배열에서 'loading' (isRoomsLoading) 제거 🌟
   const fetchUserRooms = useCallback(async () => {
     if (!userId || isUserIdLoading) {
-      // 🌟 userId가 없거나 ID 로딩 중이면 바로 리턴
       setRooms([]);
       return;
     }
-    if (isRoomsLoading) return; // 🌟 이미 목록 로딩 중이면 중복 요청 방지
+    if (isRoomsLoading) return;
 
-    setIsRoomsLoading(true); // 🌟 목록 로딩 시작
+    setIsRoomsLoading(true);
     try {
-      // console.log(me);
-      const refreshToken = await AsyncStorage.getItem("refreshToken");
-      const response = await axiosInstance.get(
-        `${API_BASE_URL}/api/chat/rooms?userId=${userId}`, {
-          headers: { Authorization: `Bearer ${refreshToken}` },
-        });
-      if (!response.data) {
-        throw new Error(`HTTP 오류! 상태: ${response.status}`);
-      }
-      const data = response.data;
-      setRooms(data);
+      const data = await getRoomsForUser(userId);
+      setRooms(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("채팅방 목록 불러오기 실패:", error);
       Alert.alert("오류", "채팅방 목록을 불러오는데 실패했습니다.");
       setRooms([]);
     } finally {
-      setIsRoomsLoading(false); // 🌟 목록 로딩 완료
+      setIsRoomsLoading(false);
     }
-  }, [userId, isUserIdLoading]); // 🌟 이제 userId와 isUserIdLoading에만 의존!
+  }, [userId, isUserIdLoading]);
 
   useFocusEffect(
     useCallback(() => {
@@ -187,7 +173,6 @@ export default function ChatRoomsListScreen({ navigation }) {
             });
             Alert.alert("알림", `'${roomName}' 방에서 나갔습니다.`);
             setRooms(prevRooms => prevRooms.filter(room => room.id !== roomIdToLeave));
-            fetchUserRooms();            
           } else {
             Alert.alert(
               "오류",
