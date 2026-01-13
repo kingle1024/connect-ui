@@ -108,7 +108,7 @@ export default function ConnectScreen() {
     } else {
       Alert.alert(
         "로그인이 필요합니다.",
-        "댓글을 보려면 로그인이 필요합니다.",
+        "모집 글을 보려면 로그인이 필요합니다.",
         [
           {
             text: "로그인",
