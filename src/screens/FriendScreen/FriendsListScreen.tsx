@@ -11,8 +11,8 @@ import {
   ActivityIndicator,
 } from "react-native";
 import Alert from '@blazejkustra/react-native-alert';
-import { useNavigation, NavigationProp } from "@react-navigation/native";
-import { Feather, AntDesign } from "@expo/vector-icons";
+import { useNavigation, NavigationProp, DrawerActions } from "@react-navigation/native";
+import { Feather } from "@expo/vector-icons";
 import FriendItem from "@/components/FriendItem";
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -431,12 +431,14 @@ const FriendsListScreen = () => {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>친구</Text>
         <View style={styles.headerRight}>
-          {/* <TouchableOpacity style={styles.iconBtn}>
-            <Feather name="user-plus" size={20} color="#333" />
+          {/* 우측 상단 햄버거: 설정·마이페이지 등 드로어 토글 (모집 화면과 동일) */}
+          <TouchableOpacity
+            onPress={() => navigation.dispatch(DrawerActions.toggleDrawer())}
+            style={{ padding: 5 }}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Feather name="menu" size={24} color="#333" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn}>
-            <AntDesign name="setting" size={20} color="#333" />
-          </TouchableOpacity> */}
         </View>
       </View>
 
