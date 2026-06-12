@@ -16,6 +16,7 @@ const BottomTabNavigation = () => {
 
   return (
     <BottomTab.Navigator
+      initialRouteName="Connect"
       screenOptions={{
         tabBarActiveTintColor: "tomato",
         tabBarInactiveTintColor: "gray",
