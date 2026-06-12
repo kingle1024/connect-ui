@@ -7,6 +7,7 @@ export interface AuthContextProp {
   signup: (email: string, password: string, name: string) => Promise<void>;
   processingSignup: boolean;
   signin: (email: string, password: string) => Promise<void>;
+  kakaoSignin: () => Promise<void>;
   signout: () => Promise<void>;
   processingSignin: boolean;
   updateProfileImage: (filepath: string) => Promise<void>;
@@ -19,6 +20,7 @@ const AuthContext = createContext<AuthContextProp>({
   signup: async () => {},
   processingSignup: false,
   signin: async () => {},
+  kakaoSignin: async () => {},
   signout: async () => {},
   processingSignin: false,
   updateProfileImage: async () => {},

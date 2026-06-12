@@ -7,6 +7,7 @@ module.exports = ({ config }) => {
     name: "MyExpoApp",
     slug: "myexpoapp",
     version: "1.0.0",
+    scheme: "connect", // 카카오 로그인 등 OAuth 딥링크(connect://...)용 스킴
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
@@ -16,6 +17,7 @@ module.exports = ({ config }) => {
       backgroundColor: "#ffffff",
     },
     assetBundlePatterns: ["**/*"],
+    plugins: ["expo-web-browser"], // 카카오 로그인 웹 인증 세션용
     ios: {
       supportsTablet: true,
     },
@@ -52,7 +54,7 @@ module.exports = ({ config }) => {
     defaultConfig.android.package = "com.yourcompany.app.staging";
     defaultConfig.ios.bundleIdentifier = "com.yourcompany.app.staging";
   } else if (process.env.EXPO_ENV === "dev") {
-    defaultConfig.extra.API_BASE_URL = "http://localhost:8888";
+    defaultConfig.extra.API_BASE_URL = "http://localhost:8889";
     defaultConfig.extra.ANOTHER_SECRET_KEY = "prod_super_secret_key";
     defaultConfig.android.package = "com.yourcompany.app.prod"; // 패키지명 변경
     defaultConfig.ios.bundleIdentifier = "com.yourcompany.app.prod"; // 번들 ID 변경

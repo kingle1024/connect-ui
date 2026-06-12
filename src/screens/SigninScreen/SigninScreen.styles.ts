@@ -61,6 +61,18 @@ const styles = StyleSheet.create({
   disabledSigninButton: {
     backgroundColor: Colors.GRAY,
   },
+  kakaoButton: {
+    backgroundColor: "#FEE500", // 카카오 브랜드 컬러
+    borderRadius: 10,
+    alignItems: "center",
+    padding: 20,
+    marginTop: 12,
+  },
+  kakaoButtonText: {
+    color: "#191600", // 카카오 가이드 텍스트 색(불투명 검정 85%)
+    fontSize: 16,
+    fontWeight: "bold",
+  },
   signingContainer: {
     flex: 1,
     alignItems: "center",
