@@ -20,7 +20,7 @@ const SigninScreen = () => {
   const navigation = useRootNavigation<"Signin">();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { signin, processingSignin } = useContext(AuthContext);
+  const { signin, kakaoSignin, processingSignin } = useContext(AuthContext);
 
   const emailErrorText = useMemo(() => {
     if (email.length === 0) {
@@ -43,7 +43,7 @@ const SigninScreen = () => {
   }, [password]);
 
   const onChangeEmailText = useCallback((text: string) => {
-    setEmail(text);
+    setEmail(text.trim());
   }, []);
 
   const onChangePasswordText = useCallback((text: string) => {
@@ -68,6 +68,14 @@ const SigninScreen = () => {
       Alert.alert(error.message);
     }
   }, [email, password, signin]);
+
+  const onPressKakaoButton = useCallback(async () => {
+    try {
+      await kakaoSignin();
+    } catch (error: any) {
+      Alert.alert(error.message);
+    }
+  }, [kakaoSignin]);
 
   const onPressBackButton = useCallback(() => {
     navigation.goBack();
@@ -156,6 +164,14 @@ const SigninScreen = () => {
               </TouchableOpacity>
             )}
           </View>
+          {!processingSignin && (
+            <TouchableOpacity
+              style={styles.kakaoButton}
+              onPress={onPressKakaoButton}
+            >
+              <Text style={styles.kakaoButtonText}>카카오로 로그인</Text>
+            </TouchableOpacity>
+          )}
           <View style={styles.signupButtonContainer}>
             <TouchableOpacity
               onPress={onPressFindPassword}

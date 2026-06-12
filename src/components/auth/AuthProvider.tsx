@@ -6,6 +6,8 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRootNavigation } from "@/hooks/useNavigation";
 import Alert from '@blazejkustra/react-native-alert';
+import * as WebBrowser from "expo-web-browser";
+import * as Linking from "expo-linking";
 
 type SignInResponse = {
   accessToken: string;
@@ -171,6 +173,59 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     [navigation]
   );
 
+  // 카카오 소셜 로그인
+  // 1) 백엔드의 인가 시작 엔드포인트를 웹 인증 세션으로 연다
+  // 2) 백엔드가 로그인 완료 후 redirectUri 로 accessToken/refreshToken 을 실어 돌려보낸다
+  // 3) 토큰을 저장하고 /api/auth/me 로 사용자 정보를 채운 뒤 메인으로 이동
+  const kakaoSignin = useCallback(async () => {
+    setProcessingSignin(true);
+    try {
+      // 플랫폼에 맞는 콜백 주소 생성 (웹: origin, 네이티브: connect://oauth-callback)
+      const redirectUri = Linking.createURL("oauth-callback");
+      const authUrl = `${API_BASE_URL}/api/auth/kakao/authorize?redirectUri=${encodeURIComponent(
+        redirectUri
+      )}`;
+
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+
+      if (result.type !== "success" || !result.url) {
+        // 사용자가 취소했거나 실패한 경우 조용히 종료
+        return;
+      }
+
+      const { queryParams } = Linking.parse(result.url);
+      const accessToken = queryParams?.accessToken as string | undefined;
+      const refreshToken = queryParams?.refreshToken as string | undefined;
+
+      if (!accessToken || !refreshToken) {
+        Alert.alert("카카오 로그인 실패", "토큰을 받지 못했습니다.");
+        return;
+      }
+
+      await AsyncStorage.setItem("accessToken", accessToken);
+      await AsyncStorage.setItem("refreshToken", refreshToken);
+
+      // 발급받은 토큰으로 사용자 정보 조회
+      const me = await axiosInstance.get("/api/auth/me", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      setUser({
+        userId: me.data.userId || "",
+        email: me.data.email || "",
+        name: me.data.name || "",
+        profileUrl: me.data.profileUrl || "",
+      });
+
+      navigation.navigate("BottomTab", { screen: "Connect" });
+    } catch (error) {
+      console.log("kakaoSignin error", error);
+      Alert.alert("카카오 로그인 에러", "다시 시도해주세요.");
+    } finally {
+      setProcessingSignin(false);
+    }
+  }, [navigation]);
+
   const signout = useCallback(async () => {
     await AsyncStorage.removeItem("accessToken");
     await AsyncStorage.removeItem("refreshToken");
@@ -193,6 +248,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       signup,
       processingSignup,
       signin,
+      kakaoSignin,
       signout,
       processingSignin,
       updateProfileImage,
@@ -204,6 +260,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     signup,
     processingSignup,
     signin,
+    kakaoSignin,
     signout,
     processingSignin,
     updateProfileImage,
