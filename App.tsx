@@ -18,7 +18,13 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ActionSheetProvider>
-          <NavigationContainer>
+          <NavigationContainer
+            // 웹 브라우저 탭 title. 화면의 title 옵션 → 라우트명 → 앱명 순으로 fallback (undefined 방지)
+            documentTitle={{
+              formatter: (options, route) =>
+                (options?.title as string) ?? route?.name ?? "같이타",
+            }}
+          >
             <StatusBar
               translucent
               backgroundColor="transparent"
