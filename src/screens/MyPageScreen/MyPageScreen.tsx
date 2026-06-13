@@ -9,6 +9,7 @@ import {
   StyleSheet,
 } from "react-native";
 import Alert from "@blazejkustra/react-native-alert";
+import { MaterialIcons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import AuthContext from "@/components/auth/AuthContext";
@@ -30,13 +31,20 @@ type Reminder = {
 };
 
 export default function MyPageScreen() {
-  const { user, updateName } = useContext(AuthContext);
+  const { user, updateName, verifyDouzoneEmail } = useContext(AuthContext);
   const navigation = useRootNavigation<"ConnectDetail">();
 
   const [name, setName] = useState(user?.name ?? "");
   const [saving, setSaving] = useState(false);
   const [myPosts, setMyPosts] = useState<Post[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
+
+  // 더존 이메일 인증 상태
+  const [douzoneEmail, setDouzoneEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
   // 일정 알림 상태
   const [reminderDate, setReminderDate] = useState<Date>(new Date());
@@ -110,6 +118,67 @@ export default function MyPageScreen() {
     }
   }, [name, nameChanged, saving, updateName]);
 
+  // 더존 이메일로 인증번호 발송
+  const onSendCode = useCallback(async () => {
+    const email = douzoneEmail.trim();
+    if (!email.toLowerCase().endsWith("@douzone.com")) {
+      Alert.alert("알림", "@douzone.com 이메일만 인증할 수 있습니다.");
+      return;
+    }
+    setSendingCode(true);
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
+      const res = await fetch(
+        `${API_BASE_URL}/api/account/verify-douzone/send-code`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ email }),
+        }
+      );
+      const data = await res.json().catch(() => null);
+      if (res.ok) {
+        setCodeSent(true);
+        Alert.alert(
+          "발송 완료",
+          "인증번호를 이메일로 보냈습니다. 메일함을 확인해주세요."
+        );
+      } else {
+        Alert.alert("발송 실패", data?.message ?? "인증번호 발송에 실패했습니다.");
+      }
+    } catch (e) {
+      Alert.alert("발송 실패", "인증번호 발송 중 오류가 발생했습니다.");
+    } finally {
+      setSendingCode(false);
+    }
+  }, [douzoneEmail]);
+
+  // 인증번호 확인 → 인증 완료
+  const onVerify = useCallback(async () => {
+    if (!code.trim()) {
+      Alert.alert("알림", "인증번호를 입력해주세요.");
+      return;
+    }
+    setVerifying(true);
+    try {
+      await verifyDouzoneEmail(douzoneEmail.trim(), code.trim());
+      Alert.alert(
+        "인증 완료",
+        "더존 이메일 인증이 완료되었습니다. 이제 일정 알림을 등록할 수 있습니다."
+      );
+      setCode("");
+      setCodeSent(false);
+      setDouzoneEmail("");
+    } catch (e: any) {
+      Alert.alert("인증 실패", e?.message ?? "인증에 실패했습니다.");
+    } finally {
+      setVerifying(false);
+    }
+  }, [code, douzoneEmail, verifyDouzoneEmail]);
+
   // 내 알림 목록 조회
   const fetchReminders = useCallback(async () => {
     const token = await AsyncStorage.getItem("accessToken");
@@ -129,8 +198,13 @@ export default function MyPageScreen() {
   }, []);
 
   useEffect(() => {
-    fetchReminders();
-  }, [fetchReminders]);
+    // 인증된 사용자만 알림 목록 조회
+    if (user?.verified) {
+      fetchReminders();
+    } else {
+      setReminders([]);
+    }
+  }, [fetchReminders, user?.verified]);
 
   // user 이메일 동기화 (알림 기본 수신 이메일)
   useEffect(() => {
@@ -231,74 +305,145 @@ export default function MyPageScreen() {
 
       <View style={styles.divider} />
 
-      {/* 일정 알림 */}
+      {/* 더존 이메일 인증 */}
+      <View style={styles.section}>
+        <Text style={styles.label}>더존 이메일 인증</Text>
+        {user?.verified ? (
+          <View style={styles.verifiedBadge}>
+            <MaterialIcons name="verified" size={20} color="#3B82F6" />
+            <Text style={styles.verifiedText}>인증 완료</Text>
+          </View>
+        ) : (
+          <>
+            <View style={styles.nameRow}>
+              <TextInput
+                style={styles.input}
+                value={douzoneEmail}
+                onChangeText={setDouzoneEmail}
+                placeholder="name@douzone.com"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                style={[styles.saveBtn, sendingCode && styles.saveBtnDisabled]}
+                onPress={onSendCode}
+                disabled={sendingCode}
+              >
+                {sendingCode ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.saveBtnText}>발송</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+            {codeSent && (
+              <View style={[styles.nameRow, { marginTop: 8 }]}>
+                <TextInput
+                  style={styles.input}
+                  value={code}
+                  onChangeText={setCode}
+                  placeholder="인증번호 6자리"
+                  keyboardType="number-pad"
+                  maxLength={6}
+                />
+                <TouchableOpacity
+                  style={[styles.saveBtn, verifying && styles.saveBtnDisabled]}
+                  onPress={onVerify}
+                  disabled={verifying}
+                >
+                  {verifying ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.saveBtnText}>인증</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
+            <Text style={styles.hint}>
+              @douzone.com 이메일을 인증하면 모집 글 인증 마크 표시 및 일정 알림 기능을 사용할 수 있습니다.
+            </Text>
+          </>
+        )}
+      </View>
+
+      <View style={styles.divider} />
+
+      {/* 일정 알림 (이메일 인증 사용자만) */}
       <View style={styles.section}>
         <Text style={styles.label}>일정 알림</Text>
-        <View style={styles.reminderRow}>
-          <View style={styles.datePickerWrap}>
-            <CustomDateTimePicker
-              testID="reminderDatePicker"
-              value={reminderDate}
-              mode="date"
-              is24Hour={true}
-              onChange={onChangeReminderDate}
-              datePickerButtonComponentStyle={styles.datePickerButton}
-              datePickerTextComponentStyle={styles.datePickerText}
-              showDatePicker={showDatePicker}
-              setShowDatePicker={setShowDatePicker}
-            />
-          </View>
-          <TextInput
-            style={[styles.input, { flex: 1, marginRight: 0 }]}
-            value={reminderContent}
-            onChangeText={setReminderContent}
-            placeholder="예: 오전 반차"
-            maxLength={50}
-          />
-        </View>
-        <TextInput
-          style={[styles.input, { marginTop: 8 }]}
-          value={reminderEmail}
-          onChangeText={setReminderEmail}
-          placeholder="알림 받을 이메일"
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-        <TouchableOpacity
-          style={[
-            styles.saveBtn,
-            styles.reminderAddBtn,
-            addingReminder && styles.saveBtnDisabled,
-          ]}
-          onPress={onAddReminder}
-          disabled={addingReminder}
-        >
-          {addingReminder ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.saveBtnText}>알림 추가</Text>
-          )}
-        </TouchableOpacity>
-        <Text style={styles.hint}>
-          설정한 날짜 오전에 입력한 이메일로 알림을 보내드립니다.
-        </Text>
-
-        {reminders.map((r) => (
-          <View key={r.id} style={styles.reminderItem}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.reminderItemDate}>{r.reminderDate}</Text>
-              <Text style={styles.reminderItemContent}>{r.content}</Text>
+        {user?.verified ? (
+          <>
+            <View style={styles.reminderRow}>
+              <View style={styles.datePickerWrap}>
+                <CustomDateTimePicker
+                  testID="reminderDatePicker"
+                  value={reminderDate}
+                  mode="date"
+                  is24Hour={true}
+                  onChange={onChangeReminderDate}
+                  datePickerButtonComponentStyle={styles.datePickerButton}
+                  datePickerTextComponentStyle={styles.datePickerText}
+                  showDatePicker={showDatePicker}
+                  setShowDatePicker={setShowDatePicker}
+                />
+              </View>
+              <TextInput
+                style={[styles.input, { flex: 1, marginRight: 0 }]}
+                value={reminderContent}
+                onChangeText={setReminderContent}
+                placeholder="예: 오전 반차"
+                maxLength={50}
+              />
             </View>
+            <TextInput
+              style={[styles.input, { marginTop: 8 }]}
+              value={reminderEmail}
+              onChangeText={setReminderEmail}
+              placeholder="알림 받을 이메일"
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
             <TouchableOpacity
-              onPress={() => onDeleteReminder(r.id)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={[
+                styles.saveBtn,
+                styles.reminderAddBtn,
+                addingReminder && styles.saveBtnDisabled,
+              ]}
+              onPress={onAddReminder}
+              disabled={addingReminder}
             >
-              <Text style={styles.reminderDelete}>삭제</Text>
+              {addingReminder ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.saveBtnText}>알림 추가</Text>
+              )}
             </TouchableOpacity>
-          </View>
-        ))}
-        {reminders.length === 0 && (
-          <Text style={styles.reminderEmpty}>등록된 알림이 없습니다.</Text>
+            <Text style={styles.hint}>
+              설정한 날짜 오전에 입력한 이메일로 알림을 보내드립니다.
+            </Text>
+
+            {reminders.map((r) => (
+              <View key={r.id} style={styles.reminderItem}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.reminderItemDate}>{r.reminderDate}</Text>
+                  <Text style={styles.reminderItemContent}>{r.content}</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => onDeleteReminder(r.id)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.reminderDelete}>삭제</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+            {reminders.length === 0 && (
+              <Text style={styles.reminderEmpty}>등록된 알림이 없습니다.</Text>
+            )}
+          </>
+        ) : (
+          <Text style={styles.reminderLocked}>
+            이메일 인증 후 이용할 수 있습니다. 위에서 더존 이메일을 인증해주세요.
+          </Text>
         )}
       </View>
 
@@ -390,6 +535,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#888",
   },
+  verifiedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  verifiedText: {
+    marginLeft: 6,
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#3B82F6",
+  },
   reminderRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -439,6 +594,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#999",
     marginTop: 10,
+  },
+  reminderLocked: {
+    fontSize: 14,
+    color: "#999",
   },
   divider: {
     height: 8,
