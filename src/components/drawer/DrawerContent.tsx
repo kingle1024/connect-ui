@@ -48,7 +48,9 @@ const DrawerContent = (props: DrawerContentComponentProps) => {
         <DrawerItem
           label="설정"
           onPress={() => {
-            // 설정 화면으로 이동
+            // 드로어를 닫고 설정 화면으로 이동
+            props.navigation.closeDrawer();
+            navigation.navigate("Settings");
           }}
           icon={({ color, size }) => (
             <Feather name="settings" color="tomato" size={size} />
@@ -59,7 +61,9 @@ const DrawerContent = (props: DrawerContentComponentProps) => {
         <DrawerItem
           label="도움말"
           onPress={() => {
-            // 도움말 화면으로 이동
+            // 드로어를 닫고 도움말 화면으로 이동
+            props.navigation.closeDrawer();
+            navigation.navigate("Help");
           }}
           icon={({ color, size }) => (
             <Feather name="help-circle" color="tomato" size={size} />
@@ -70,7 +74,9 @@ const DrawerContent = (props: DrawerContentComponentProps) => {
         <DrawerItem
           label="마이페이지"
           onPress={() => {
-            // 마이페이지 화면으로 이동
+            // 드로어를 닫고 마이페이지 화면으로 이동
+            props.navigation.closeDrawer();
+            navigation.navigate("MyPage");
           }}
           icon={({ color, size }) => (
             <MaterialCommunityIcons name="account" color="tomato" size={size} />

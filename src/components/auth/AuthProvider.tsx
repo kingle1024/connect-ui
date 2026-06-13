@@ -226,6 +226,26 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [navigation]);
 
+  // 본인 이름(별칭) 변경. 서버 반영 후 로컬 user 상태도 갱신해 새 글 작성 시 새 이름이 쓰이게 한다.
+  const updateName = useCallback(async (name: string) => {
+    const accessToken = await AsyncStorage.getItem("accessToken");
+    try {
+      const response = await axiosInstance.put(
+        "/api/account/me/name",
+        { name },
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      const updated = response.data?.data;
+      if (updated?.name) {
+        setUser((prev) => (prev ? { ...prev, name: updated.name } : prev));
+      }
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message ?? "이름 변경에 실패했습니다.";
+      throw new Error(message);
+    }
+  }, []);
+
   const signout = useCallback(async () => {
     await AsyncStorage.removeItem("accessToken");
     await AsyncStorage.removeItem("refreshToken");
@@ -249,6 +269,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       processingSignup,
       signin,
       kakaoSignin,
+      updateName,
       signout,
       processingSignin,
       updateProfileImage,
@@ -261,6 +282,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     processingSignup,
     signin,
     kakaoSignin,
+    updateName,
     signout,
     processingSignin,
     updateProfileImage,

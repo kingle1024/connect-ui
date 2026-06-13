@@ -9,6 +9,8 @@ import SigninScreen from "@/screens/SigninScreen/SigninScreen";
 import MyPageScreen from "@/screens/MyPageScreen/MyPageScreen";
 import SignupScreen from "@/screens/SignUpScreen/SignupScreen";
 import FindPasswordScreen from "@/screens/FindAccountScreen/FindPasswordScreen";
+import SettingsScreen from "@/screens/SettingsScreen/SettingsScreen";
+import HelpScreen from "@/screens/HelpScreen/HelpScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -69,7 +71,21 @@ export const RootNavigation = () => {
         })}
       />
       <Stack.Screen name="FindPassword" component={FindPasswordScreen} />
-      <Stack.Screen name="MyPage" component={MyPageScreen} />
+      <Stack.Screen
+        name="MyPage"
+        component={MyPageScreen}
+        options={{ headerShown: true, title: "마이페이지" }}
+      />
+      <Stack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ headerShown: true, title: "설정" }}
+      />
+      <Stack.Screen
+        name="Help"
+        component={HelpScreen}
+        options={{ headerShown: true, title: "도움말" }}
+      />
       <Stack.Screen name="채팅방 상세" component={EnterChatRoom} />
     </Stack.Navigator>
   );
