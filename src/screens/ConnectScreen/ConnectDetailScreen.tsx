@@ -147,14 +147,6 @@ const ConnectDetail = () => {
     }
   }, [me, navigation]);
 
-  const onTextInputContentSizeChange = useCallback((event: any) => {
-    const height = Math.min(
-      150,
-      Math.max(40, event.nativeEvent.contentSize.height)
-    );
-    setReplyInputHeight(height);
-  }, []);
-
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     if (routes.params.parentId) {
@@ -251,7 +243,6 @@ const ConnectDetail = () => {
   );
 
   const ListHeaderComponent = useCallback(() => {
-    if (!reply) return null;
 
     return (
       <>
@@ -280,15 +271,26 @@ const ConnectDetail = () => {
             <TouchableOpacity
              onPress={() => boardDetail?.userId && boardDetail?.userName && openProfileBottomSheet(boardDetail.userId, boardDetail.userName)}
             >
-              <Text
-                style={{
-                  fontWeight: "bold",
-                  fontSize: 18,
-                  color: "#111827",
-                }}
-              >
-                {boardDetail?.userName}              
-              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <Text
+                  style={{
+                    fontWeight: "bold",
+                    fontSize: 18,
+                    color: "#111827",
+                  }}
+                >
+                  {boardDetail?.userName}
+                </Text>
+                {/* 더존 이메일 인증 마크 */}
+                {boardDetail?.verified && (
+                  <MaterialIcons
+                    name="verified"
+                    size={18}
+                    color="#3B82F6"
+                    style={{ marginLeft: 4 }}
+                  />
+                )}
+              </View>
             </TouchableOpacity>
             <Text
               style={{

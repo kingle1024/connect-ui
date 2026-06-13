@@ -35,6 +35,7 @@ export interface Post {
   destination: string; // 목적지
   maxCapacity: number; // 최대 모집 인원
   currentParticipants: number; // 모집 인원
+  verified?: boolean; // 작성자 더존 이메일 인증 여부
   replies?: Reply[]; // 댓글
 }
 
@@ -54,6 +55,7 @@ export interface User {
   email: string;
   name: string;
   profileUrl?: string;
+  verified?: boolean; // 더존 이메일 인증 여부
 }
 
 export interface CreateCommentRequest {
@@ -82,4 +84,5 @@ export interface ConnectDetailBoardDto {
   userId: string;
   userName: string;
   insertDts: string;
+  verified?: boolean; // 작성자 더존 이메일 인증 여부
 }

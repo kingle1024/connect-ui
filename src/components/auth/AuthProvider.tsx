@@ -43,6 +43,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               email: response.data.email || "",
               name: response.data.name || "",
               profileUrl: response.data.profileUrl || "",
+              verified: response.data.verified ?? false,
             });
           }
         }
@@ -81,6 +82,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     email: retryResponse.data.email || "",
                     name: retryResponse.data.name || "",
                     profileUrl: retryResponse.data.profileUrl || "",
+                    verified: retryResponse.data.verified ?? false,
                   });
                 } else {
                   await signout();
@@ -150,6 +152,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             email: email,
             name: "익명",
             profileUrl: "",
+            verified: false,
           });
           navigation.navigate("BottomTab", {
             screen: "Connect",
@@ -215,6 +218,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         email: me.data.email || "",
         name: me.data.name || "",
         profileUrl: me.data.profileUrl || "",
+        verified: me.data.verified ?? false,
       });
 
       navigation.navigate("BottomTab", { screen: "Connect" });
@@ -246,6 +250,26 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, []);
 
+  // 더존 이메일 인증 확정. 성공 시 로컬 user.verified 를 true 로 갱신한다.
+  const verifyDouzoneEmail = useCallback(async (email: string, code: string) => {
+    const accessToken = await AsyncStorage.getItem("accessToken");
+    try {
+      const response = await axiosInstance.post(
+        "/api/account/verify-douzone/confirm",
+        { email, code },
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      const updated = response.data?.data;
+      setUser((prev) =>
+        prev ? { ...prev, verified: updated?.verified ?? true } : prev
+      );
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message ?? "인증에 실패했습니다.";
+      throw new Error(message);
+    }
+  }, []);
+
   const signout = useCallback(async () => {
     await AsyncStorage.removeItem("accessToken");
     await AsyncStorage.removeItem("refreshToken");
@@ -270,6 +294,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       signin,
       kakaoSignin,
       updateName,
+      verifyDouzoneEmail,
       signout,
       processingSignin,
       updateProfileImage,
@@ -283,6 +308,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     signin,
     kakaoSignin,
     updateName,
+    verifyDouzoneEmail,
     signout,
     processingSignin,
     updateProfileImage,

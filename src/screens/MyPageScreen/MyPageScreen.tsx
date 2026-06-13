@@ -9,6 +9,7 @@ import {
   StyleSheet,
 } from "react-native";
 import Alert from "@blazejkustra/react-native-alert";
+import { MaterialIcons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import AuthContext from "@/components/auth/AuthContext";
@@ -19,13 +20,20 @@ import { formatRelativeTime } from "@/utils/formatRelativeTime";
 const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL ?? "";
 
 export default function MyPageScreen() {
-  const { user, updateName } = useContext(AuthContext);
+  const { user, updateName, verifyDouzoneEmail } = useContext(AuthContext);
   const navigation = useRootNavigation<"ConnectDetail">();
 
   const [name, setName] = useState(user?.name ?? "");
   const [saving, setSaving] = useState(false);
   const [myPosts, setMyPosts] = useState<Post[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
+
+  // 더존 이메일 인증 상태
+  const [douzoneEmail, setDouzoneEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
   // user 정보가 갱신되면 입력값도 동기화
   useEffect(() => {
@@ -91,6 +99,67 @@ export default function MyPageScreen() {
     }
   }, [name, nameChanged, saving, updateName]);
 
+  // 더존 이메일로 인증번호 발송
+  const onSendCode = useCallback(async () => {
+    const email = douzoneEmail.trim();
+    if (!email.toLowerCase().endsWith("@douzone.com")) {
+      Alert.alert("알림", "@douzone.com 이메일만 인증할 수 있습니다.");
+      return;
+    }
+    setSendingCode(true);
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
+      const res = await fetch(
+        `${API_BASE_URL}/api/account/verify-douzone/send-code`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ email }),
+        }
+      );
+      const data = await res.json().catch(() => null);
+      if (res.ok) {
+        setCodeSent(true);
+        Alert.alert(
+          "발송 완료",
+          "인증번호를 이메일로 보냈습니다. 메일함을 확인해주세요."
+        );
+      } else {
+        Alert.alert("발송 실패", data?.message ?? "인증번호 발송에 실패했습니다.");
+      }
+    } catch (e) {
+      Alert.alert("발송 실패", "인증번호 발송 중 오류가 발생했습니다.");
+    } finally {
+      setSendingCode(false);
+    }
+  }, [douzoneEmail]);
+
+  // 인증번호 확인 → 인증 완료
+  const onVerify = useCallback(async () => {
+    if (!code.trim()) {
+      Alert.alert("알림", "인증번호를 입력해주세요.");
+      return;
+    }
+    setVerifying(true);
+    try {
+      await verifyDouzoneEmail(douzoneEmail.trim(), code.trim());
+      Alert.alert(
+        "인증 완료",
+        "더존 이메일 인증이 완료되었습니다. 모집 글 이름 옆에 인증 마크가 표시됩니다."
+      );
+      setCode("");
+      setCodeSent(false);
+      setDouzoneEmail("");
+    } catch (e: any) {
+      Alert.alert("인증 실패", e?.message ?? "인증에 실패했습니다.");
+    } finally {
+      setVerifying(false);
+    }
+  }, [code, douzoneEmail, verifyDouzoneEmail]);
+
   return (
     <View style={styles.container}>
       {/* 이름 수정 영역 */}
@@ -123,6 +192,69 @@ export default function MyPageScreen() {
         <Text style={styles.hint}>
           모집 글에 표시되는 이름입니다. 변경하면 새로 쓰는 글부터 반영됩니다.
         </Text>
+      </View>
+
+      <View style={styles.divider} />
+
+      {/* 더존 이메일 인증 */}
+      <View style={styles.section}>
+        <Text style={styles.label}>더존 이메일 인증</Text>
+        {user?.verified ? (
+          <View style={styles.verifiedBadge}>
+            <MaterialIcons name="verified" size={20} color="#3B82F6" />
+            <Text style={styles.verifiedText}>인증 완료</Text>
+          </View>
+        ) : (
+          <>
+            <View style={styles.nameRow}>
+              <TextInput
+                style={styles.input}
+                value={douzoneEmail}
+                onChangeText={setDouzoneEmail}
+                placeholder="name@douzone.com"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                style={[styles.saveBtn, sendingCode && styles.saveBtnDisabled]}
+                onPress={onSendCode}
+                disabled={sendingCode}
+              >
+                {sendingCode ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.saveBtnText}>발송</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+            {codeSent && (
+              <View style={[styles.nameRow, { marginTop: 8 }]}>
+                <TextInput
+                  style={styles.input}
+                  value={code}
+                  onChangeText={setCode}
+                  placeholder="인증번호 6자리"
+                  keyboardType="number-pad"
+                  maxLength={6}
+                />
+                <TouchableOpacity
+                  style={[styles.saveBtn, verifying && styles.saveBtnDisabled]}
+                  onPress={onVerify}
+                  disabled={verifying}
+                >
+                  {verifying ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.saveBtnText}>인증</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
+            <Text style={styles.hint}>
+              @douzone.com 이메일을 인증하면 모집 글 이름 옆에 인증 마크가 표시됩니다.
+            </Text>
+          </>
+        )}
       </View>
 
       <View style={styles.divider} />
@@ -212,6 +344,16 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 12,
     color: "#888",
+  },
+  verifiedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  verifiedText: {
+    marginLeft: 6,
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#3B82F6",
   },
   divider: {
     height: 8,
