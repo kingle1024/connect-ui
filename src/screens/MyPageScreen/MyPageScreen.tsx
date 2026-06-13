@@ -16,8 +16,19 @@ import AuthContext from "@/components/auth/AuthContext";
 import { Post } from "@/types";
 import { useRootNavigation } from "@/hooks/useNavigation";
 import { formatRelativeTime } from "@/utils/formatRelativeTime";
+import CustomDateTimePicker from "@/components/CustomDateTimePicker";
+import dayjs from "dayjs";
 
 const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL ?? "";
+
+// 날짜 알림 항목
+type Reminder = {
+  id: number;
+  reminderDate: string;
+  content: string;
+  email: string;
+  notified: boolean;
+};
 
 export default function MyPageScreen() {
   const { user, updateName, verifyDouzoneEmail } = useContext(AuthContext);
@@ -34,6 +45,14 @@ export default function MyPageScreen() {
   const [codeSent, setCodeSent] = useState(false);
   const [sendingCode, setSendingCode] = useState(false);
   const [verifying, setVerifying] = useState(false);
+
+  // 일정 알림 상태
+  const [reminderDate, setReminderDate] = useState<Date>(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [reminderContent, setReminderContent] = useState("");
+  const [reminderEmail, setReminderEmail] = useState(user?.email ?? "");
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [addingReminder, setAddingReminder] = useState(false);
 
   // user 정보가 갱신되면 입력값도 동기화
   useEffect(() => {
@@ -148,7 +167,7 @@ export default function MyPageScreen() {
       await verifyDouzoneEmail(douzoneEmail.trim(), code.trim());
       Alert.alert(
         "인증 완료",
-        "더존 이메일 인증이 완료되었습니다. 모집 글 이름 옆에 인증 마크가 표시됩니다."
+        "더존 이메일 인증이 완료되었습니다. 이제 일정 알림을 등록할 수 있습니다."
       );
       setCode("");
       setCodeSent(false);
@@ -159,6 +178,96 @@ export default function MyPageScreen() {
       setVerifying(false);
     }
   }, [code, douzoneEmail, verifyDouzoneEmail]);
+
+  // 내 알림 목록 조회
+  const fetchReminders = useCallback(async () => {
+    const token = await AsyncStorage.getItem("accessToken");
+    if (!token) {
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/account/reminders`, {
+        headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setReminders(await res.json());
+      }
+    } catch (e) {
+      console.warn("fetchReminders error:", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    // 인증된 사용자만 알림 목록 조회
+    if (user?.verified) {
+      fetchReminders();
+    } else {
+      setReminders([]);
+    }
+  }, [fetchReminders, user?.verified]);
+
+  // user 이메일 동기화 (알림 기본 수신 이메일)
+  useEffect(() => {
+    setReminderEmail(user?.email ?? "");
+  }, [user?.email]);
+
+  const onChangeReminderDate = useCallback((_event: any, selected?: Date) => {
+    if (selected) {
+      setReminderDate(selected);
+    }
+    setShowDatePicker(false);
+  }, []);
+
+  const onAddReminder = useCallback(async () => {
+    if (!reminderContent.trim()) {
+      Alert.alert("알림", "알림 내용을 입력해주세요. (예: 오전 반차)");
+      return;
+    }
+    setAddingReminder(true);
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
+      const res = await fetch(`${API_BASE_URL}/api/account/reminders`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          reminderDate: dayjs(reminderDate).format("YYYY-MM-DD"),
+          content: reminderContent.trim(),
+          email: reminderEmail.trim() || undefined,
+        }),
+      });
+      if (res.ok) {
+        setReminderContent("");
+        fetchReminders();
+        Alert.alert("등록 완료", "설정한 날짜 오전에 이메일로 알림을 보내드립니다.");
+      } else {
+        const msg = await res.text().catch(() => null);
+        Alert.alert("등록 실패", msg || "알림 등록에 실패했습니다.");
+      }
+    } catch (e) {
+      Alert.alert("등록 실패", "알림 등록 중 오류가 발생했습니다.");
+    } finally {
+      setAddingReminder(false);
+    }
+  }, [reminderContent, reminderDate, reminderEmail, fetchReminders]);
+
+  const onDeleteReminder = useCallback(
+    async (id: number) => {
+      try {
+        const token = await AsyncStorage.getItem("accessToken");
+        await fetch(`${API_BASE_URL}/api/account/reminders/${id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        fetchReminders();
+      } catch (e) {
+        console.warn("deleteReminder error:", e);
+      }
+    },
+    [fetchReminders]
+  );
 
   return (
     <View style={styles.container}>
@@ -251,9 +360,90 @@ export default function MyPageScreen() {
               </View>
             )}
             <Text style={styles.hint}>
-              @douzone.com 이메일을 인증하면 모집 글 이름 옆에 인증 마크가 표시됩니다.
+              @douzone.com 이메일을 인증하면 모집 글 인증 마크 표시 및 일정 알림 기능을 사용할 수 있습니다.
             </Text>
           </>
+        )}
+      </View>
+
+      <View style={styles.divider} />
+
+      {/* 일정 알림 (이메일 인증 사용자만) */}
+      <View style={styles.section}>
+        <Text style={styles.label}>일정 알림</Text>
+        {user?.verified ? (
+          <>
+            <View style={styles.reminderRow}>
+              <View style={styles.datePickerWrap}>
+                <CustomDateTimePicker
+                  testID="reminderDatePicker"
+                  value={reminderDate}
+                  mode="date"
+                  is24Hour={true}
+                  onChange={onChangeReminderDate}
+                  datePickerButtonComponentStyle={styles.datePickerButton}
+                  datePickerTextComponentStyle={styles.datePickerText}
+                  showDatePicker={showDatePicker}
+                  setShowDatePicker={setShowDatePicker}
+                />
+              </View>
+              <TextInput
+                style={[styles.input, { flex: 1, marginRight: 0 }]}
+                value={reminderContent}
+                onChangeText={setReminderContent}
+                placeholder="예: 오전 반차"
+                maxLength={50}
+              />
+            </View>
+            <TextInput
+              style={[styles.input, { marginTop: 8 }]}
+              value={reminderEmail}
+              onChangeText={setReminderEmail}
+              placeholder="알림 받을 이메일"
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            <TouchableOpacity
+              style={[
+                styles.saveBtn,
+                styles.reminderAddBtn,
+                addingReminder && styles.saveBtnDisabled,
+              ]}
+              onPress={onAddReminder}
+              disabled={addingReminder}
+            >
+              {addingReminder ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.saveBtnText}>알림 추가</Text>
+              )}
+            </TouchableOpacity>
+            <Text style={styles.hint}>
+              설정한 날짜 오전에 입력한 이메일로 알림을 보내드립니다.
+            </Text>
+
+            {reminders.map((r) => (
+              <View key={r.id} style={styles.reminderItem}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.reminderItemDate}>{r.reminderDate}</Text>
+                  <Text style={styles.reminderItemContent}>{r.content}</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => onDeleteReminder(r.id)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.reminderDelete}>삭제</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+            {reminders.length === 0 && (
+              <Text style={styles.reminderEmpty}>등록된 알림이 없습니다.</Text>
+            )}
+          </>
+        ) : (
+          <Text style={styles.reminderLocked}>
+            이메일 인증 후 이용할 수 있습니다. 위에서 더존 이메일을 인증해주세요.
+          </Text>
         )}
       </View>
 
@@ -354,6 +544,60 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: "#3B82F6",
+  },
+  reminderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  datePickerWrap: {
+    marginRight: 8,
+  },
+  datePickerButton: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    minWidth: 150,
+  },
+  datePickerText: {
+    fontSize: 15,
+    color: "#222",
+  },
+  reminderAddBtn: {
+    marginTop: 10,
+    alignSelf: "flex-start",
+    paddingHorizontal: 24,
+  },
+  reminderItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  reminderItemDate: {
+    fontSize: 13,
+    color: "#3B82F6",
+    fontWeight: "600",
+  },
+  reminderItemContent: {
+    fontSize: 15,
+    color: "#222",
+    marginTop: 2,
+  },
+  reminderDelete: {
+    fontSize: 13,
+    color: "#ff4444",
+  },
+  reminderEmpty: {
+    fontSize: 13,
+    color: "#999",
+    marginTop: 10,
+  },
+  reminderLocked: {
+    fontSize: 14,
+    color: "#999",
   },
   divider: {
     height: 8,
