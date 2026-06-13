@@ -198,13 +198,9 @@ export default function MyPageScreen() {
   }, []);
 
   useEffect(() => {
-    // 인증된 사용자만 알림 목록 조회
-    if (user?.verified) {
-      fetchReminders();
-    } else {
-      setReminders([]);
-    }
-  }, [fetchReminders, user?.verified]);
+    // 알림은 누구나 마이페이지에서 조회 가능 (이메일 발송만 인증자 한정)
+    fetchReminders();
+  }, [fetchReminders]);
 
   // user 이메일 동기화 (알림 기본 수신 이메일)
   useEffect(() => {
@@ -368,82 +364,84 @@ export default function MyPageScreen() {
 
       <View style={styles.divider} />
 
-      {/* 일정 알림 (이메일 인증 사용자만) */}
+      {/* 일정 알림 (누구나 등록·조회 / 이메일 발송은 인증자만) */}
       <View style={styles.section}>
         <Text style={styles.label}>일정 알림</Text>
-        {user?.verified ? (
-          <>
-            <View style={styles.reminderRow}>
-              <View style={styles.datePickerWrap}>
-                <CustomDateTimePicker
-                  testID="reminderDatePicker"
-                  value={reminderDate}
-                  mode="date"
-                  is24Hour={true}
-                  onChange={onChangeReminderDate}
-                  datePickerButtonComponentStyle={styles.datePickerButton}
-                  datePickerTextComponentStyle={styles.datePickerText}
-                  showDatePicker={showDatePicker}
-                  setShowDatePicker={setShowDatePicker}
-                />
-              </View>
-              <TextInput
-                style={[styles.input, { flex: 1, marginRight: 0 }]}
-                value={reminderContent}
-                onChangeText={setReminderContent}
-                placeholder="예: 오전 반차"
-                maxLength={50}
-              />
-            </View>
-            <TextInput
-              style={[styles.input, { marginTop: 8 }]}
-              value={reminderEmail}
-              onChangeText={setReminderEmail}
-              placeholder="알림 받을 이메일"
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            <TouchableOpacity
-              style={[
-                styles.saveBtn,
-                styles.reminderAddBtn,
-                addingReminder && styles.saveBtnDisabled,
-              ]}
-              onPress={onAddReminder}
-              disabled={addingReminder}
-            >
-              {addingReminder ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.saveBtnText}>알림 추가</Text>
-              )}
-            </TouchableOpacity>
-            <Text style={styles.hint}>
-              설정한 날짜 오전에 입력한 이메일로 알림을 보내드립니다.
+        {!user?.verified && (
+          <View style={styles.reminderNotice}>
+            <MaterialIcons name="mark-email-unread" size={18} color="#3B82F6" />
+            <Text style={styles.reminderNoticeText}>
+              이메일 인증을 하면 설정한 날짜에 알림 메일을 받을 수 있어요. (미인증 시 마이페이지에서 보기만 가능)
             </Text>
+          </View>
+        )}
+        <View style={styles.reminderRow}>
+          <View style={styles.datePickerWrap}>
+            <CustomDateTimePicker
+              testID="reminderDatePicker"
+              value={reminderDate}
+              mode="date"
+              is24Hour={true}
+              onChange={onChangeReminderDate}
+              datePickerButtonComponentStyle={styles.datePickerButton}
+              datePickerTextComponentStyle={styles.datePickerText}
+              showDatePicker={showDatePicker}
+              setShowDatePicker={setShowDatePicker}
+            />
+          </View>
+          <TextInput
+            style={[styles.input, { flex: 1, marginRight: 0 }]}
+            value={reminderContent}
+            onChangeText={setReminderContent}
+            placeholder="예: 오전 반차"
+            maxLength={50}
+          />
+        </View>
+        <TextInput
+          style={[styles.input, { marginTop: 8 }]}
+          value={reminderEmail}
+          onChangeText={setReminderEmail}
+          placeholder="알림 받을 이메일"
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
+        <TouchableOpacity
+          style={[
+            styles.saveBtn,
+            styles.reminderAddBtn,
+            addingReminder && styles.saveBtnDisabled,
+          ]}
+          onPress={onAddReminder}
+          disabled={addingReminder}
+        >
+          {addingReminder ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.saveBtnText}>알림 추가</Text>
+          )}
+        </TouchableOpacity>
+        <Text style={styles.hint}>
+          {user?.verified
+            ? "설정한 날짜 오전에 입력한 이메일로 알림을 보내드립니다."
+            : "지금은 마이페이지에서 보기만 가능합니다. 위에서 더존 이메일을 인증하면 알림 메일을 받을 수 있어요."}
+        </Text>
 
-            {reminders.map((r) => (
-              <View key={r.id} style={styles.reminderItem}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.reminderItemDate}>{r.reminderDate}</Text>
-                  <Text style={styles.reminderItemContent}>{r.content}</Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() => onDeleteReminder(r.id)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Text style={styles.reminderDelete}>삭제</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-            {reminders.length === 0 && (
-              <Text style={styles.reminderEmpty}>등록된 알림이 없습니다.</Text>
-            )}
-          </>
-        ) : (
-          <Text style={styles.reminderLocked}>
-            이메일 인증 후 이용할 수 있습니다. 위에서 더존 이메일을 인증해주세요.
-          </Text>
+        {reminders.map((r) => (
+          <View key={r.id} style={styles.reminderItem}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.reminderItemDate}>{r.reminderDate}</Text>
+              <Text style={styles.reminderItemContent}>{r.content}</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => onDeleteReminder(r.id)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.reminderDelete}>삭제</Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+        {reminders.length === 0 && (
+          <Text style={styles.reminderEmpty}>등록된 알림이 없습니다.</Text>
         )}
       </View>
 
@@ -595,9 +593,19 @@ const styles = StyleSheet.create({
     color: "#999",
     marginTop: 10,
   },
-  reminderLocked: {
-    fontSize: 14,
-    color: "#999",
+  reminderNotice: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#EFF6FF",
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 12,
+  },
+  reminderNoticeText: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 12,
+    color: "#3B82F6",
   },
   divider: {
     height: 8,
