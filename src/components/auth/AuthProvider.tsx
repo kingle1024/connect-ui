@@ -278,9 +278,29 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     navigation.navigate("Signin");
   }, [navigation]);
 
+  // 프로필 사진 업로드: base64 이미지를 백엔드(R2)로 보내고 받은 URL 로 로컬 user 갱신
   const updateProfileImage = useCallback(
-    async (filepath: string) => {},
-    [user]
+    async (imageBase64: string, contentType: string) => {
+      const accessToken = await AsyncStorage.getItem("accessToken");
+      try {
+        const response = await axiosInstance.post(
+          "/api/account/me/profile-image",
+          { imageBase64, contentType },
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+        const updated = response.data?.data;
+        if (updated?.profileUrl) {
+          setUser((prev) =>
+            prev ? { ...prev, profileUrl: updated.profileUrl } : prev
+          );
+        }
+      } catch (error: any) {
+        const message =
+          error?.response?.data?.message ?? "프로필 사진 업로드에 실패했습니다.";
+        throw new Error(message);
+      }
+    },
+    []
   );
 
   const addFcmToken = useCallback(async (token: string) => {}, [user]);

@@ -12,7 +12,7 @@ export interface AuthContextProp {
   verifyDouzoneEmail: (email: string, code: string) => Promise<void>;
   signout: () => Promise<void>;
   processingSignin: boolean;
-  updateProfileImage: (filepath: string) => Promise<void>;
+  updateProfileImage: (imageBase64: string, contentType: string) => Promise<void>;
   addFcmToken: (token: string) => Promise<void>;
 }
 
