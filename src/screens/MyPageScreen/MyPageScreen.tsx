@@ -31,8 +31,15 @@ type Reminder = {
 };
 
 export default function MyPageScreen() {
-  const { user, updateName, verifyDouzoneEmail } = useContext(AuthContext);
+  const { user, initialized, updateName, verifyDouzoneEmail } = useContext(AuthContext);
   const navigation = useRootNavigation<"ConnectDetail">();
+
+  // 미로그인 상태로 진입하면 로그인 페이지로 이동 (초기화 완료 후 판단해 새로고침 깜빡임 방지)
+  useEffect(() => {
+    if (initialized && !user) {
+      navigation.navigate("Signin");
+    }
+  }, [initialized, user, navigation]);
 
   const [name, setName] = useState(user?.name ?? "");
   const [saving, setSaving] = useState(false);
