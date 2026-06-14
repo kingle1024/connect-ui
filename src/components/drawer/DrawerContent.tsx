@@ -46,32 +46,6 @@ const DrawerContent = (props: DrawerContentComponentProps) => {
       <View style={styles.menuSection}>
         {/* 추가 메뉴 항목들 */}
         <DrawerItem
-          label="설정"
-          onPress={() => {
-            // 드로어를 닫고 설정 화면으로 이동
-            props.navigation.closeDrawer();
-            navigation.navigate("Settings");
-          }}
-          icon={({ color, size }) => (
-            <Feather name="settings" color="tomato" size={size} />
-          )}
-          labelStyle={styles.menuLabel}
-        />
-
-        <DrawerItem
-          label="도움말"
-          onPress={() => {
-            // 드로어를 닫고 도움말 화면으로 이동
-            props.navigation.closeDrawer();
-            navigation.navigate("Help");
-          }}
-          icon={({ color, size }) => (
-            <Feather name="help-circle" color="tomato" size={size} />
-          )}
-          labelStyle={styles.menuLabel}
-        />
-
-        <DrawerItem
           label="마이페이지"
           onPress={() => {
             // 드로어를 닫고 마이페이지로 이동. 미로그인 시 로그인 페이지로 유도
