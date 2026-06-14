@@ -74,9 +74,13 @@ const DrawerContent = (props: DrawerContentComponentProps) => {
         <DrawerItem
           label="마이페이지"
           onPress={() => {
-            // 드로어를 닫고 마이페이지 화면으로 이동
+            // 드로어를 닫고 마이페이지로 이동. 미로그인 시 로그인 페이지로 유도
             props.navigation.closeDrawer();
-            navigation.navigate("MyPage");
+            if (me) {
+              navigation.navigate("MyPage");
+            } else {
+              navigation.navigate("Signin");
+            }
           }}
           icon={({ color, size }) => (
             <MaterialCommunityIcons name="account" color="tomato" size={size} />
