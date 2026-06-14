@@ -2,7 +2,7 @@ import AuthProvider from "@/components/auth/AuthProvider";
 import { DrawNavigation } from "@/navigation/DrawNavigation";
 import { ActionSheetProvider } from "@expo/react-native-action-sheet";
 import { NavigationContainer } from "@react-navigation/native";
-import { StatusBar } from "react-native";
+import { StatusBar, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
@@ -12,6 +12,18 @@ import * as WebBrowser from "expo-web-browser";
 // 결과(토큰이 담긴 URL)를 openAuthSessionAsync 호출부로 전달한다.
 // 모듈 로드 시점에 호출해야 팝업 컨텍스트에서 즉시 세션이 완료된다.
 WebBrowser.maybeCompleteAuthSession();
+
+// 웹: 입력칸 placeholder 색상을 회색으로 (기본이 너무 진하게 보임)
+if (Platform.OS === "web" && typeof document !== "undefined") {
+  const styleId = "global-placeholder-style";
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement("style");
+    style.id = styleId;
+    style.textContent =
+      "input::placeholder, textarea::placeholder { color: #9CA3AF !important; opacity: 1; }";
+    document.head.appendChild(style);
+  }
+}
 
 export default function App() {
   return (
