@@ -4,7 +4,7 @@ module.exports = ({ config }) => {
   // 기본 설정
   const defaultConfig = {
     ...config, // 기존 app.json의 내용들을 여기에 합쳐도 됨
-    name: "MyExpoApp",
+    name: "같이타",
     slug: "myexpoapp",
     version: "1.0.0",
     scheme: "connect", // 카카오 로그인 등 OAuth 딥링크(connect://...)용 스킴
