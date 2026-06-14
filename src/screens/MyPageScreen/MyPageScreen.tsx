@@ -7,6 +7,7 @@ import {
   FlatList,
   ActivityIndicator,
   StyleSheet,
+  Platform,
 } from "react-native";
 import Alert from "@blazejkustra/react-native-alert";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -57,7 +58,6 @@ export default function MyPageScreen() {
   const [reminderDate, setReminderDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [reminderContent, setReminderContent] = useState("");
-  const [reminderEmail, setReminderEmail] = useState(user?.email ?? "");
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [addingReminder, setAddingReminder] = useState(false);
 
@@ -209,11 +209,6 @@ export default function MyPageScreen() {
     fetchReminders();
   }, [fetchReminders]);
 
-  // user 이메일 동기화 (알림 기본 수신 이메일)
-  useEffect(() => {
-    setReminderEmail(user?.email ?? "");
-  }, [user?.email]);
-
   const onChangeReminderDate = useCallback((_event: any, selected?: Date) => {
     if (selected) {
       setReminderDate(selected);
@@ -238,13 +233,12 @@ export default function MyPageScreen() {
         body: JSON.stringify({
           reminderDate: dayjs(reminderDate).format("YYYY-MM-DD"),
           content: reminderContent.trim(),
-          email: reminderEmail.trim() || undefined,
         }),
       });
       if (res.ok) {
         setReminderContent("");
         fetchReminders();
-        Alert.alert("등록 완료", "설정한 날짜 오전에 이메일로 알림을 보내드립니다.");
+        Alert.alert("등록 완료", "인증한 이메일로, 설정한 날짜 오전에 알림을 보내드립니다.");
       } else {
         const msg = await res.text().catch(() => null);
         Alert.alert("등록 실패", msg || "알림 등록에 실패했습니다.");
@@ -254,7 +248,7 @@ export default function MyPageScreen() {
     } finally {
       setAddingReminder(false);
     }
-  }, [reminderContent, reminderDate, reminderEmail, fetchReminders]);
+  }, [reminderContent, reminderDate, fetchReminders]);
 
   const onDeleteReminder = useCallback(
     async (id: number) => {
@@ -384,17 +378,39 @@ export default function MyPageScreen() {
         )}
         <View style={styles.reminderRow}>
           <View style={styles.datePickerWrap}>
-            <CustomDateTimePicker
-              testID="reminderDatePicker"
-              value={reminderDate}
-              mode="date"
-              is24Hour={true}
-              onChange={onChangeReminderDate}
-              datePickerButtonComponentStyle={styles.datePickerButton}
-              datePickerTextComponentStyle={styles.datePickerText}
-              showDatePicker={showDatePicker}
-              setShowDatePicker={setShowDatePicker}
-            />
+            {Platform.OS === "web" ? (
+              // 웹: 브라우저 기본 date input (안정적으로 동작)
+              // @ts-ignore 웹 전용 DOM 요소
+              <input
+                type="date"
+                value={dayjs(reminderDate).format("YYYY-MM-DD")}
+                onChange={(e: any) => {
+                  if (e?.target?.value) {
+                    setReminderDate(dayjs(e.target.value).toDate());
+                  }
+                }}
+                style={{
+                  padding: 10,
+                  borderRadius: 8,
+                  border: "1px solid #ddd",
+                  fontSize: 15,
+                  color: "#222",
+                  minWidth: 150,
+                }}
+              />
+            ) : (
+              <CustomDateTimePicker
+                testID="reminderDatePicker"
+                value={reminderDate}
+                mode="date"
+                is24Hour={true}
+                onChange={onChangeReminderDate}
+                datePickerButtonComponentStyle={styles.datePickerButton}
+                datePickerTextComponentStyle={styles.datePickerText}
+                showDatePicker={showDatePicker}
+                setShowDatePicker={setShowDatePicker}
+              />
+            )}
           </View>
           <TextInput
             style={[styles.input, { flex: 1, marginRight: 0 }]}
@@ -404,14 +420,6 @@ export default function MyPageScreen() {
             maxLength={50}
           />
         </View>
-        <TextInput
-          style={[styles.input, { marginTop: 8 }]}
-          value={reminderEmail}
-          onChangeText={setReminderEmail}
-          placeholder="알림 받을 이메일"
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
         <TouchableOpacity
           style={[
             styles.saveBtn,
@@ -429,7 +437,7 @@ export default function MyPageScreen() {
         </TouchableOpacity>
         <Text style={styles.hint}>
           {user?.verified
-            ? "설정한 날짜 오전에 입력한 이메일로 알림을 보내드립니다."
+            ? `설정한 날짜 오전에 인증한 이메일(${user?.email})로 알림을 보내드립니다.`
             : "지금은 마이페이지에서 보기만 가능합니다. 위에서 더존 이메일을 인증하면 알림 메일을 받을 수 있어요."}
         </Text>
 
