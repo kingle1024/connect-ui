@@ -3,7 +3,9 @@ import {
   DrawerContentScrollView,
   DrawerItem,
 } from "@react-navigation/drawer";
-import { Text, View, StyleSheet, TouchableOpacity } from "react-native";
+import { Text, View, StyleSheet, TouchableOpacity, Image, Platform } from "react-native";
+import Alert from "@blazejkustra/react-native-alert";
+import * as ImagePicker from "expo-image-picker";
 import {
   Feather,
   MaterialCommunityIcons,
@@ -15,7 +17,7 @@ import AuthContext from "../auth/AuthContext";
 
 const DrawerContent = (props: DrawerContentComponentProps) => {
   const navigation = useRootNavigation<"Signin">();
-  const { user: me, signout } = useContext(AuthContext);
+  const { user: me, signout, updateProfileImage } = useContext(AuthContext);
 
   const onPressBottomButton = useCallback(() => {
     if (me) {
@@ -25,12 +27,57 @@ const DrawerContent = (props: DrawerContentComponentProps) => {
     }
   }, [me, signout, navigation]);
 
+  // 프로필 사진 클릭 → 이미지 선택 → 업로드
+  const onPressProfileImage = useCallback(async () => {
+    if (!me) {
+      // 미로그인 시 로그인으로 유도
+      props.navigation.closeDrawer();
+      navigation.navigate("Signin");
+      return;
+    }
+    try {
+      if (Platform.OS !== "web") {
+        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!perm.granted) {
+          Alert.alert("권한 필요", "사진 접근 권한이 필요합니다.");
+          return;
+        }
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+        base64: true,
+      });
+      if (result.canceled || !result.assets?.[0]?.base64) {
+        return;
+      }
+      const asset = result.assets[0];
+      await updateProfileImage(asset.base64 as string, asset.mimeType ?? "image/jpeg");
+    } catch (e: any) {
+      Alert.alert("실패", e?.message ?? "프로필 사진 업로드에 실패했습니다.");
+    }
+  }, [me, updateProfileImage, navigation, props.navigation]);
+
   return (
     <DrawerContentScrollView contentContainerStyle={styles.container}>
       <View style={styles.profileSection}>
-        <View style={styles.profileImageContainer}>
-          <MaterialIcons name="person" size={64} color="#9CA3AF" />
-        </View>
+        <TouchableOpacity
+          style={styles.profileImageContainer}
+          onPress={onPressProfileImage}
+          activeOpacity={0.8}
+        >
+          {me?.profileUrl ? (
+            <Image source={{ uri: me.profileUrl }} style={styles.profileImage} />
+          ) : (
+            <MaterialIcons name="person" size={64} color="#9CA3AF" />
+          )}
+          {/* 카메라 뱃지 (사진 등록 안내) */}
+          <View style={styles.cameraBadge}>
+            <Feather name="camera" size={14} color="#fff" />
+          </View>
+        </TouchableOpacity>
         {me?.userId ? null : (
           <Text style={styles.userName}>로그인이 필요합니다.</Text>
         )}
@@ -95,6 +142,24 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     borderWidth: 3,
     borderColor: "tomato",
+  },
+  profileImage: {
+    width: 74,
+    height: 74,
+    borderRadius: 37,
+  },
+  cameraBadge: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "tomato",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
   },
   userName: {
     fontSize: 18,
