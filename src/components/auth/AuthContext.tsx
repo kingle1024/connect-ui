@@ -13,6 +13,7 @@ export interface AuthContextProp {
   signout: () => Promise<void>;
   processingSignin: boolean;
   updateProfileImage: (imageBase64: string, contentType: string) => Promise<void>;
+  removeProfileImage: () => Promise<void>;
   addFcmToken: (token: string) => Promise<void>;
 }
 
@@ -28,6 +29,7 @@ const AuthContext = createContext<AuthContextProp>({
   signout: async () => {},
   processingSignin: false,
   updateProfileImage: async () => {},
+  removeProfileImage: async () => {},
   addFcmToken: async () => {},
 });
 

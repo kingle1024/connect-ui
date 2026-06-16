@@ -17,7 +17,8 @@ import AuthContext from "../auth/AuthContext";
 
 const DrawerContent = (props: DrawerContentComponentProps) => {
   const navigation = useRootNavigation<"Signin">();
-  const { user: me, signout, updateProfileImage } = useContext(AuthContext);
+  const { user: me, signout, updateProfileImage, removeProfileImage } =
+    useContext(AuthContext);
 
   const onPressBottomButton = useCallback(() => {
     if (me) {
@@ -27,14 +28,8 @@ const DrawerContent = (props: DrawerContentComponentProps) => {
     }
   }, [me, signout, navigation]);
 
-  // 프로필 사진 클릭 → 이미지 선택 → 업로드
-  const onPressProfileImage = useCallback(async () => {
-    if (!me) {
-      // 미로그인 시 로그인으로 유도
-      props.navigation.closeDrawer();
-      navigation.navigate("Signin");
-      return;
-    }
+  // 사진 선택 → 업로드
+  const pickAndUpload = useCallback(async () => {
     try {
       if (Platform.OS !== "web") {
         const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -58,7 +53,35 @@ const DrawerContent = (props: DrawerContentComponentProps) => {
     } catch (e: any) {
       Alert.alert("실패", e?.message ?? "프로필 사진 업로드에 실패했습니다.");
     }
-  }, [me, updateProfileImage, navigation, props.navigation]);
+  }, [updateProfileImage]);
+
+  // 프로필 사진 클릭: 미로그인→로그인, 사진 있으면 변경/삭제 선택, 없으면 바로 선택
+  const onPressProfileImage = useCallback(() => {
+    if (!me) {
+      props.navigation.closeDrawer();
+      navigation.navigate("Signin");
+      return;
+    }
+    if (me.profileUrl) {
+      Alert.alert("프로필 사진", "변경하거나 기본 이미지로 되돌립니다.", [
+        { text: "사진 변경", onPress: () => pickAndUpload() },
+        {
+          text: "기본 이미지로",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await removeProfileImage();
+            } catch (e: any) {
+              Alert.alert("실패", e?.message ?? "프로필 사진 삭제에 실패했습니다.");
+            }
+          },
+        },
+        { text: "취소", style: "cancel" },
+      ]);
+    } else {
+      pickAndUpload();
+    }
+  }, [me, pickAndUpload, removeProfileImage, navigation, props.navigation]);
 
   return (
     <DrawerContentScrollView contentContainerStyle={styles.container}>
