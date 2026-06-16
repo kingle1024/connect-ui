@@ -303,6 +303,21 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     []
   );
 
+  // 프로필 사진 삭제(기본 이미지로)
+  const removeProfileImage = useCallback(async () => {
+    const accessToken = await AsyncStorage.getItem("accessToken");
+    try {
+      await axiosInstance.delete("/api/account/me/profile-image", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setUser((prev) => (prev ? { ...prev, profileUrl: undefined } : prev));
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message ?? "프로필 사진 삭제에 실패했습니다.";
+      throw new Error(message);
+    }
+  }, []);
+
   const addFcmToken = useCallback(async (token: string) => {}, [user]);
 
   const value = useMemo(() => {
@@ -318,6 +333,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       signout,
       processingSignin,
       updateProfileImage,
+      removeProfileImage,
       addFcmToken,
     };
   }, [
@@ -332,6 +348,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     signout,
     processingSignin,
     updateProfileImage,
+    removeProfileImage,
     addFcmToken,
   ]);
 
