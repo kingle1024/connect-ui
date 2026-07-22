@@ -1,59 +1,83 @@
 // FriendsListScreen.styles.ts
 import { StyleSheet } from "react-native";
+import theme from "@/modules/theme";
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#fff" },
+  safe: { flex: 1, backgroundColor: theme.colors.surface },
   header: {
     height: 56,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  headerTitle: { fontSize: 20, fontWeight: "700" },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: theme.colors.text,
+    letterSpacing: -0.3,
+  },
   headerRight: { flexDirection: "row", alignItems: "center" },
-  iconBtn: { marginLeft: 12 },
+  iconBtn: { marginLeft: 16 },
 
   searchWrap: {
-    marginHorizontal: 16,
+    marginHorizontal: 20,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f2f2f2",
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    height: 42,
+    backgroundColor: theme.colors.field,
+    paddingHorizontal: 14,
+    borderRadius: theme.radius.md,
+    height: 44,
     marginBottom: 8,
   },
-  searchInput: { flex: 1, marginLeft: 8, fontSize: 15 },
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 15,
+    color: theme.colors.text,
+  },
 
-  sectionHeader: { paddingHorizontal: 16, paddingVertical: 6, backgroundColor: "#fff" },
-  sectionTitle: { fontSize: 13, fontWeight: "700", color: "#666" },
+  sectionHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 6,
+    backgroundColor: theme.colors.surface,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: theme.colors.textMuted,
+  },
 
-  separator: { height: StyleSheet.hairlineWidth, backgroundColor: "#eee", marginLeft: 74 },
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: theme.colors.divider,
+    marginLeft: 76,
+  },
 
-  empty: { alignItems: "center", paddingTop: 40 },
-  emptyText: { color: "#888" },
+  empty: { alignItems: "center", paddingTop: 48 },
+  emptyText: { color: theme.colors.textMuted, fontSize: 15 },
 
   // Modal / action sheet
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: "rgba(25, 31, 40, 0.5)",
     justifyContent: "flex-end",
   },
   actionSheet: {
     padding: 16,
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: theme.radius.xl,
+    borderTopRightRadius: theme.radius.xl,
   },
   actionButton: {
-    paddingVertical: 14,
+    paddingVertical: 15,
     alignItems: "center",
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#eee",
+    borderBottomColor: theme.colors.divider,
   },
-  actionText: { fontSize: 16 },
-  deleteText: { color: "red", fontWeight: "700" },
+  actionText: { fontSize: 16, color: theme.colors.text },
+  deleteText: { color: theme.colors.danger, fontWeight: "700" },
 });
 
 export default styles;

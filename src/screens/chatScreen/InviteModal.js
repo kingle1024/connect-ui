@@ -14,6 +14,7 @@ import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import AuthContext from "@/components/auth/AuthContext";
 import { useContext } from "react";
+import theme from "@/modules/theme";
 
 export default function InviteModal({
   visible,
@@ -236,7 +237,7 @@ export default function InviteModal({
           )}
 
           <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 8 }}>
-            <TouchableOpacity onPress={confirmInvite} style={{ paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#2e86de', borderRadius: 8 }}>
+            <TouchableOpacity onPress={confirmInvite} style={{ paddingHorizontal: 14, paddingVertical: 8, backgroundColor: theme.colors.primary, borderRadius: theme.radius.pill }}>
               <Text style={{ color: '#fff' }}>{mode === 'invite' ? '초대하기' : '강퇴하기'}</Text>
             </TouchableOpacity>
           </View>

@@ -31,6 +31,7 @@ import { createOneToOneRoom, getOneToOneRoomsForUser } from "@/utils/chat";
 import { useDetailBoard } from "@/hooks/useDetailBoard";
 import Constants from "expo-constants";
 import axios from "axios";
+import theme from "@/modules/theme";
 
 const screenHeight = Dimensions.get("window").height;
 
@@ -558,13 +559,13 @@ const ConnectDetail = () => {
             >
               {isExpanded ? (
                 <Text
-                  style={{ fontSize: 14, fontWeight: "500", color: "#FF4D00" }}
+                  style={{ fontSize: 14, fontWeight: "600", color: theme.colors.primary }}
                 >
                   대댓글 접기
                 </Text>
               ) : (
                 <Text
-                  style={{ fontSize: 14, fontWeight: "500", color: "#FF4D00" }}
+                  style={{ fontSize: 14, fontWeight: "600", color: theme.colors.primary }}
                 >
                   대댓글 {item.replies.length - maxVisibleReplies}개 더보기 ...
                 </Text>
@@ -642,9 +643,9 @@ const ConnectDetail = () => {
                 {/* 친구 요청 버튼 */}
                 <TouchableOpacity
                   style={{
-                    backgroundColor: '#007bff',
+                    backgroundColor: theme.colors.primary,
                     padding: 15,
-                    borderRadius: 10,
+                    borderRadius: theme.radius.md,
                     alignItems: 'center',
                   }}
                   onPress={() => sendFriendRequest(selectedUser.userId, selectedUser.userName)}
@@ -662,18 +663,18 @@ const ConnectDetail = () => {
                 {/* 1:1 대화하기 버튼 */}
                 <TouchableOpacity
                   style={{
-                    backgroundColor: '#6c757d',
+                    backgroundColor: theme.colors.field,
                     padding: 15,
-                    borderRadius: 10,
+                    borderRadius: theme.radius.md,
                     alignItems: 'center',
                   }}
                   onPress={() => startPrivateChat(selectedUser.userId, selectedUser.userName)}
                   disabled={isStartingChat}
                 >
                   {isStartingChat ? (
-                    <ActivityIndicator color="white" />
+                    <ActivityIndicator color={theme.colors.textSecondary} />
                   ) : (
-                    <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: 16, fontWeight: 'bold' }}>
                       1:1 대화하기
                     </Text>
                   )}
@@ -698,11 +699,13 @@ const ConnectDetail = () => {
               placeholder="댓글을 남겨주세요."
               multiline={true}
               style={{
-                color: "black",
-                borderRadius: 8,
+                color: theme.colors.text,
+                borderRadius: theme.radius.md,
+                backgroundColor: theme.colors.field,
                 borderWidth: 1,
-                borderColor: replyInputErrorText ? "red" : "#D1D5DB",
-                padding: 10,
+                borderColor: replyInputErrorText ? theme.colors.danger : theme.colors.field,
+                paddingHorizontal: 14,
+                paddingVertical: 10,
                 minHeight: 40,
                 maxHeight: 150,
               }}
@@ -715,7 +718,7 @@ const ConnectDetail = () => {
               }}
             />
             {replyInputErrorText && (
-              <Text style={{ color: "red", marginTop: 5 }}>
+              <Text style={{ color: theme.colors.danger, fontSize: 13, marginTop: 5 }}>
                 {replyInputErrorText}
               </Text>
             )}
@@ -729,10 +732,10 @@ const ConnectDetail = () => {
               position: "absolute",
               bottom: 40,
               right: 20,
-              backgroundColor: "rgba(255, 99, 71, 1)",
+              backgroundColor: theme.colors.primary,
               paddingVertical: 8,
-              paddingHorizontal: 16,
-              borderRadius: 8,
+              paddingHorizontal: 18,
+              borderRadius: theme.radius.pill,
               opacity: (replyInput.trim() && boardDetail) ? 1 : 0.5,
             }}
             onPress={handleRegisterReply}

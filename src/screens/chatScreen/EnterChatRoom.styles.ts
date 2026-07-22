@@ -1,18 +1,19 @@
 import { StyleSheet, Platform, StatusBar } from 'react-native';
+import theme from '@/modules/theme';
 
 const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
-    backgroundColor: '#f0f2f5',
+    backgroundColor: theme.colors.background,
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   headerContainer: { // 🌟 헤더 전체를 감싸는 View
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 15,
-    backgroundColor: '#fff',
+    paddingVertical: 14,
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: theme.colors.border,
     position: 'relative', // 뒤로가기 버튼 위치 조정을 위해
     paddingLeft: 50, // 뒤로가기 버튼 공간 확보
     paddingRight: 15, // 사용자명 표시를 위한 오른쪽 여백
@@ -29,20 +30,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center', // 내부 텍스트 및 버튼 중앙 정렬
   },
-  headerText: { // 🌟 헤더 텍스트 스타일 (이전 header 스타일에서 이름 변경)
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
-    // flex: 1, // 텍스트가 중앙에 오도록 flex 제거
-    // textAlign: 'center', // 텍스트 중앙 정렬
+  headerText: { // 🌟 헤더 텍스트 스타일
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.colors.text,
+    letterSpacing: -0.2,
   },
   headerTextInput: { // 🌟 편집 모드 시 TextInput 스타일
     flex: 1, // 최대한 공간을 차지
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.colors.text,
     borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
+    borderBottomColor: theme.colors.border,
     paddingVertical: Platform.OS === 'ios' ? 5 : 0, // OS별 패딩 조절
     marginHorizontal: 5,
     textAlign: 'center', // 입력 중인 텍스트 중앙 정렬
@@ -52,31 +52,33 @@ const styles = StyleSheet.create({
     marginLeft: 5, // 방 이름 텍스트/인풋과의 간격
   },
   headerUsername: { // 🌟 사용자명 텍스트 스타일
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    color: theme.colors.textMuted,
     marginLeft: 10,
-    // position: 'absolute', // 사용자명을 절대 위치로 두어 오른쪽 끝에 배치
-    // right: 15,
   },
   chatArea: {
     flex: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
   messageContainer: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 15,
-    marginVertical: 4,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+    marginVertical: 3,
     maxWidth: '80%',
   },
   myMessage: {
     alignSelf: 'flex-end',
-    backgroundColor: '#ffe81e',
+    backgroundColor: theme.colors.primary,
+    borderBottomRightRadius: 4,
   },
   otherMessage: {
     alignSelf: 'flex-start',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderBottomLeftRadius: 4,
   },
   systemMessage: {
     alignSelf: 'center',
@@ -85,68 +87,78 @@ const styles = StyleSheet.create({
     marginVertical: 2,
   },
   messageText: {
-    fontSize: 16,
-    color: '#333',
+    fontSize: 15,
+    color: theme.colors.text,
+    lineHeight: 21,
+  },
+  myMessageText: {
+    fontSize: 15,
+    color: theme.colors.white,
+    lineHeight: 21,
   },
   systemText: {
     fontSize: 12,
-    color: '#888',
+    color: theme.colors.textMuted,
   },
   senderText: {
     fontSize: 12,
-    color: '#666',
-    marginBottom: 2,
+    color: theme.colors.textMuted,
+    marginBottom: 3,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#eee',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    backgroundColor: '#fff',
-    minHeight: 50,
+    borderTopColor: theme.colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: theme.colors.surface,
+    minHeight: 56,
   },
   input: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    marginRight: 10,
-    fontSize: 16,
+    backgroundColor: theme.colors.field,
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginRight: 8,
+    fontSize: 15,
+    color: theme.colors.text,
     maxHeight: 120,
   },
   sendButton: {
     paddingVertical: 10,
-    paddingHorizontal: 15,
-    backgroundColor: '#ffe81e',
-    borderRadius: 20,
+    paddingHorizontal: 16,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.radius.pill,
     justifyContent: 'center',
     alignItems: 'center',
   },
   sendButtonText: {
-    color: '#333',
-    fontWeight: 'bold',
-    fontSize: 16,
+    color: theme.colors.white,
+    fontWeight: '700',
+    fontSize: 15,
   },
   leaderFunctionContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     padding: 10,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: theme.colors.border,
   },
   leaderButton: {
-    backgroundColor: '#6200EE',
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
     paddingVertical: 8,
     paddingHorizontal: 15,
-    borderRadius: 5,
+    borderRadius: theme.radius.sm,
   },
   leaderButtonText: {
-    color: 'white',
+    color: theme.colors.textSecondary,
     fontSize: 14,
+    fontWeight: '500',
   }
 });
 

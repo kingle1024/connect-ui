@@ -29,6 +29,7 @@ import Toast from "react-native-toast-message";
 import { useRootNavigation } from "@/hooks/useNavigation";
 import AuthContext from "@/components/auth/AuthContext";
 import NewPostSheet from "./NewPostSheet";
+import theme from "@/modules/theme";
 
 const screenHeight = Dimensions.get("window").height;
 
@@ -336,7 +337,7 @@ export default function ConnectScreen() {
   return (
     <SafeAreaView
       edges={["right", "left"]}
-      style={{ flex: 1, paddingTop: 10, backgroundColor: "#F7F8FA" }}
+      style={{ flex: 1, paddingTop: 12, backgroundColor: theme.colors.background }}
     >
       <FlatList
         ref={flatListRef}
@@ -359,19 +360,8 @@ export default function ConnectScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       />
-      <TouchableOpacity onPress={onPressNewPost}>
-        <View
-          style={{
-            position: "absolute",
-            bottom: 20,
-            right: 20,
-            backgroundColor: "#FF4D00",
-            borderRadius: 9999,
-            padding: 12,
-          }}
-        >
-          <FontAwesome6 name="add" size={24} color="white" />
-        </View>
+      <TouchableOpacity onPress={onPressNewPost} activeOpacity={0.85} style={localStyles.fab}>
+        <FontAwesome6 name="add" size={22} color={theme.colors.white} />
       </TouchableOpacity>
       <RBSheet
         ref={refRBSheet}
@@ -380,16 +370,17 @@ export default function ConnectScreen() {
         closeOnPressMask={true}
         customStyles={{
           wrapper: {
-            backgroundColor: "rgba(0,0,0,0.5)",
+            backgroundColor: "rgba(25, 31, 40, 0.5)",
           },
           draggableIcon: {
-            backgroundColor: "#ccc",
+            backgroundColor: theme.colors.border,
             width: 40,
             height: 4,
           },
           container: {
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
+            borderTopLeftRadius: theme.radius.xl,
+            borderTopRightRadius: theme.radius.xl,
+            backgroundColor: theme.colors.surface,
           },
         }}
         customAvoidingViewProps={{

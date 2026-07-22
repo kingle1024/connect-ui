@@ -161,14 +161,14 @@ const SigninScreen = () => {
               onPress={onPressFindPassword}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Text style={{ fontSize: 16 }}>비밀번호 찾기</Text>
+              <Text style={styles.linkText}>비밀번호 찾기</Text>
             </TouchableOpacity>
             <View style={{ paddingLeft: 10, paddingRight: 10 }} />
             <TouchableOpacity
               onPress={onPressSignUp}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Text style={{ fontSize: 16 }}>회원가입</Text>
+              <Text style={styles.linkText}>회원가입</Text>
             </TouchableOpacity>
           </View>
         </View>

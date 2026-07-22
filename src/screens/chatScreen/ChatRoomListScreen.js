@@ -15,6 +15,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import localStyles from "./ChatRoomListScreen.styles.ts";
 import AuthContext from "@/components/auth/AuthContext";
 import { getRoomsForUser } from "@/utils/chat";
+import theme from "@/modules/theme";
 const API_BASE_URL = Constants.expoConfig.extra.API_BASE_URL;
 const SOCKET_URL = API_BASE_URL + "/ws-chat";
 
@@ -205,7 +206,7 @@ export default function ChatRoomsListScreen({ navigation }) {
   if (isUserIdLoading) {
     return (
       <View style={localStyles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0000ff" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text>사용자 ID 로딩 중...</Text>
       </View>
     );
@@ -225,7 +226,7 @@ export default function ChatRoomsListScreen({ navigation }) {
 
       {isRoomsLoading ? ( // 🌟 채팅방 목록 로딩 상태를 보여줌 🌟
         <View style={localStyles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0000ff" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
           <Text>채팅방 목록 불러오는 중...</Text>
         </View>
       ) : rooms.length === 0 ? (

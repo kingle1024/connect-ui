@@ -7,18 +7,28 @@ import ChatNavigation from "./ChatNavigation";
 import AuthContext from "@/components/auth/AuthContext";
 import { useRootNavigation } from "@/hooks/useNavigation";
 import FriendNavigation from "./FriendNavigation";
+import theme from "@/modules/theme";
 
 const BottomTab = createBottomTabNavigator();
 
 const BottomTabNavigation = () => {
   const { user: me } = useContext(AuthContext);
-  const rootNavigation = useRootNavigation(); 
+  const rootNavigation = useRootNavigation();
 
   return (
     <BottomTab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: "tomato",
-        tabBarInactiveTintColor: "gray",
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.textMuted,
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
+        tabBarStyle: {
+          backgroundColor: theme.colors.surface,
+          borderTopColor: theme.colors.border,
+          borderTopWidth: 1,
+          height: 60,
+          paddingTop: 6,
+          paddingBottom: 8,
+        },
       }}
     >
       <BottomTab.Screen
@@ -28,7 +38,11 @@ const BottomTabNavigation = () => {
           headerShown: false,
           tabBarLabel: "친구",
           tabBarIcon: ({ focused, size }) => (
-            <Feather name="users" size={20} color={focused ? "tomato" : "gray"} />
+            <Feather
+              name="users"
+              size={20}
+              color={focused ? theme.colors.primary : theme.colors.textMuted}
+            />
           ),
         }}
         listeners={() => ({
@@ -63,7 +77,7 @@ const BottomTabNavigation = () => {
             <Feather
               name="clipboard"
               size={20}
-              color={focused ? "tomato" : "gray"}
+              color={focused ? theme.colors.primary : theme.colors.textMuted}
             />
           ),
         }}
@@ -75,7 +89,11 @@ const BottomTabNavigation = () => {
           headerShown: false,
           tabBarLabel: "채팅",
           tabBarIcon: ({ focused, size }) => (
-            <Entypo name="chat" size={20} color={focused ? "tomato" : "gray"} />
+            <Entypo
+              name="chat"
+              size={20}
+              color={focused ? theme.colors.primary : theme.colors.textMuted}
+            />
           ),
         }}
         listeners={() => ({
