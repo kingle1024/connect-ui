@@ -12,6 +12,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import CustomDateTimePicker from '../../components/CustomDateTimePicker';
+import theme from '@/modules/theme';
 
 interface NewPostSheetProps {
   screenHeight: number;
@@ -83,14 +84,14 @@ const NewPostSheet: React.FC<NewPostSheetProps> = React.memo((props) => {
             style={{
               ...styles.postButton,
               backgroundColor: isPostButtonDisabled
-                ? 'rgba(255, 99, 71, 0.5)'
-                : 'rgba(255, 99, 71, 1)',
+                ? theme.colors.textDisabled
+                : theme.colors.primary,
             }}
             onPress={onPressPost}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             disabled={!!isPostButtonDisabled} // disabled prop 추가
           >
-            <Text style={styles.postButtonText}>Post</Text>
+            <Text style={styles.postButtonText}>등록</Text>
           </TouchableOpacity>
         </View>
 
@@ -100,7 +101,7 @@ const NewPostSheet: React.FC<NewPostSheetProps> = React.memo((props) => {
           placeholder="제목"
           onChangeText={setTitleInput}
           onBlur={validateTitle} // <-- onBlur 추가
-          placeholderTextColor="#999"
+          placeholderTextColor={theme.colors.textMuted}
           style={styles.textInput}
           returnKeyType="done"
         />
@@ -116,7 +117,7 @@ const NewPostSheet: React.FC<NewPostSheetProps> = React.memo((props) => {
           onChangeText={setContentInput}
           onBlur={validateContent} // <-- onBlur 추가
           placeholder="내용을 입력하세요"
-          placeholderTextColor="#999"
+          placeholderTextColor={theme.colors.textMuted}
           multiline={true}
           textAlignVertical="top"
           style={styles.multilineTextInput}
@@ -133,7 +134,7 @@ const NewPostSheet: React.FC<NewPostSheetProps> = React.memo((props) => {
           placeholder="도착지 입력"
           onChangeText={setDestinationInput}
           onBlur={validateDestination} // <-- onBlur 추가
-          placeholderTextColor="#999"
+          placeholderTextColor={theme.colors.textMuted}
           style={styles.textInput}
           returnKeyType="done"
         />
@@ -149,7 +150,7 @@ const NewPostSheet: React.FC<NewPostSheetProps> = React.memo((props) => {
           onChangeText={setMaxCapacityInput}
           onBlur={validateMaxCapacity} // <-- onBlur 추가
           placeholder="최대 모집 인원 입력"
-          placeholderTextColor="#999"
+          placeholderTextColor={theme.colors.textMuted}
           keyboardType="numeric"
           style={styles.textInput}
           returnKeyType="done"
@@ -186,78 +187,81 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dragHandle: {
-    width: 50,
-    height: 5,
-    backgroundColor: '#ccc',
-    borderRadius: 2.5,
+    width: 44,
+    height: 4,
+    backgroundColor: theme.colors.border,
+    borderRadius: theme.radius.pill,
   },
   scrollView: {
-    padding: 10,
+    paddingHorizontal: 20,
+    paddingTop: 4,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 20,
   },
   cancelButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
+    color: theme.colors.textSecondary,
+    fontSize: 15,
+    fontWeight: '500',
   },
   titleText: {
     fontSize: 18,
-    fontWeight: 'bold',
-    marginTop: 10,
-    marginBottom: 5,
-    color: '#333',
+    fontWeight: '700',
+    color: theme.colors.text,
     textAlign: 'center',
+    letterSpacing: -0.2,
   },
   postButton: {
     paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingHorizontal: 18,
+    borderRadius: theme.radius.pill,
   },
   postButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
+    color: theme.colors.white,
+    fontWeight: '700',
+    fontSize: 14,
   },
   textInput: {
-    marginBottom: 10,
-    padding: 10,
-    color: 'black',
+    marginBottom: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    color: theme.colors.text,
     fontSize: 16,
-    backgroundColor: 'white',
-    borderWidth: 1,
-    borderColor: 'black',
-    borderRadius: 8,
+    backgroundColor: theme.colors.field,
+    borderRadius: theme.radius.md,
   },
   multilineTextInput: {
     height: 150,
-    padding: 10,
-    color: 'black',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    color: theme.colors.text,
     fontSize: 16,
-    backgroundColor: 'white',
-    borderWidth: 1,
-    borderColor: 'black',
-    borderRadius: 8,
-    marginBottom: 10,
+    backgroundColor: theme.colors.field,
+    borderRadius: theme.radius.md,
+    marginBottom: 12,
   },
   errorContainer: {
-    marginBottom: 10,
+    marginBottom: 12,
+    marginTop: -6,
+    paddingHorizontal: 4,
   },
   errorText: {
-    color: 'red',
+    color: theme.colors.danger,
+    fontSize: 13,
   },
   datePickerButton: {
-    padding: 10,
-    backgroundColor: 'white',
-    borderWidth: 1,
-    borderColor: 'black',
-    borderRadius: 8,
-    marginBottom: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: theme.colors.field,
+    borderRadius: theme.radius.md,
+    marginBottom: 12,
   },
   datePickerText: {
     fontSize: 16,
+    color: theme.colors.text,
   },
 });
 

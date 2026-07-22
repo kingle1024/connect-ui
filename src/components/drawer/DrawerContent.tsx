@@ -12,6 +12,7 @@ import {
 import { useCallback, useContext } from "react";
 import { useRootNavigation } from "@/hooks/useNavigation";
 import AuthContext from "../auth/AuthContext";
+import theme from "@/modules/theme";
 
 const DrawerContent = (props: DrawerContentComponentProps) => {
   const navigation = useRootNavigation<"Signin">();
@@ -29,7 +30,7 @@ const DrawerContent = (props: DrawerContentComponentProps) => {
     <DrawerContentScrollView contentContainerStyle={styles.container}>
       <View style={styles.profileSection}>
         <View style={styles.profileImageContainer}>
-          <MaterialIcons name="person" size={64} color="#9CA3AF" />
+          <MaterialIcons name="person" size={44} color={theme.colors.primary} />
         </View>
         {me?.userId ? null : (
           <Text style={styles.userName}>로그인이 필요합니다.</Text>
@@ -51,7 +52,7 @@ const DrawerContent = (props: DrawerContentComponentProps) => {
             // 설정 화면으로 이동
           }}
           icon={({ color, size }) => (
-            <Feather name="settings" color="tomato" size={size} />
+            <Feather name="settings" color={theme.colors.textSecondary} size={size} />
           )}
           labelStyle={styles.menuLabel}
         />
@@ -62,7 +63,7 @@ const DrawerContent = (props: DrawerContentComponentProps) => {
             // 도움말 화면으로 이동
           }}
           icon={({ color, size }) => (
-            <Feather name="help-circle" color="tomato" size={size} />
+            <Feather name="help-circle" color={theme.colors.textSecondary} size={size} />
           )}
           labelStyle={styles.menuLabel}
         />
@@ -73,7 +74,7 @@ const DrawerContent = (props: DrawerContentComponentProps) => {
             // 마이페이지 화면으로 이동
           }}
           icon={({ color, size }) => (
-            <MaterialCommunityIcons name="account" color="tomato" size={size} />
+            <MaterialCommunityIcons name="account" color={theme.colors.textSecondary} size={size} />
           )}
           labelStyle={styles.menuLabel}
         />
@@ -85,7 +86,7 @@ const DrawerContent = (props: DrawerContentComponentProps) => {
           style={styles.bottomButton}
           onPress={onPressBottomButton}
         >
-          <Feather name="log-out" size={20} color="#ff4444" />
+          <Feather name="log-out" size={20} color={theme.colors.primary} />
           <Text style={styles.bottomText}>{me ? "로그아웃" : "로그인"}</Text>
         </TouchableOpacity>
       </View>
@@ -96,6 +97,7 @@ const DrawerContent = (props: DrawerContentComponentProps) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: theme.colors.surface,
   },
   profileSection: {
     alignItems: "center",
@@ -103,28 +105,27 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   profileImageContainer: {
-    marginBottom: 15,
+    marginBottom: 14,
     justifyContent: "center",
     alignItems: "center",
-    width: 80, // w-32
-    height: 80, // h-32
+    width: 80,
+    height: 80,
     borderRadius: 40,
-    borderWidth: 3,
-    borderColor: "tomato",
+    backgroundColor: theme.colors.primaryTint,
   },
   userName: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 5,
+    fontSize: 17,
+    fontWeight: "700",
+    color: theme.colors.text,
+    marginBottom: 4,
   },
   userEmail: {
     fontSize: 14,
-    color: "#666",
+    color: theme.colors.textMuted,
   },
   divider: {
     height: 1,
-    backgroundColor: "#e0e0e0",
+    backgroundColor: theme.colors.divider,
     marginHorizontal: 20,
     marginBottom: 10,
   },
@@ -132,30 +133,31 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   menuLabel: {
-    fontSize: 16,
+    fontSize: 15,
+    color: theme.colors.text,
+    fontWeight: "500",
   },
   bottomSection: {
     borderTopWidth: 1,
-    borderTopColor: "#e0e0e0",
-    paddingTop: 20,
+    borderTopColor: theme.colors.divider,
+    paddingTop: 16,
     paddingHorizontal: 20,
     paddingBottom: 30,
   },
   bottomButton: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
+    justifyContent: "center",
+    paddingVertical: 13,
     paddingHorizontal: 16,
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "tomato",
+    backgroundColor: theme.colors.primaryTint,
+    borderRadius: theme.radius.md,
   },
   bottomText: {
-    marginLeft: 12,
-    fontSize: 16,
-    color: "tomato",
-    fontWeight: "500",
+    marginLeft: 10,
+    fontSize: 15,
+    color: theme.colors.primary,
+    fontWeight: "600",
   },
 });
 

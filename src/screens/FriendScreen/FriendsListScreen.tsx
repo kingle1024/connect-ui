@@ -19,6 +19,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import AuthContext from "@/components/auth/AuthContext";
 import { useRootNavigation } from "@/hooks/useNavigation";
 import { createOneToOneRoom, getOneToOneRoomsForUser } from "@/utils/chat";
+import theme from "@/modules/theme";
 import styles from './FriendsListScreen.styles';
 
 type Friend = {
@@ -441,7 +442,7 @@ const FriendsListScreen = () => {
       </View>
 
       <View style={styles.searchWrap}>
-        <Feather name="search" size={18} color="#777" />
+        <Feather name="search" size={18} color={theme.colors.textMuted} />
         <TextInput
           placeholder="친구 검색"
           style={styles.searchInput}
@@ -453,7 +454,7 @@ const FriendsListScreen = () => {
 
       {(isLoadingFriends) && (
         <View style={{ paddingVertical: 10 }}>
-          <ActivityIndicator size="small" color="#0000ff" />
+          <ActivityIndicator size="small" color={theme.colors.primary} />
         </View>
       )}
       

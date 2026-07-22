@@ -299,7 +299,9 @@ export default function EnterChatRoom({ route, navigation }) {
         {!isMyMessage && (
           <Text style={localStyles.senderText}>{item.sender}</Text>
         )}
-        <Text style={localStyles.messageText}>{item.content}</Text>
+        <Text style={isMyMessage ? localStyles.myMessageText : localStyles.messageText}>
+          {item.content}
+        </Text>
       </View>
     );
   };

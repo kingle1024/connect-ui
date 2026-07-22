@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, Image, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Feather } from "@expo/vector-icons";
+import theme from "@/modules/theme";
 
 type Friend = {
   id: string;
@@ -83,7 +84,7 @@ const FriendItem = ({
       {/* 친구 타입일 때만 화살표 아이콘 표시 */}
       {!isFriendRequest && (
         <View style={styles.arrowContainer}>
-          <Feather name="chevron-right" size={20} color="#bbb" />
+          <Feather name="chevron-right" size={20} color={theme.colors.textDisabled} />
         </View>
       )}
     </TouchableOpacity>
@@ -94,9 +95,9 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
   },
   avatarContainer: {
     position: 'relative',
@@ -106,20 +107,20 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#eee',
+    backgroundColor: theme.colors.field,
   },
   defaultAvatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#a0a0a0',
+    backgroundColor: theme.colors.primaryTint,
     justifyContent: 'center',
     alignItems: 'center',
   },
   defaultAvatarText: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
+    color: theme.colors.primary,
+    fontSize: 18,
+    fontWeight: '700',
   },
   onlineIndicator: {
     position: 'absolute',
@@ -128,9 +129,9 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#4CAF50', // 초록색
+    backgroundColor: theme.colors.success,
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: theme.colors.surface,
   },
   infoContainer: {
     flex: 1,
@@ -138,12 +139,12 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '600',
+    color: theme.colors.text,
   },
   status: { // 친구의 상태 메시지 또는 요청 상태를 표시
     fontSize: 13,
-    color: '#888',
+    color: theme.colors.textMuted,
     marginTop: 2,
   },
   arrowContainer: {
@@ -154,21 +155,21 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 5,
+    paddingHorizontal: 14,
+    borderRadius: theme.radius.sm,
     marginLeft: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
   acceptButton: {
-    backgroundColor: '#4CAF50', // 초록색
+    backgroundColor: theme.colors.primary,
   },
   declineButton: {
-    backgroundColor: '#F44336', // 빨간색
+    backgroundColor: theme.colors.textDisabled,
   },
   buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: theme.colors.white,
+    fontWeight: '700',
     fontSize: 14,
   }
 });
