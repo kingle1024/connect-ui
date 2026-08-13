@@ -7,6 +7,7 @@ import { DrawerActions } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 import SigninScreen from "@/screens/SigninScreen/SigninScreen";
 import MyPageScreen from "@/screens/MyPageScreen/MyPageScreen";
+import MealScreen from "@/screens/MealScreen/MealScreen";
 import SignupScreen from "@/screens/SignUpScreen/SignupScreen";
 import FindPasswordScreen from "@/screens/FindAccountScreen/FindPasswordScreen";
 
@@ -70,6 +71,11 @@ export const RootNavigation = () => {
       />
       <Stack.Screen name="FindPassword" component={FindPasswordScreen} />
       <Stack.Screen name="MyPage" component={MyPageScreen} />
+      <Stack.Screen
+        name="Meal"
+        component={MealScreen}
+        options={{ headerShown: true, title: "오늘 식단" }}
+      />
       <Stack.Screen name="채팅방 상세" component={EnterChatRoom} />
     </Stack.Navigator>
   );

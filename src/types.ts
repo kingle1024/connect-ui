@@ -6,6 +6,7 @@ export type TypeRootStackNavigationParams = {
   Signup: undefined;
   Signin: undefined;
   FindPassword: undefined;
+  Meal: undefined;
 };
 
 export type TypeBottomTabNavigationParams = {

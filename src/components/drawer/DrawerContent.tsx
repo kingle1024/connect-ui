@@ -15,7 +15,7 @@ import AuthContext from "../auth/AuthContext";
 import theme from "@/modules/theme";
 
 const DrawerContent = (props: DrawerContentComponentProps) => {
-  const navigation = useRootNavigation<"Signin">();
+  const navigation = useRootNavigation<"Signin" | "Meal">();
   const { user: me, signout } = useContext(AuthContext);
 
   const onPressBottomButton = useCallback(() => {
@@ -25,6 +25,12 @@ const DrawerContent = (props: DrawerContentComponentProps) => {
       navigation.navigate("Signin");
     }
   }, [me, signout, navigation]);
+
+  // 오늘 식단은 사내 구내식당 안내라 로그인 없이도 볼 수 있게 둔다.
+  const onPressMeal = useCallback(() => {
+    props.navigation.closeDrawer();
+    navigation.navigate("Meal");
+  }, [navigation, props.navigation]);
 
   return (
     <DrawerContentScrollView contentContainerStyle={styles.container}>
@@ -47,12 +53,10 @@ const DrawerContent = (props: DrawerContentComponentProps) => {
       <View style={styles.menuSection}>
         {/* 추가 메뉴 항목들 */}
         <DrawerItem
-          label="설정"
-          onPress={() => {
-            // 설정 화면으로 이동
-          }}
+          label="오늘 식단"
+          onPress={onPressMeal}
           icon={({ color, size }) => (
-            <Feather name="settings" color={theme.colors.textSecondary} size={size} />
+            <MaterialIcons name="restaurant" color={theme.colors.textSecondary} size={size} />
           )}
           labelStyle={styles.menuLabel}
         />
