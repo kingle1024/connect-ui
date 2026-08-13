@@ -7,6 +7,8 @@ export type TypeRootStackNavigationParams = {
   Signin: undefined;
   FindPassword: undefined;
   Meal: undefined;
+  Inquiry: undefined;
+  Help: undefined;
 };
 
 export type TypeBottomTabNavigationParams = {
@@ -72,6 +74,29 @@ export interface ReplyDto {
   insertDts: string;
   parentReplyId: number | null;
   replies?: ReplyDto[];
+}
+
+// 개선/버그 요청(문의). 서버 InquiryType / InquiryStatus 와 값을 맞춘다.
+export type InquiryType = "IMPROVEMENT" | "BUG" | "ETC";
+export type InquiryStatus = "RECEIVED" | "IN_PROGRESS" | "ANSWERED" | "REJECTED";
+
+export interface Inquiry {
+  id: number;
+  type: InquiryType;
+  typeLabel: string; // "개선 요청" 등 서버가 내려주는 한글 라벨
+  title: string;
+  content: string;
+  status: InquiryStatus;
+  statusLabel: string;
+  answer: string | null; // 관리자 답변 (없으면 null)
+  answeredBy: string | null;
+  answeredDts: string | null;
+  userId: string | null; // 로그인 없이 보낸 요청이면 null
+  userName: string; // 로그인 없이 보낸 요청이면 "비회원"
+  guest: boolean; // 로그인 없이 보낸 요청인지
+  guestEmail: string | null; // 비로그인 접수 때 답변받을 주소로 남긴 메일 (선택)
+  insertDts: string;
+  updateDts: string;
 }
 
 export interface ConnectDetailBoardDto {

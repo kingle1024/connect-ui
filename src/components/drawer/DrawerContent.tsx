@@ -15,7 +15,7 @@ import AuthContext from "../auth/AuthContext";
 import theme from "@/modules/theme";
 
 const DrawerContent = (props: DrawerContentComponentProps) => {
-  const navigation = useRootNavigation<"Signin" | "Meal">();
+  const navigation = useRootNavigation<"Signin" | "Meal" | "Inquiry" | "Help">();
   const { user: me, signout } = useContext(AuthContext);
 
   const onPressBottomButton = useCallback(() => {
@@ -30,6 +30,18 @@ const DrawerContent = (props: DrawerContentComponentProps) => {
   const onPressMeal = useCallback(() => {
     props.navigation.closeDrawer();
     navigation.navigate("Meal");
+  }, [navigation, props.navigation]);
+
+  // 불편을 겪은 사람을 로그인부터 시키면 그냥 나가버리므로 로그인 없이도 보낼 수 있게 둔다.
+  const onPressFeedback = useCallback(() => {
+    props.navigation.closeDrawer();
+    navigation.navigate("Inquiry");
+  }, [navigation, props.navigation]);
+
+  // 도움말은 안내 화면이라 로그인 없이도 볼 수 있게 둔다.
+  const onPressHelp = useCallback(() => {
+    props.navigation.closeDrawer();
+    navigation.navigate("Help");
   }, [navigation, props.navigation]);
 
   return (
@@ -62,10 +74,17 @@ const DrawerContent = (props: DrawerContentComponentProps) => {
         />
 
         <DrawerItem
+          label="개선/버그 요청"
+          onPress={onPressFeedback}
+          icon={({ color, size }) => (
+            <MaterialIcons name="bug-report" color={theme.colors.textSecondary} size={size} />
+          )}
+          labelStyle={styles.menuLabel}
+        />
+
+        <DrawerItem
           label="도움말"
-          onPress={() => {
-            // 도움말 화면으로 이동
-          }}
+          onPress={onPressHelp}
           icon={({ color, size }) => (
             <Feather name="help-circle" color={theme.colors.textSecondary} size={size} />
           )}

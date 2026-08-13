@@ -10,6 +10,8 @@ import MyPageScreen from "@/screens/MyPageScreen/MyPageScreen";
 import MealScreen from "@/screens/MealScreen/MealScreen";
 import SignupScreen from "@/screens/SignUpScreen/SignupScreen";
 import FindPasswordScreen from "@/screens/FindAccountScreen/FindPasswordScreen";
+import InquiryScreen from "@/screens/InquiryScreen/InquiryScreen";
+import HelpScreen from "@/screens/HelpScreen/HelpScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -75,6 +77,16 @@ export const RootNavigation = () => {
         name="Meal"
         component={MealScreen}
         options={{ headerShown: true, title: "오늘 식단" }}
+      />
+      <Stack.Screen
+        name="Inquiry"
+        component={InquiryScreen}
+        options={{ headerShown: true, title: "개선/버그 요청" }}
+      />
+      <Stack.Screen
+        name="Help"
+        component={HelpScreen}
+        options={{ headerShown: true, title: "도움말" }}
       />
       <Stack.Screen name="채팅방 상세" component={EnterChatRoom} />
     </Stack.Navigator>
