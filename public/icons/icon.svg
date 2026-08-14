@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="같이타">
+  <title>같이타</title>
+  <defs>
+    <clipPath id="baseline">
+      <rect x="-200" y="-200" width="1400" height="1105"/>
+    </clipPath>
+  </defs>
+  <rect width="1024" height="1024" rx="225.28" fill="#ff5a2f"/>
+  <g transform="translate(12.95 24.63) scale(0.93455)">
+    <g clip-path="url(#baseline)">
+      <circle cx="726" cy="258" r="120" fill="#ffffff"/>
+      <circle cx="726" cy="584" r="180" fill="#ffffff"/>
+      <rect x="546" y="584" width="360" height="321" rx="48" fill="#ffffff"/>
+      <circle cx="388" cy="292" r="152" fill="#ff5a2f" stroke="#ff5a2f" stroke-width="84" stroke-linejoin="round"/>
+      <circle cx="388" cy="698" r="226" fill="#ff5a2f" stroke="#ff5a2f" stroke-width="84" stroke-linejoin="round"/>
+      <rect x="162" y="698" width="452" height="207" rx="56" fill="#ff5a2f" stroke="#ff5a2f" stroke-width="84" stroke-linejoin="round"/>
+      <circle cx="388" cy="292" r="152" fill="#ffffff"/>
+      <circle cx="388" cy="698" r="226" fill="#ffffff"/>
+      <rect x="162" y="698" width="452" height="207" rx="56" fill="#ffffff"/>
+    </g>
+  </g>
+</svg>

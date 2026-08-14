@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover"
+    />
+    <title>%WEB_TITLE%</title>
+
+    <!-- 홈 화면에 추가(PWA) -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#FF5A2F" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <!-- iOS Safari: 홈 화면에서 실행할 때 브라우저 UI 없이 앱처럼 열린다 -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="같이타" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+
+    <!-- 브라우저 탭 아이콘. SVG 를 지원하면 어떤 배율에서도 선명하게 그려진다. -->
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/favicon-192.png" />
+
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Use static rendering with Expo Router to support running without JavaScript. -->
+    <noscript>
+      You need to enable JavaScript to run this app.
+    </noscript>
+    <!-- The root element for your Expo app. -->
+    <div id="root"></div>
+
+    <script>
+      // beforeinstallprompt 는 앱이 마운트되기 전에 발생할 수 있어 여기서 미리 붙잡아 둔다.
+      // (InstallPromptBanner 에서 window.__deferredInstallPrompt 로 꺼내 쓴다)
+      window.addEventListener("beforeinstallprompt", function (event) {
+        event.preventDefault(); // 크롬 기본 설치 배너를 막고 앱 배너로 대체한다
+        window.__deferredInstallPrompt = event;
+        window.dispatchEvent(new Event("deferredinstallpromptchange"));
+      });
+
+      // 설치 조건(서비스 워커 등록)을 만족시키기 위해 등록한다.
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker.register("/sw.js").catch(function (error) {
+            console.warn("서비스 워커 등록 실패:", error);
+          });
+        });
+      }
+    </script>
+  </body>
+</html>

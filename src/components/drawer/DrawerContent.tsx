@@ -15,7 +15,9 @@ import AuthContext from "../auth/AuthContext";
 import theme from "@/modules/theme";
 
 const DrawerContent = (props: DrawerContentComponentProps) => {
-  const navigation = useRootNavigation<"Signin" | "Meal" | "Inquiry" | "Help">();
+  const navigation = useRootNavigation<
+    "Signin" | "MyPage" | "Meal" | "Inquiry" | "Help"
+  >();
   const { user: me, signout } = useContext(AuthContext);
 
   const onPressBottomButton = useCallback(() => {
@@ -26,12 +28,23 @@ const DrawerContent = (props: DrawerContentComponentProps) => {
     }
   }, [me, signout, navigation]);
 
+  // 설정 화면은 없어졌고, 프로필/더존 이메일 인증은 마이페이지에서 처리한다.
+  const onPressMyPage = useCallback(() => {
+    props.navigation.closeDrawer();
+    if (me) {
+      navigation.navigate("MyPage");
+    } else {
+      navigation.navigate("Signin");
+    }
+  }, [me, navigation, props.navigation]);
+
   // 오늘 식단은 사내 구내식당 안내라 로그인 없이도 볼 수 있게 둔다.
   const onPressMeal = useCallback(() => {
     props.navigation.closeDrawer();
     navigation.navigate("Meal");
   }, [navigation, props.navigation]);
 
+  // 예전에는 mailto 로 메일 앱을 열었지만, 이제는 앱 안에서 접수하고 답변까지 확인한다.
   // 불편을 겪은 사람을 로그인부터 시키면 그냥 나가버리므로 로그인 없이도 보낼 수 있게 둔다.
   const onPressFeedback = useCallback(() => {
     props.navigation.closeDrawer();
@@ -50,11 +63,23 @@ const DrawerContent = (props: DrawerContentComponentProps) => {
         <View style={styles.profileImageContainer}>
           <MaterialIcons name="person" size={44} color={theme.colors.primary} />
         </View>
-        {me?.userId ? null : (
+        {me ? (
+          <View style={styles.nameRow}>
+            <Text style={styles.userName}>{me.name || me.userId}</Text>
+            {me.verified ? (
+              <MaterialIcons
+                name="verified"
+                size={18}
+                color={theme.colors.info}
+                style={styles.verifiedIcon}
+              />
+            ) : null}
+          </View>
+        ) : (
           <Text style={styles.userName}>로그인이 필요합니다.</Text>
         )}
         <Text style={styles.userEmail}>
-          {me?.userId ?? "로그인하여 모든 기능을 이용해보세요."}
+          {me ? me.userId : "로그인하여 모든 기능을 이용해보세요."}
         </Text>
       </View>
 
@@ -93,9 +118,7 @@ const DrawerContent = (props: DrawerContentComponentProps) => {
 
         <DrawerItem
           label="마이페이지"
-          onPress={() => {
-            // 마이페이지 화면으로 이동
-          }}
+          onPress={onPressMyPage}
           icon={({ color, size }) => (
             <MaterialCommunityIcons name="account" color={theme.colors.textSecondary} size={size} />
           )}
@@ -136,10 +159,18 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     backgroundColor: theme.colors.primaryTint,
   },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
   userName: {
     fontSize: 17,
     fontWeight: "700",
     color: theme.colors.text,
+    marginBottom: 4,
+  },
+  verifiedIcon: {
+    marginLeft: 4,
     marginBottom: 4,
   },
   userEmail: {

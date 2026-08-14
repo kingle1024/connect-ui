@@ -5,6 +5,7 @@ import localStyles from "./ConnectScreen.styles";
 import { MaterialIcons, Feather } from "@expo/vector-icons";
 import { formatRelativeTime, getDeadlineLabel } from "@/utils/formatRelativeTime";
 import theme from "@/modules/theme";
+import VerifiedBadge from "@/components/VerifiedBadge";
 
 type Props = {
   item: Post;
@@ -60,7 +61,13 @@ export default function PostItem({ item, now, me, insets, onPressListItem, onPre
         <Text style={localStyles.metaText}>{formatRelativeTime(item.insertDts)}</Text>
       </View>
 
-      <Text style={localStyles.postTitle}>{item.title}</Text>
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        {/* 제목이 길어질 수 있으므로 인증 마크는 제목 왼쪽에 고정 */}
+        {item.verified ? (
+          <VerifiedBadge size={16} style={{ marginRight: 4, marginTop: 8 }} />
+        ) : null}
+        <Text style={[localStyles.postTitle, { flexShrink: 1 }]}>{item.title}</Text>
+      </View>
       <Text style={localStyles.postContent} numberOfLines={2}>
         {item.content}
       </Text>

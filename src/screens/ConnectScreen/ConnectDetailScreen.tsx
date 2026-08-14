@@ -5,8 +5,10 @@ import {
   TouchableOpacity,
   Dimensions,
   TextInput,
-  RefreshControl,  
+  RefreshControl,
   ActivityIndicator,
+  StyleSheet,
+  Platform,
 } from "react-native";
 import React, {
   useCallback,
@@ -29,14 +31,90 @@ import { useRootNavigation, useRootRoute } from "@/hooks/useNavigation";
 import AuthContext from "@/components/auth/AuthContext";
 import { createOneToOneRoom, getOneToOneRoomsForUser } from "@/utils/chat";
 import { useDetailBoard } from "@/hooks/useDetailBoard";
+import { CATEGORY_CUSTOM, useCategories } from "@/hooks/useCategories";
+import CustomDateTimePicker from "@/components/CustomDateTimePicker";
+import dayjs from "dayjs";
 import Constants from "expo-constants";
 import axios from "axios";
 import theme from "@/modules/theme";
+import VerifiedBadge from "@/components/VerifiedBadge";
 
 const screenHeight = Dimensions.get("window").height;
 
+const editStyles = StyleSheet.create({
+  input: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.field,
+    color: theme.colors.text,
+    fontSize: 16,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+  },
+  // 라벨 + 입력란 묶음. 값이 채워지면 placeholder 가 사라져서 어떤 항목인지 알 수 없으므로
+  // 수정 폼에서는 모든 항목에 라벨을 붙인다.
+  field: {
+    gap: 6,
+  },
+  // 카테고리 칩. 글쓰기 시트(NewPostSheet)와 같은 모양/동작을 쓴다.
+  chipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  chip: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.field,
+  },
+  chipSelected: {
+    backgroundColor: theme.colors.primary,
+  },
+  chipText: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+  },
+  chipTextSelected: {
+    color: theme.colors.white,
+    fontWeight: "600",
+  },
+  datePickerText: {
+    fontSize: 16,
+    color: theme.colors.text,
+  },
+  primaryButton: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 12,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.primary,
+  },
+  primaryButtonText: {
+    color: theme.colors.white,
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  secondaryButton: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 12,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.field,
+  },
+  secondaryButtonText: {
+    color: theme.colors.textSecondary,
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+});
+
 const ConnectDetail = () => {
-  const navigation = useRootNavigation<"ConnectDetail" | "BottomTab">();
+  const navigation = useRootNavigation<"ConnectDetail" | "BottomTab" | "Signin">();
   const { user: me } = useContext(AuthContext);
   const [isSendingFriendRequest, setIsSendingFriendRequest] = useState(false);
   const [selectedUser, setSelectedUser] = useState<{
@@ -44,10 +122,36 @@ const ConnectDetail = () => {
     userName: string;
   } | null>(null);
   const routes = useRootRoute<"ConnectDetail">();
-  const { boardDetail, loadingBoardDetail, boardDetailError, loadBoardDetail } = useDetailBoard();
+  const {
+    boardDetail,
+    loadingBoardDetail,
+    boardDetailError,
+    loadBoardDetail,
+    updateBoardDetail,
+    deleteBoardDetail,
+  } = useDetailBoard();
+  const [isEditing, setIsEditing] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  // 카테고리는 글쓰기 시트와 동일하게 서버에서 받은 칩 + '직접입력'으로 고른다
+  const { categories, loadCategories } = useCategories();
+  const [editCategoryPreset, setEditCategoryPreset] = useState("");
+  const [editCustomCategory, setEditCustomCategory] = useState("");
+  const isEditCustomCategory = editCategoryPreset === CATEGORY_CUSTOM;
+  const editCategory = isEditCustomCategory
+    ? editCustomCategory.trim()
+    : editCategoryPreset;
+  const [editDestination, setEditDestination] = useState("");
+  const [editMaxCapacity, setEditMaxCapacity] = useState("");
+  const [editDeadline, setEditDeadline] = useState(new Date());
+  const [showEditDatePicker, setShowEditDatePicker] = useState(false);
+  const isAuthor = !!me && !!boardDetail && me.userId === boardDetail.userId;
   const { reply, loadReply, replyInput, setReplyInput, replyInputErrorText, submitReply, deleteComment } =
     useReply();
   const [expandedReplies, setExpandedReplies] = useState<number[]>([]);
+  // 대댓글을 달 대상 댓글. null 이면 게시글에 대한 일반 댓글이다.
+  const [replyTarget, setReplyTarget] = useState<{ id: number; userName: string } | null>(null);
   const [replyInputHeight, setReplyInputHeight] = useState(0);
   const refSheet = useRef<CustomBottomSheetRef>(null);
   const openProfileBottomSheet = useCallback(
@@ -61,15 +165,33 @@ const ConnectDetail = () => {
     setSelectedUser(null);
   }, []);
   const inputRef = useRef<TextInput>(null);
-  const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
 
   const [refreshing, setRefreshing] = useState(false);
   const [isStartingChat, setIsStartingChat] = useState(false);
   const currentBoardId = routes.params.parentId;
 
-  const handleRegisterReply = useCallback(async () => {
-    const parentReplyIdForSubmit = null;
+  const promptCommentLogin = useCallback(() => {
+    Alert.alert(
+      "로그인이 필요합니다.",
+      "댓글을 작성하려면 로그인이 필요합니다.",
+      [
+        {
+          text: "로그인",
+          onPress: () => navigation.navigate("Signin"),
+        },
+        { text: "닫기" },
+      ]
+    );
+  }, [navigation]);
 
+  const handleRegisterReply = useCallback(async () => {
+    // 대댓글 대상이 지정돼 있으면 그 댓글의 자식으로, 없으면 게시글 직속 댓글로 등록한다.
+    const parentReplyIdForSubmit = replyTarget?.id ?? null;
+
+    if (!me) {
+      promptCommentLogin();
+      return;
+    }
     if (!currentBoardId) {
       Alert.alert("오류", "게시글 ID를 찾을 수 없습니다.");
       return;
@@ -81,13 +203,20 @@ const ConnectDetail = () => {
 
     try {
       await submitReply(currentBoardId, parentReplyIdForSubmit, replyInput);
+      // 방금 쓴 대댓글이 접힌 목록(기본 3개만 노출) 뒤에 숨지 않도록 대상 댓글을 펼쳐둔다
+      if (parentReplyIdForSubmit !== null) {
+        setExpandedReplies((prev) =>
+          prev.includes(parentReplyIdForSubmit) ? prev : [...prev, parentReplyIdForSubmit]
+        );
+      }
+      setReplyTarget(null);
       if (refSheet.current) {
         refSheet.current.close();
       }
     } catch (error) {
       console.error("댓글 등록 중 최종 에러:", error);
     }
-  }, [currentBoardId, replyInput, submitReply]);
+  }, [me, promptCommentLogin, currentBoardId, replyInput, submitReply, replyTarget]);
 
   const toggleExpand = (id: number) => {
     setExpandedReplies((prev) =>
@@ -140,13 +269,10 @@ const ConnectDetail = () => {
     }
   }, [routes.params.parentId, loadBoardDetail, loadReply]);
 
+  // 수정 폼의 카테고리 칩 목록 (글쓰기 시트와 같은 서버 목록)
   useEffect(() => {
-    if (!me) {
-      navigation.navigate("BottomTab", {
-        screen: "Connect",
-      });
-    }
-  }, [me, navigation]);
+    loadCategories();
+  }, [loadCategories]);
 
   const onTextInputContentSizeChange = useCallback((event: any) => {
     const height = Math.min(
@@ -244,15 +370,138 @@ const ConnectDetail = () => {
     }
   }, [me?.userId, me?.email, isStartingChat, navigation]); // me.username 대신 me.userId/email 사용
 
+  const startEdit = useCallback(() => {
+    if (!boardDetail) return;
+    setEditTitle(boardDetail.title ?? "");
+    setEditContent(boardDetail.content ?? "");
+    // 현재 카테고리가 칩 목록에 없으면(직접입력으로 만든 값) '직접입력'을 선택한 상태로 시작한다
+    const current = boardDetail.category ?? "";
+    if (current && !categories.includes(current)) {
+      setEditCategoryPreset(CATEGORY_CUSTOM);
+      setEditCustomCategory(current);
+    } else {
+      setEditCategoryPreset(current);
+      setEditCustomCategory("");
+    }
+    setEditDestination(boardDetail.destination ?? "");
+    setEditMaxCapacity(String(boardDetail.maxCapacity ?? ""));
+    setEditDeadline(
+      boardDetail.deadlineDts ? dayjs(boardDetail.deadlineDts).toDate() : new Date()
+    );
+    setIsEditing(true);
+  }, [boardDetail, categories]);
+
+  const handleEditDeadlineChange = useCallback((event: any, selectedDate?: Date) => {
+    setShowEditDatePicker(Platform.OS === "ios");
+    if (selectedDate) {
+      setEditDeadline(selectedDate);
+    }
+  }, []);
+
+  const cancelEdit = useCallback(() => setIsEditing(false), []);
+
+  const saveEdit = useCallback(async () => {
+    if (!boardDetail || savingEdit) return;
+    if (!editTitle.trim() || !editContent.trim() || !editDestination.trim() || !editCategory.trim()) {
+      Alert.alert("알림", "제목, 내용, 카테고리, 도착지를 모두 입력해주세요.");
+      return;
+    }
+    const capacity = parseInt(editMaxCapacity || "0", 10);
+    if (!capacity || capacity < boardDetail.currentParticipants) {
+      Alert.alert(
+        "알림",
+        `최대 모집 인원은 현재 참여 인원(${boardDetail.currentParticipants}명)보다 적을 수 없습니다.`
+      );
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      await updateBoardDetail({
+        id: boardDetail.id,
+        title: editTitle.trim(),
+        content: editContent.trim(),
+        category: editCategory.trim(),
+        destination: editDestination.trim(),
+        maxCapacity: capacity,
+        deadlineDts: dayjs(editDeadline).format("YYYY-MM-DDTHH:mm:ss"),
+      });
+      setIsEditing(false);
+      Alert.alert("완료", "게시글이 수정되었습니다.");
+    } catch (error: any) {
+      const message =
+        typeof error.response?.data === "string"
+          ? error.response.data
+          : "게시글 수정 중 오류가 발생했습니다.";
+      Alert.alert("수정 실패", message);
+    } finally {
+      setSavingEdit(false);
+    }
+  }, [boardDetail, savingEdit, editTitle, editContent, editCategory, editDestination, editMaxCapacity, editDeadline, updateBoardDetail]);
+
+  const confirmDelete = useCallback(() => {
+    if (!boardDetail) return;
+    Alert.alert("게시글 삭제", "게시글을 삭제하시겠습니까?", [
+      {
+        text: "삭제",
+        onPress: async () => {
+          try {
+            await deleteBoardDetail(boardDetail.id);
+            navigation.goBack();
+          } catch (error: any) {
+            const message =
+              typeof error.response?.data === "string"
+                ? error.response.data
+                : "게시글 삭제 중 오류가 발생했습니다.";
+            Alert.alert("삭제 실패", message);
+          }
+        },
+      },
+      { text: "취소" },
+    ]);
+  }, [boardDetail, deleteBoardDetail, navigation]);
+
+  // 대댓글 달기.
+  // 예전에는 ConnectDetail 을 댓글 id 로 push 했지만, 댓글은 게시글과 다른 테이블/시퀀스라서
+  // id 가 겹치면 엉뚱한 게시글이 열리고 안 겹치면 /api/boards/{id} 가 404 로 빈 화면이 됐다.
+  // 화면 이동 없이 대상 댓글만 지정하고 입력창으로 포커스를 옮긴다.
   const onPressReply = useCallback(
-    (replyId: number) => {
-      navigation.push("ConnectDetail", { parentId: replyId });
+    (item: Reply) => {
+      if (!me) {
+        promptCommentLogin();
+        return;
+      }
+      setSelectedUser(null);
+      setReplyTarget({ id: item.id, userName: item.userName });
+      inputRef.current?.focus();
     },
-    [navigation]
+    [me, promptCommentLogin]
   );
 
-  const ListHeaderComponent = useCallback(() => {
-    if (!reply) return null;
+  // 주의: FlatList 의 ListHeaderComponent 에 "컴포넌트 함수"로 넘기면 안 된다.
+  // 입력할 때마다 이 함수의 identity 가 바뀌어 FlatList 가 헤더를 새 타입으로 보고
+  // 매 글자마다 언마운트/재마운트하기 때문에 TextInput 포커스가 풀린다.
+  // 그래서 아래에서 renderListHeader() 를 호출해 "엘리먼트"로 넘긴다.
+  const renderListHeader = useCallback(() => {
+    // 헤더(게시글 본문)는 댓글이 아니라 게시글 자체에만 의존한다.
+    // 예전엔 `!reply`로 막고 있어서 댓글 조회가 실패하면(CORS/500 등)
+    // 게시글 내용까지 통째로 안 보였다.
+    if (loadingBoardDetail) {
+      return (
+        <View style={{ paddingVertical: 40, alignItems: "center" }}>
+          <ActivityIndicator color={theme.colors.primary} />
+        </View>
+      );
+    }
+
+    if (!boardDetail) {
+      return (
+        <View style={{ paddingVertical: 40, alignItems: "center" }}>
+          <Text style={{ color: theme.colors.textSecondary }}>
+            {boardDetailError ?? "게시글을 불러오지 못했습니다."}
+          </Text>
+        </View>
+      );
+    }
 
     return (
       <>
@@ -280,6 +529,7 @@ const ConnectDetail = () => {
           <View>
             <TouchableOpacity
              onPress={() => boardDetail?.userId && boardDetail?.userName && openProfileBottomSheet(boardDetail.userId, boardDetail.userName)}
+             style={{ flexDirection: "row", alignItems: "center" }}
             >
               <Text
                 style={{
@@ -288,8 +538,11 @@ const ConnectDetail = () => {
                   color: "#111827",
                 }}
               >
-                {boardDetail?.userName}              
+                {boardDetail?.userName}
               </Text>
+              {boardDetail?.verified ? (
+                <VerifiedBadge size={16} style={{ marginLeft: 4 }} />
+              ) : null}
             </TouchableOpacity>
             <Text
               style={{
@@ -303,27 +556,140 @@ const ConnectDetail = () => {
           </View>
         </View>
 
-        {/* 본문 */}
-        <View style={{ marginTop: 10 }}>
-          {boardDetail?.title && (
-            <View style={{ paddingBottom: 20 }}>
-              <Text
-                style={{
-                  fontSize: 24,
-                  fontWeight: "bold",
-                  marginBottom: 8,
-                  color: "#111827",
-                }}
-              >
-                {boardDetail.title}
-              </Text>
+        {/* 본문 (작성자가 수정 중이면 입력 폼) */}
+        {isEditing ? (
+          <View style={{ marginTop: 10, gap: 14 }}>
+            <View style={editStyles.field}>
+              <Text style={editStyles.fieldLabel}>카테고리</Text>
+              <View style={editStyles.chipRow}>
+                {[...categories, CATEGORY_CUSTOM].map((option) => {
+                  const selected = editCategoryPreset === option;
+                  return (
+                    <TouchableOpacity
+                      key={option}
+                      style={[editStyles.chip, selected && editStyles.chipSelected]}
+                      onPress={() => setEditCategoryPreset(option)}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                    >
+                      <Text
+                        style={[
+                          editStyles.chipText,
+                          selected && editStyles.chipTextSelected,
+                        ]}
+                      >
+                        {option}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              {isEditCustomCategory && (
+                <TextInput
+                  value={editCustomCategory}
+                  onChangeText={setEditCustomCategory}
+                  placeholder="카테고리 직접 입력"
+                  placeholderTextColor={theme.colors.textMuted}
+                  style={editStyles.input}
+                />
+              )}
             </View>
-          )}
-          <Text style={{ fontSize: 16, marginBottom: 24, color: "#6B7280" }}>
-            {boardDetail?.content}
-          </Text>
-          <View style={{ height: 200 }} />
-        </View>
+            <View style={editStyles.field}>
+              <Text style={editStyles.fieldLabel}>제목</Text>
+              <TextInput
+                value={editTitle}
+                onChangeText={setEditTitle}
+                placeholder="제목"
+                placeholderTextColor={theme.colors.textMuted}
+                style={editStyles.input}
+              />
+            </View>
+            <View style={editStyles.field}>
+              <Text style={editStyles.fieldLabel}>내용</Text>
+              <TextInput
+                value={editContent}
+                onChangeText={setEditContent}
+                placeholder="내용"
+                placeholderTextColor={theme.colors.textMuted}
+                multiline
+                textAlignVertical="top"
+                style={[editStyles.input, { height: 120 }]}
+              />
+            </View>
+            <View style={editStyles.field}>
+              <Text style={editStyles.fieldLabel}>도착지</Text>
+              <TextInput
+                value={editDestination}
+                onChangeText={setEditDestination}
+                placeholder="도착지"
+                placeholderTextColor={theme.colors.textMuted}
+                style={editStyles.input}
+              />
+            </View>
+            <View style={editStyles.field}>
+              <Text style={editStyles.fieldLabel}>최대 모집 인원(본인 포함)</Text>
+              <TextInput
+                value={editMaxCapacity}
+                onChangeText={(text) => setEditMaxCapacity(text.replace(/[^0-9]/g, ""))}
+                placeholder="최대 모집 인원(본인 포함)"
+                placeholderTextColor={theme.colors.textMuted}
+                keyboardType="numeric"
+                style={editStyles.input}
+              />
+            </View>
+            <View style={editStyles.field}>
+              <Text style={editStyles.fieldLabel}>마감일</Text>
+              <CustomDateTimePicker
+                testID="editDateTimePicker"
+                value={editDeadline}
+                mode="date"
+                is24Hour={true}
+                onChange={handleEditDeadlineChange}
+                datePickerButtonComponentStyle={editStyles.input}
+                datePickerTextComponentStyle={editStyles.datePickerText}
+                showDatePicker={showEditDatePicker}
+                setShowDatePicker={setShowEditDatePicker}
+              />
+            </View>
+            <View style={{ flexDirection: "row", gap: 10, marginBottom: 24 }}>
+              <TouchableOpacity
+                style={[editStyles.primaryButton, savingEdit && { opacity: 0.6 }]}
+                onPress={saveEdit}
+                disabled={savingEdit}
+              >
+                {savingEdit ? (
+                  <ActivityIndicator color={theme.colors.white} />
+                ) : (
+                  <Text style={editStyles.primaryButtonText}>저장</Text>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity style={editStyles.secondaryButton} onPress={cancelEdit}>
+                <Text style={editStyles.secondaryButtonText}>취소</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={{ height: 200 }} />
+          </View>
+        ) : (
+          <View style={{ marginTop: 10 }}>
+            {boardDetail?.title && (
+              <View style={{ paddingBottom: 20 }}>
+                <Text
+                  style={{
+                    fontSize: 24,
+                    fontWeight: "bold",
+                    marginBottom: 8,
+                    color: "#111827",
+                  }}
+                >
+                  {boardDetail.title}
+                </Text>
+              </View>
+            )}
+            <Text style={{ fontSize: 16, marginBottom: 24, color: "#6B7280" }}>
+              {boardDetail?.content}
+            </Text>
+            <View style={{ height: 200 }} />
+          </View>
+        )}
 
         {/* 구분선 + 액션 */}
         <View
@@ -375,10 +741,68 @@ const ConnectDetail = () => {
               <Text style={{ fontSize: 14, color: "#6B7280" }}>대화하기</Text>
             </TouchableOpacity>
           </View>
+
+          {/* 본인 글일 때만 수정/삭제 노출 */}
+          {isAuthor && !isEditing && (
+            <>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <TouchableOpacity
+                  style={{ flexDirection: "row", alignItems: "center" }}
+                  onPress={startEdit}
+                >
+                  <MaterialIcons
+                    name="edit"
+                    size={18}
+                    color={theme.colors.primary}
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={{ fontSize: 14, color: theme.colors.primary }}>수정</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <TouchableOpacity
+                  style={{ flexDirection: "row", alignItems: "center" }}
+                  onPress={confirmDelete}
+                >
+                  <MaterialIcons
+                    name="delete"
+                    size={18}
+                    color={theme.colors.danger}
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={{ fontSize: 14, color: theme.colors.danger }}>삭제</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
         </View>
       </>
     );
-  }, [boardDetail, reply, inputRef, startPrivateChat]);
+  }, [
+    boardDetail,
+    loadingBoardDetail,
+    boardDetailError,
+    inputRef,
+    startPrivateChat,
+    isAuthor,
+    isEditing,
+    startEdit,
+    confirmDelete,
+    saveEdit,
+    cancelEdit,
+    savingEdit,
+    editTitle,
+    editContent,
+    categories,
+    editCategoryPreset,
+    editCustomCategory,
+    isEditCustomCategory,
+    editDestination,
+    editMaxCapacity,
+    editDeadline,
+    showEditDatePicker,
+    handleEditDeadlineChange,
+  ]);
 
   const renderItem = useCallback(({ item }: { item: Reply }) => {
     const maxVisibleReplies = 3;
@@ -455,7 +879,7 @@ const ConnectDetail = () => {
             )}
               <TouchableOpacity
                 style={{ flexDirection: "row", alignItems: "center" }}
-                onPress={() => onPressReply(item.id)}
+                onPress={() => onPressReply(item)}
               >
                 <MaterialIcons
                   name="subdirectory-arrow-right"
@@ -575,7 +999,7 @@ const ConnectDetail = () => {
         </View>
       </View>
     );
-  }, [expandedReplies, startPrivateChat]);
+  }, [expandedReplies, startPrivateChat, onPressReply, me, currentBoardId, deleteComment]);
 
   const ListFooterComponent = () => {
     return (
@@ -606,7 +1030,7 @@ const ConnectDetail = () => {
         data={reply}
         renderItem={renderItem}
         keyExtractor={(item) => String(item.id)}
-        ListHeaderComponent={ListHeaderComponent}
+        ListHeaderComponent={renderListHeader()}
         ListFooterComponent={ListFooterComponent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -615,7 +1039,13 @@ const ConnectDetail = () => {
       <CustomBottomSheet
         ref={refSheet}
         minClosingHeight={screenHeight * 0.1}
-        extraContentHeight={selectedUser ? 200 : replyInputHeight}
+        // 댓글 입력 모드에서는 입력창 높이 + 위아래 padding(20*2) 만큼 필요하다.
+        // padding 을 빼먹으면 시트가 내용보다 짧아져 입력창/등록 버튼이 화면 밖으로 잘린다.
+        extraContentHeight={
+          selectedUser
+            ? 200
+            : Math.max(40, replyInputHeight) + 40 + (replyTarget ? 26 : 0)
+        }
         onOpen={() => {
             if (selectedUser) {
             } else {
@@ -689,14 +1119,63 @@ const ConnectDetail = () => {
 
           </View>
         ) : ( // ✨ selectedUser가 없으면 댓글 입력 모드
-          <View style={{ padding: 20 }}>
+          <View
+            style={{
+              padding: 20,
+              flexDirection: "row",
+              alignItems: "flex-end",
+              gap: 10,
+            }}
+          >
+            <View style={{ flex: 1 }}>
+            {/* 지금 어떤 댓글에 대댓글을 쓰는 중인지 알려주고, 일반 댓글로 되돌릴 수단을 준다 */}
+            {replyTarget && (
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  marginBottom: 6,
+                  gap: 6,
+                }}
+              >
+                <MaterialIcons
+                  name="subdirectory-arrow-right"
+                  size={14}
+                  color={theme.colors.primary}
+                />
+                <Text
+                  numberOfLines={1}
+                  style={{ flex: 1, fontSize: 13, color: theme.colors.primary }}
+                >
+                  {replyTarget.userName}님에게 대댓글
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setReplyTarget(null)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <MaterialIcons
+                    name="close"
+                    size={16}
+                    color={theme.colors.textSecondary}
+                  />
+                </TouchableOpacity>
+              </View>
+            )}
             <TextInput
               ref={inputRef}
               value={replyInput}
               onChangeText={(text) => {
                   setReplyInput(text);
               }}
-              placeholder="댓글을 남겨주세요."
+              onFocus={() => {
+                if (!me) {
+                  inputRef.current?.blur();
+                  promptCommentLogin();
+                }
+              }}
+              placeholder={
+                replyTarget ? "대댓글을 남겨주세요." : "댓글을 남겨주세요."
+              }
               multiline={true}
               style={{
                 color: theme.colors.text,
@@ -722,27 +1201,24 @@ const ConnectDetail = () => {
                 {replyInputErrorText}
               </Text>
             )}
+            </View>
+            {/* 등록 버튼. 예전에는 absolute 로 띄우고 "바텀시트 열림" state 로 가렸지만,
+                그 state 를 갱신하는 곳이 없어 버튼이 영원히 보이지 않았다.
+                시트는 항상 하단에 붙어 있으니 입력창 옆에 같이 배치한다. */}
+            <TouchableOpacity
+              style={{
+                backgroundColor: theme.colors.primary,
+                paddingVertical: 10,
+                paddingHorizontal: 18,
+                borderRadius: theme.radius.pill,
+                opacity: (replyInput.trim() && boardDetail) ? 1 : 0.5,
+              }}
+              onPress={handleRegisterReply}
+              disabled={!replyInput.trim() || !boardDetail}
+            >
+              <Text style={{ color: "white", fontWeight: "bold" }}>등록</Text>
+            </TouchableOpacity>
           </View>
-        )}
-        {
-        // 바텀시트가 열려 있고, selectedUser가 없으며, 댓글 입력 모드일 때만 등록 버튼 표시
-        bottomSheetOpen && !selectedUser && (
-          <TouchableOpacity
-            style={{
-              position: "absolute",
-              bottom: 40,
-              right: 20,
-              backgroundColor: theme.colors.primary,
-              paddingVertical: 8,
-              paddingHorizontal: 18,
-              borderRadius: theme.radius.pill,
-              opacity: (replyInput.trim() && boardDetail) ? 1 : 0.5,
-            }}
-            onPress={handleRegisterReply}
-            disabled={!replyInput.trim() || !boardDetail}
-          >
-            <Text style={{ color: "white", fontWeight: "bold" }}>등록</Text>
-          </TouchableOpacity>
         )}
       </CustomBottomSheet>
     </SafeAreaView>

@@ -1,4 +1,5 @@
 import AuthProvider from "@/components/auth/AuthProvider";
+import InstallPromptBanner from "@/components/InstallPromptBanner";
 import { DrawNavigation } from "@/navigation/DrawNavigation";
 import { ActionSheetProvider } from "@expo/react-native-action-sheet";
 import { NavigationContainer } from "@react-navigation/native";
@@ -20,6 +21,7 @@ export default function App() {
             />
             <AuthProvider>
               <DrawNavigation />
+              <InstallPromptBanner />
               <Toast />
             </AuthProvider>
           </NavigationContainer>

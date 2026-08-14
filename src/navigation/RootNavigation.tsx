@@ -56,6 +56,7 @@ export const RootNavigation = () => {
       <Stack.Screen
         name="Signin"
         component={SigninScreen}
+        options={{ title: "로그인" }}
         listeners={({ navigation }) => ({
           focus: () => {
             navigation.getParent()?.setOptions({ swipeEnabled: false });
@@ -65,14 +66,23 @@ export const RootNavigation = () => {
       <Stack.Screen
         name="Signup"
         component={SignupScreen}
+        options={{ title: "회원가입" }}
         listeners={({ navigation }) => ({
           focus: () => {
             navigation.getParent()?.setOptions({ swipeEnabled: false });
           },
         })}
       />
-      <Stack.Screen name="FindPassword" component={FindPasswordScreen} />
-      <Stack.Screen name="MyPage" component={MyPageScreen} />
+      <Stack.Screen
+        name="FindPassword"
+        component={FindPasswordScreen}
+        options={{ title: "비밀번호 찾기" }}
+      />
+      <Stack.Screen
+        name="MyPage"
+        component={MyPageScreen}
+        options={{ headerShown: true, title: "마이페이지" }}
+      />
       <Stack.Screen
         name="Meal"
         component={MealScreen}

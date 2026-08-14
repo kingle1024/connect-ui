@@ -47,24 +47,14 @@ export default function EnterChatRoom({ route, navigation }) {
 
   const client = useRef(null);
   const flatListRef = useRef(null);
+  // 🌟 onBlur / onSubmitEditing / 저장 버튼 onPress 가 연달아 발생해도
+  //    저장이 한 번만 실행되도록 하는 가드
+  const isSavingRoomName = useRef(false);
 
-  // 🌟 채팅방 퇴장 메시지 전송 함수 🌟
-  const sendLeaveMessage = useCallback(() => {
-    if (client.current && client.current.connected) {
-      client.current.publish({
-        destination: "/app/chat.leaveUser", // 백엔드에 구현된 퇴장 엔드포인트
-        body: JSON.stringify({
-          type: MessageType.LEAVE,
-          roomId: roomId,
-          sender: username,
-          content: `${username}님이 퇴장했습니다.`,
-        }),
-      });
-      console.log(
-        `${username}님이 방 ${roomId}에서 퇴장 메시지 보냄`
-      );
-    }
-  }, [roomId, username]); // 의존성 추가
+  // 🌟 화면을 벗어나는 것(뒤로가기/언마운트)은 '방 나가기'가 아니므로
+  //    /app/chat.leaveUser 는 여기서 호출하지 않는다.
+  //    (서버의 leaveUser 는 멤버십을 삭제하고, 남은 인원이 0명이면 방 자체를 지운다.)
+  //    실제 방 나가기는 채팅방 목록 화면의 '나가기' 버튼에서만 수행한다.
 
   const fetchChatHistory = useCallback(async () => {
     try {
@@ -98,11 +88,16 @@ export default function EnterChatRoom({ route, navigation }) {
     
   // 🌟 방 이름 업데이트 API 호출 함수 🌟
   const handleSaveRoomName = useCallback(async () => {
+    if (isSavingRoomName.current) {
+      return;
+    }
+
     if (tempRoomName.trim() === "" || tempRoomName === _roomName) {
       setIsEditingRoomName(false);
       return;
     }
 
+    isSavingRoomName.current = true;
     try {
       const refreshToken = await AsyncStorage.getItem("refreshToken");
       const response = await fetch(`${API_BASE_URL}/api/chat/rooms/name`, {
@@ -128,14 +123,19 @@ export default function EnterChatRoom({ route, navigation }) {
 
     } catch (error) {
       console.error("방 이름 업데이트 실패:", error);
+    } finally {
+      isSavingRoomName.current = false;
     }
   }, [roomId, tempRoomName, _roomName, username, API_BASE_URL]);
     
+  // 헤더 타이틀만 갱신 (STOMP 연결과 분리 — 방 이름 변경 시 재연결되면 안 됨)
   useEffect(() => {
     navigation.setOptions({
       headerTitle: _roomName, // 변경된 _roomName을 헤더 타이틀로 설정
     });
+  }, [navigation, _roomName]);
 
+  useEffect(() => {
     client.current = new Client({
       webSocketFactory: () => new SockJS(SOCKET_URL),
       onConnect: () => {
@@ -180,19 +180,15 @@ export default function EnterChatRoom({ route, navigation }) {
     client.current.activate();
 
     return () => {
-      // 🌟 컴포넌트 언마운트 시 퇴장 메시지 보내고 연결 해제 🌟
-      sendLeaveMessage(); // 퇴장 메시지 전송
+      // 🌟 언마운트 시에는 소켓만 끊는다. (퇴장 메시지를 보내면 방에서 탈퇴 처리됨) 🌟
       if (client.current && client.current.connected) {
         client.current.deactivate();
       }
-      console.log("STOMP 연결 해제 및 퇴장 처리 완료!");
+      console.log("STOMP 연결 해제 완료!");
     };
   }, [roomId,
     username,
-    sendLeaveMessage,
-    fetchChatHistory,
-    navigation,
-    _roomName
+    fetchChatHistory
   ]);
 
   useEffect(() => {

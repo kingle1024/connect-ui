@@ -4,14 +4,21 @@ export type TypeRootStackNavigationParams = {
   };
   ConnectDetail: { parentId: number };
   Signup: undefined;
-  Signin: undefined;
+  Signin:
+    | {
+        // 로그인 성공 후 돌아갈 탭. 없으면 모집 탭
+        redirectTab?: keyof TypeBottomTabNavigationParams;
+      }
+    | undefined;
   FindPassword: undefined;
+  MyPage: undefined;
   Meal: undefined;
   Inquiry: undefined;
   Help: undefined;
 };
 
 export type TypeBottomTabNavigationParams = {
+  Friends: undefined;
   Connect: {
     screen?: keyof TypeConnectStackNavigationParams;
   };
@@ -35,6 +42,7 @@ export interface Post {
   destination: string; // 목적지
   maxCapacity: number; // 최대 모집 인원
   currentParticipants: number; // 모집 인원
+  verified?: boolean; // 작성자의 더존 이메일 인증 여부 (인증 마크 표시용)
   replies?: Reply[]; // 댓글
 }
 
@@ -54,6 +62,7 @@ export interface User {
   email: string;
   name: string;
   profileUrl?: string;
+  verified?: boolean; // 더존 이메일 인증 완료 여부
 }
 
 export interface CreateCommentRequest {
@@ -100,9 +109,16 @@ export interface Inquiry {
 }
 
 export interface ConnectDetailBoardDto {
+  id: number;
   title: string;
   content: string;
+  category: string;
   userId: string;
   userName: string;
   insertDts: string;
+  deadlineDts: string;
+  destination: string;
+  maxCapacity: number;
+  currentParticipants: number;
+  verified?: boolean; // 작성자의 더존 이메일 인증 여부
 }

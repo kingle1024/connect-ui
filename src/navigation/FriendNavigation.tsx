@@ -11,7 +11,7 @@ const FriendNavigation = () => {
       <Stack.Screen
         name="FriendsList"
         component={FriendsListScreen}
-        options={{ headerShown: false }}
+        options={{ headerShown: false, title: "친구" }}
       />
       <Stack.Screen
         name="FriendProfile"

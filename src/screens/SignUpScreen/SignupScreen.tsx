@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import Alert from '@blazejkustra/react-native-alert';
 import validator from "validator";
-import { useCallback, useContext, useMemo, useState } from "react";
+import { useCallback, useContext, useMemo, useRef, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AuthContext from "@/components/auth/AuthContext";
 import theme from "@/modules/theme";
@@ -103,11 +103,31 @@ const styles = StyleSheet.create({
 
 const SignupScreen = () => {
   const navigation = useRootNavigation<"Signup">();
+  const [userId, setUserId] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmedPassword, setConfirmedPassword] = useState("");
   const [name, setName] = useState("");
   const { processingSignup, signup } = useContext(AuthContext);
+
+  const userIdRef = useRef<TextInput>(null);
+  const emailRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+  const confirmedPasswordRef = useRef<TextInput>(null);
+  const nameRef = useRef<TextInput>(null);
+
+  const userIdErrorText = useMemo(() => {
+    if (userId.length === 0) {
+      return "아이디를 입력해주세요.";
+    }
+    if (userId.toLowerCase().startsWith("kakao_")) {
+      return "'kakao_'로 시작하는 아이디는 사용할 수 없습니다.";
+    }
+    if (!/^[a-zA-Z0-9._-]{4,20}$/.test(userId)) {
+      return "아이디는 4~20자의 영문, 숫자, 점(.), 밑줄(_), 하이픈(-)만 사용할 수 있습니다.";
+    }
+    return null;
+  }, [userId]);
 
   const emailErrorText = useMemo(() => {
     if (email.length === 0) {
@@ -123,8 +143,8 @@ const SignupScreen = () => {
     if (password.length === 0) {
       return "비밀번호를 입력해주세요.";
     }
-    if (password.length < 6) {
-      return "비밀번호는 6자리 이상이여야합니다";
+    if (password.length < 4) {
+      return "비밀번호는 4자리 이상이여야합니다";
     }
     if (password !== confirmedPassword) {
       return "비밀번호를 확인해주세요.";
@@ -136,8 +156,8 @@ const SignupScreen = () => {
     if (confirmedPassword.length === 0) {
       return "비밀번호를 입력해주세요.";
     }
-    if (confirmedPassword.length < 6) {
-      return "비밀번호는 6자리 이상이여야합니다";
+    if (confirmedPassword.length < 4) {
+      return "비밀번호는 4자리 이상이여야합니다";
     }
     if (password !== confirmedPassword) {
       return "비밀번호를 확인해주세요.";
@@ -150,6 +170,10 @@ const SignupScreen = () => {
     }
     return null;
   }, [name.length]);
+
+  const onChangeUserIdText = useCallback((text: string) => {
+    setUserId(text);
+  }, []);
 
   const onChangeEmailText = useCallback((text: string) => {
     setEmail(text);
@@ -169,12 +193,14 @@ const SignupScreen = () => {
 
   const signupButtonEnabled = useMemo(() => {
     return (
+      userIdErrorText == null &&
       emailErrorText == null &&
       passwordErrorText == null &&
       confirmedPasswordErrorText == null &&
       nameErrorText == null
     );
   }, [
+    userIdErrorText,
     emailErrorText,
     passwordErrorText,
     confirmedPasswordErrorText,
@@ -190,11 +216,47 @@ const SignupScreen = () => {
 
   const onPressSignupButton = useCallback(async () => {
     try {
-      await signup(email, password, name);
+      await signup(userId, email, password, name);
     } catch (error: any) {
       Alert.alert(error.message);
     }
-  }, [email, password, name, signup]);
+  }, [userId, email, password, name, signup]);
+
+  const firstInvalidInputRef = useMemo(() => {
+    if (userIdErrorText != null) {
+      return userIdRef;
+    }
+    if (emailErrorText != null) {
+      return emailRef;
+    }
+    if (passwordErrorText != null) {
+      return passwordRef;
+    }
+    if (confirmedPasswordErrorText != null) {
+      return confirmedPasswordRef;
+    }
+    if (nameErrorText != null) {
+      return nameRef;
+    }
+    return null;
+  }, [
+    userIdErrorText,
+    emailErrorText,
+    passwordErrorText,
+    confirmedPasswordErrorText,
+    nameErrorText,
+  ]);
+
+  const onSubmitEditing = useCallback(() => {
+    if (processingSignup) {
+      return;
+    }
+    if (firstInvalidInputRef != null) {
+      firstInvalidInputRef.current?.focus();
+      return;
+    }
+    onPressSignupButton();
+  }, [processingSignup, firstInvalidInputRef, onPressSignupButton]);
 
   const onPressBackButton = useCallback(() => {
     try {
@@ -243,13 +305,34 @@ const SignupScreen = () => {
       </View>
       <ScrollView style={styles.scrollContainer}>
         <View style={styles.section}>
+          <Text style={styles.title}>아이디</Text>
+          <TextInput
+            ref={userIdRef}
+            value={userId}
+            style={styles.input}
+            autoCapitalize="none"
+            autoCorrect={false}
+            onChangeText={onChangeUserIdText}
+            returnKeyType="next"
+            submitBehavior="submit"
+            onSubmitEditing={onSubmitEditing}
+          />
+          {userIdErrorText && (
+            <Text style={styles.errorText}>{userIdErrorText}</Text>
+          )}
+        </View>
+        <View style={styles.section}>
           <Text style={styles.title}>이메일</Text>
           <TextInput
+            ref={emailRef}
             value={email}
             style={styles.input}
             keyboardType="email-address"
             autoCapitalize="none"
             onChangeText={onChangeEmailText}
+            returnKeyType="next"
+            submitBehavior="submit"
+            onSubmitEditing={onSubmitEditing}
           />
           {emailErrorText && (
             <Text style={styles.errorText}>{emailErrorText}</Text>
@@ -258,10 +341,14 @@ const SignupScreen = () => {
         <View style={styles.section}>
           <Text style={styles.title}>비밀번호</Text>
           <TextInput
+            ref={passwordRef}
             value={password}
             style={styles.input}
             secureTextEntry
             onChangeText={onChangePasswordText}
+            returnKeyType="next"
+            submitBehavior="submit"
+            onSubmitEditing={onSubmitEditing}
           />
           {passwordErrorText && (
             <Text style={styles.errorText}>{passwordErrorText}</Text>
@@ -270,10 +357,14 @@ const SignupScreen = () => {
         <View style={styles.section}>
           <Text style={styles.title}>비밀번호 확인</Text>
           <TextInput
+            ref={confirmedPasswordRef}
             value={confirmedPassword}
             style={styles.input}
             secureTextEntry
             onChangeText={onChangeConfirmedPasswordText}
+            returnKeyType="next"
+            submitBehavior="submit"
+            onSubmitEditing={onSubmitEditing}
           />
           {confirmedPasswordErrorText && (
             <Text style={styles.errorText}>{confirmedPasswordErrorText}</Text>
@@ -282,9 +373,13 @@ const SignupScreen = () => {
         <View style={styles.section}>
           <Text style={styles.title}>이름</Text>
           <TextInput
+            ref={nameRef}
             value={name}
             style={styles.input}
             onChangeText={onChangeNameText}
+            returnKeyType="done"
+            submitBehavior="submit"
+            onSubmitEditing={onSubmitEditing}
           />
           {nameErrorText && (
             <Text style={styles.errorText}>{nameErrorText}</Text>

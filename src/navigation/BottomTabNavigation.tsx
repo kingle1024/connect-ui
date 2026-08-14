@@ -17,6 +17,7 @@ const BottomTabNavigation = () => {
 
   return (
     <BottomTab.Navigator
+      initialRouteName="Connect"
       screenOptions={{
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.textMuted,
@@ -57,7 +58,9 @@ const BottomTabNavigation = () => {
                   {
                     text: "로그인",
                     onPress: () => {
-                      rootNavigation.navigate("Signin");
+                      rootNavigation.navigate("Signin", {
+                        redirectTab: "Friends",
+                      });
                     },
                   },
                   { text: "닫기" },
@@ -108,7 +111,9 @@ const BottomTabNavigation = () => {
                   {
                     text: "로그인",
                     onPress: () => {
-                      rootNavigation.navigate("Signin");
+                      rootNavigation.navigate("Signin", {
+                        redirectTab: "Chat",
+                      });
                     },
                   },
                   { text: "닫기" },

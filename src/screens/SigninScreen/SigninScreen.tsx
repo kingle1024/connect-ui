@@ -10,40 +10,38 @@ import {
   Platform,
 } from "react-native";
 import Alert from '@blazejkustra/react-native-alert';
-import validator from "validator";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { useRootNavigation } from "@/hooks/useNavigation";
+import { useRootNavigation, useRootRoute } from "@/hooks/useNavigation";
 import styles from "./SigninScreen.styles";
 
 const SigninScreen = () => {
   const navigation = useRootNavigation<"Signin">();
-  const [email, setEmail] = useState("");
+  const route = useRootRoute<"Signin">();
+  const redirectTab = route.params?.redirectTab;
+  const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
   const { signin, processingSignin } = useContext(AuthContext);
 
-  const emailErrorText = useMemo(() => {
-    if (email.length === 0) {
-      return "이메일을 입력해주세요.";
-    }
-    if (!validator.isEmail(email)) {
-      return "올바른 이메일이 아닙니다.";
+  const userIdErrorText = useMemo(() => {
+    if (userId.length === 0) {
+      return "아이디를 입력해주세요.";
     }
     return null;
-  }, [email]);
+  }, [userId]);
 
   const passwordErrorText = useMemo(() => {
     if (password.length === 0) {
       return "비밀번호를 입력해주세요.";
     }
-    if (password.length < 6) {
-      return "비밀번호는 6자리 이상이여야합니다";
+    if (password.length < 4) {
+      return "비밀번호는 4자리 이상이여야합니다";
     }
     return null;
   }, [password]);
 
-  const onChangeEmailText = useCallback((text: string) => {
-    setEmail(text);
+  const onChangeUserIdText = useCallback((text: string) => {
+    setUserId(text);
   }, []);
 
   const onChangePasswordText = useCallback((text: string) => {
@@ -51,8 +49,8 @@ const SigninScreen = () => {
   }, []);
 
   const signinButtonEnabled = useMemo(() => {
-    return emailErrorText == null && passwordErrorText == null;
-  }, [emailErrorText, passwordErrorText]);
+    return userIdErrorText == null && passwordErrorText == null;
+  }, [userIdErrorText, passwordErrorText]);
 
   const signinButtonStyle = useMemo(() => {
     if (signinButtonEnabled) {
@@ -63,11 +61,11 @@ const SigninScreen = () => {
 
   const onPressSigninButton = useCallback(async () => {
     try {
-      await signin(email, password);
+      await signin(userId, password, redirectTab);
     } catch (error: any) {
       Alert.alert(error.message);
     }
-  }, [email, password, signin]);
+  }, [userId, password, signin, redirectTab]);
 
   const onPressBackButton = useCallback(() => {
     navigation.goBack();
@@ -111,16 +109,16 @@ const SigninScreen = () => {
         </View>
         <View>
           <View style={styles.section}>
-            <Text style={styles.title}>이메일</Text>
+            <Text style={styles.title}>아이디</Text>
             <TextInput
-              value={email}
+              value={userId}
               style={styles.input}
-              keyboardType="email-address"
               autoCapitalize="none"
-              onChangeText={onChangeEmailText}
+              autoCorrect={false}
+              onChangeText={onChangeUserIdText}
             />
-            {emailErrorText && (
-              <Text style={styles.errorText}>{emailErrorText}</Text>
+            {userIdErrorText && (
+              <Text style={styles.errorText}>{userIdErrorText}</Text>
             )}
           </View>
           <View style={styles.section}>

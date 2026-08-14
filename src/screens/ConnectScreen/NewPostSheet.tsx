@@ -41,11 +41,22 @@ interface NewPostSheetProps {
   maxCapacityInputErrorText: string | null;
   validateMaxCapacity: () => boolean;
 
+  // 카테고리 칩 목록. 서버에서 불러온 카테고리 + '직접입력'
+  categoryOptions: string[];
+  categoryPreset: string;
+  setCategoryPreset: (value: string) => void;
+  customCategoryInput: string;
+  setCustomCategoryInput: (text: string) => void;
+  isCustomCategory: boolean;
+  categoryInputErrorText: string | null;
+
   deadlineDts: Date;
   showDatePicker: boolean;
   setShowDatePicker: (show: boolean) => void;
   handleDeadlineDtsChange: (event: any, selectedDate?: Date) => void;
 }
+
+const DESTINATION_QUICK_PICKS = ['강촌', '강변', '회사'];
 
 const NewPostSheet: React.FC<NewPostSheetProps> = React.memo((props) => {
   const {
@@ -54,13 +65,16 @@ const NewPostSheet: React.FC<NewPostSheetProps> = React.memo((props) => {
     contentInput, setContentInput, contentInputErrorText, validateContent,
     destinationInput, setDestinationInput, destinationInputErrorText, validateDestination,
     maxCapacityInput, setMaxCapacityInput, maxCapacityInputErrorText, validateMaxCapacity,
+    categoryOptions, categoryPreset, setCategoryPreset, customCategoryInput, setCustomCategoryInput,
+    isCustomCategory, categoryInputErrorText,
     deadlineDts, handleDeadlineDtsChange, showDatePicker, setShowDatePicker
   } = props;
 
 
   // TextInput 오류 여부에 따라 Post 버튼의 배경색 결정 (props로 받은 에러 텍스트 사용)
   const isPostButtonDisabled =
-    titleInputErrorText || contentInputErrorText || destinationInputErrorText || maxCapacityInputErrorText;
+    titleInputErrorText || contentInputErrorText || destinationInputErrorText ||
+    maxCapacityInputErrorText || categoryInputErrorText;
 
   return (
     <KeyboardAvoidingView
@@ -95,6 +109,41 @@ const NewPostSheet: React.FC<NewPostSheetProps> = React.memo((props) => {
           </TouchableOpacity>
         </View>
 
+        {/* 카테고리 */}
+        <Text style={styles.fieldLabel}>카테고리</Text>
+        <View style={styles.quickPickRow}>
+          {categoryOptions.map((option) => {
+            const selected = categoryPreset === option;
+            return (
+              <TouchableOpacity
+                key={option}
+                style={[styles.quickPickChip, selected && styles.quickPickChipSelected]}
+                onPress={() => setCategoryPreset(option)}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              >
+                <Text style={[styles.quickPickChipText, selected && styles.quickPickChipTextSelected]}>
+                  {option}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        {isCustomCategory && (
+          <TextInput
+            value={customCategoryInput}
+            placeholder="카테고리 직접 입력"
+            onChangeText={setCustomCategoryInput}
+            placeholderTextColor={theme.colors.textMuted}
+            style={styles.textInput}
+            returnKeyType="done"
+          />
+        )}
+        {!!categoryInputErrorText && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{categoryInputErrorText}</Text>
+          </View>
+        )}
+
         {/* 제목 */}
         <TextInput
           value={titleInput}
@@ -105,7 +154,7 @@ const NewPostSheet: React.FC<NewPostSheetProps> = React.memo((props) => {
           style={styles.textInput}
           returnKeyType="done"
         />
-        {titleInputErrorText && (
+        {!!titleInputErrorText && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{titleInputErrorText}</Text>
           </View>
@@ -122,7 +171,7 @@ const NewPostSheet: React.FC<NewPostSheetProps> = React.memo((props) => {
           textAlignVertical="top"
           style={styles.multilineTextInput}
         />
-        {contentInputErrorText && (
+        {!!contentInputErrorText && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{contentInputErrorText}</Text>
           </View>
@@ -138,7 +187,25 @@ const NewPostSheet: React.FC<NewPostSheetProps> = React.memo((props) => {
           style={styles.textInput}
           returnKeyType="done"
         />
-        {destinationInputErrorText && (
+        {/* 도착지 빠른 실행: 누르면 즉시 입력란에 반영 */}
+        <View style={styles.quickPickRow}>
+          {DESTINATION_QUICK_PICKS.map((place) => {
+            const selected = destinationInput === place;
+            return (
+              <TouchableOpacity
+                key={place}
+                style={[styles.quickPickChip, selected && styles.quickPickChipSelected]}
+                onPress={() => setDestinationInput(place)}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              >
+                <Text style={[styles.quickPickChipText, selected && styles.quickPickChipTextSelected]}>
+                  {place}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        {!!destinationInputErrorText && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{destinationInputErrorText}</Text>
           </View>
@@ -149,13 +216,13 @@ const NewPostSheet: React.FC<NewPostSheetProps> = React.memo((props) => {
           value={maxCapacityInput}
           onChangeText={setMaxCapacityInput}
           onBlur={validateMaxCapacity} // <-- onBlur 추가
-          placeholder="최대 모집 인원 입력"
+          placeholder="최대 모집 인원(본인 포함)"
           placeholderTextColor={theme.colors.textMuted}
           keyboardType="numeric"
           style={styles.textInput}
           returnKeyType="done"
         />
-        {maxCapacityInputErrorText && (
+        {!!maxCapacityInputErrorText && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{maxCapacityInputErrorText}</Text>
           </View>
@@ -232,6 +299,35 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: theme.colors.field,
     borderRadius: theme.radius.md,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+    marginBottom: 8,
+  },
+  quickPickRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: -4,
+    marginBottom: 12,
+  },
+  quickPickChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.field,
+  },
+  quickPickChipSelected: {
+    backgroundColor: theme.colors.primary,
+  },
+  quickPickChipText: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+  },
+  quickPickChipTextSelected: {
+    color: theme.colors.white,
+    fontWeight: '600',
   },
   multilineTextInput: {
     height: 150,

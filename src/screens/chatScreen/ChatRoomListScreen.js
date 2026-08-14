@@ -30,21 +30,29 @@ export default function ChatRoomsListScreen({ navigation }) {
   const [isUserIdLoading, setIsUserIdLoading] = useState(true); // 🌟 사용자 ID 로딩 상태
   const [isRoomsLoading, setIsRoomsLoading] = useState(false); // 🌟 채팅방 목록 로딩 상태
   const [rooms, setRooms] = useState([]);
-  const { user: me } = useContext(AuthContext);
+  const { user: me, initialized } = useContext(AuthContext);
 
   const stompClient = useRef(null);
 
   useEffect(() => {
+    // 🌟 인증 복구가 끝나기 전에는 판단하지 않는다.
+    //    (여기서 임시 ID를 만들어버리면 로그인 유저의 채팅방을 못 찾는다)
+    if (!initialized) return;
+
     const loadUserId = async () => {
       try {
-        let storedUserId;
-        if (me) {
-          storedUserId = me.email;
-          setUserId(storedUserId);
+        // 🌟 친구/모집 화면과 동일한 식별자를 써야 멤버십(user_id)이 일치한다.
+        //    로그인 직후에는 email이 빈 문자열이므로 userId를 우선 사용.
+        const currentUserId = me?.userId || me?.email;
+        if (currentUserId) {
+          setUserId(currentUserId);
         } else {
-          const newId = `user_${Math.random()
-            .toString(36)
-            .substr(2, 6)}_${Date.now().toString().substr(-4)}`;
+          const storedId = await AsyncStorage.getItem(USER_ID_KEY);
+          const newId =
+            storedId ||
+            `user_${Math.random()
+              .toString(36)
+              .substr(2, 6)}_${Date.now().toString().substr(-4)}`;
           await AsyncStorage.setItem(USER_ID_KEY, newId);
           setUserId(newId);
         }
@@ -57,7 +65,7 @@ export default function ChatRoomsListScreen({ navigation }) {
       }
     };
     loadUserId();
-  }, []);
+  }, [initialized, me?.userId, me?.email]);
 
   const connectWebSocket = useCallback(() => {
     if (stompClient.current && stompClient.current.connected) {

@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useRef, useState, useContext } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   Text,
   View,
@@ -11,12 +12,19 @@ import {
   Animated,
   PanResponder,
   RefreshControl,
+  ScrollView,
 } from "react-native";
 import Alert from '@blazejkustra/react-native-alert';
 import { Post } from "@/types";
 import localStyles from "./ConnectScreen.styles";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
-import { useBoard } from "@/hooks/useBoard";
+import {
+  useBoard,
+  CATEGORY_CUSTOM,
+  CATEGORY_FILTER_ALL,
+  SEARCH_FIELD_OPTIONS,
+  SearchField,
+} from "@/hooks/useBoard";
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -37,6 +45,7 @@ export default function ConnectScreen() {
   const navigation = useRootNavigation<"ConnectDetail" | "Signin">();
   const { user: me } = useContext(AuthContext);
   const refRBSheet = useRef<any>(null);
+  const filterSheetRef = useRef<any>(null);
   const flatListRef = useRef<FlatList<any>>(null);
   const insets = useSafeAreaInsets();
   const { showActionSheetWithOptions } = useActionSheet();
@@ -71,6 +80,19 @@ export default function ConnectScreen() {
     loadPosts,
     loadMorePosts,
     hasNextPage,
+    categories,
+    loadCategories,
+    selectedCategory,
+    setSelectedCategory,
+    searchField,
+    setSearchField,
+    searchKeyword,
+    setSearchKeyword,
+    openOnly,
+    setOpenOnly,
+    appliedFilter,
+    applySearch,
+    clearSearch,
     titleInput,
     setTitleInput,
     titleInputErrorText,
@@ -91,6 +113,13 @@ export default function ConnectScreen() {
     maxCapacityInputErrorText,
     resetMaxCapacityInput,
     validateMaxCapacity,
+    categoryPreset,
+    setCategoryPreset,
+    customCategoryInput,
+    setCustomCategoryInput,
+    isCustomCategory,
+    categoryInputErrorText,
+    resetCategoryInput,
     deadlineDts,
     showDatePicker,
     setShowDatePicker,
@@ -104,21 +133,8 @@ export default function ConnectScreen() {
   };
 
   const onPressListItem = (postId: number) => {
-    if (me) {
-      navigation.push("ConnectDetail", { parentId: postId });
-    } else {
-      Alert.alert(
-        "로그인이 필요합니다.",
-        "모집 글을 보려면 로그인이 필요합니다.",
-        [
-          {
-            text: "로그인",
-            onPress: () => navigation.navigate("Signin"),
-          },
-          { text: "닫기" },
-        ]
-      );
-    }
+    // 모집 글 열람은 로그인 없이 허용 (참여/작성/댓글 시점에만 로그인 안내)
+    navigation.push("ConnectDetail", { parentId: postId });
   };
 
   const onPressCancel = () => {
@@ -148,7 +164,8 @@ export default function ConnectScreen() {
       titleInputErrorText ||
       contentInputErrorText ||
       destinationInputErrorText ||
-      maxCapacityInputErrorText
+      maxCapacityInputErrorText ||
+      categoryInputErrorText
     ) {
       return;
     }
@@ -158,6 +175,7 @@ export default function ConnectScreen() {
       resetContenInput();
       resetDestinationInput();
       resetMaxCapacityInput();
+      resetCategoryInput();
       refRBSheet.current?.close();
       flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
       Toast.show({
@@ -298,6 +316,7 @@ export default function ConnectScreen() {
     const fetch = async () => {
       try {
         await loadPosts();
+        loadCategories();
         setNow(dayjs());
       } finally {
         setRefreshing(false);
@@ -306,7 +325,11 @@ export default function ConnectScreen() {
     if (refreshing) {
       fetch();
     }
-  }, [refreshing, loadPosts]);
+  }, [refreshing, loadPosts, loadCategories]);
+
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -319,9 +342,13 @@ export default function ConnectScreen() {
     };
   });
 
-  useEffect(() => {
-    loadPosts();
-  }, [loadPosts]);
+  // 상세 화면에서 삭제·수정 후 돌아왔을 때도 목록이 최신 상태가 되도록
+  // 마운트 시점이 아니라 화면이 포커스될 때마다 다시 불러온다
+  useFocusEffect(
+    useCallback(() => {
+      loadPosts();
+    }, [loadPosts])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -333,12 +360,95 @@ export default function ConnectScreen() {
     }
   };
 
+  const onPressCategory = (category: string) => {
+    if (category === selectedCategory) {
+      return;
+    }
+    setSelectedCategory(category);
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+  };
+
+  const categoryFilters = [CATEGORY_FILTER_ALL, ...categories];
+  // 작성 시트의 카테고리 칩도 같은 목록을 쓰고, 마지막에 '직접입력'만 덧붙인다
+  const categoryOptions = [...categories, CATEGORY_CUSTOM];
+
+  const onPressFilter = () => {
+    filterSheetRef.current?.open();
+  };
+
+  // 필터 시트 '적용' 버튼
+  const onPressApplyFilter = () => {
+    Keyboard.dismiss();
+    applySearch();
+    filterSheetRef.current?.close();
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+  };
+
+  // 필터 시트 '초기화' 버튼
+  const onPressResetFilter = () => {
+    clearSearch();
+    filterSheetRef.current?.close();
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+  };
+
+  const searchFieldLabel =
+    SEARCH_FIELD_OPTIONS.find((o) => o.key === searchField)?.label ?? "제목";
+  const hasActiveSearch =
+    appliedFilter.keyword.length > 0 || appliedFilter.openOnly;
 
   return (
     <SafeAreaView
       edges={["right", "left"]}
       style={{ flex: 1, paddingTop: 12, backgroundColor: theme.colors.background }}
     >
+      <View style={localStyles.filterHeaderRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={localStyles.filterBar}
+          style={localStyles.filterBarScroll}
+        >
+          {categoryFilters.map((category) => {
+            const selected = category === selectedCategory;
+            return (
+              <TouchableOpacity
+                key={category}
+                style={[
+                  localStyles.filterChip,
+                  selected && localStyles.filterChipSelected,
+                ]}
+                onPress={() => onPressCategory(category)}
+                activeOpacity={0.85}
+              >
+                <Text
+                  style={[
+                    localStyles.filterChipText,
+                    selected && localStyles.filterChipTextSelected,
+                  ]}
+                >
+                  {category}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+        {/* 검색 필터 버튼. 필터가 적용되어 있으면 점으로 표시한다 */}
+        <TouchableOpacity
+          style={localStyles.filterIconButton}
+          onPress={onPressFilter}
+          activeOpacity={0.85}
+          accessibilityLabel="검색 필터"
+        >
+          <FontAwesome6
+            name="filter"
+            size={15}
+            color={
+              hasActiveSearch ? theme.colors.primary : theme.colors.textSecondary
+            }
+          />
+          {hasActiveSearch && <View style={localStyles.filterActiveDot} />}
+        </TouchableOpacity>
+      </View>
       <FlatList
         ref={flatListRef}
         data={posts}
@@ -354,12 +464,127 @@ export default function ConnectScreen() {
         )}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={localStyles.listContainer}
+        ListEmptyComponent={
+          <View style={localStyles.emptyContainer}>
+            <Text style={localStyles.emptyText}>
+              {hasActiveSearch
+                ? "검색 조건에 맞는 모집 글이 없어요."
+                : selectedCategory === CATEGORY_FILTER_ALL
+                ? "아직 등록된 모집 글이 없어요."
+                : `'${selectedCategory}' 카테고리에 모집 글이 없어요.`}
+            </Text>
+          </View>
+        }
         onEndReached={onEndReached}
         onEndReachedThreshold={0.1}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       />
+      {/* 검색 필터 시트 */}
+      <RBSheet
+        ref={filterSheetRef}
+        useNativeDriver={false}
+        height={340}
+        closeOnPressMask={true}
+        customStyles={{
+          wrapper: {
+            backgroundColor: "rgba(25, 31, 40, 0.5)",
+          },
+          container: {
+            borderTopLeftRadius: theme.radius.xl,
+            borderTopRightRadius: theme.radius.xl,
+            backgroundColor: theme.colors.surface,
+          },
+        }}
+      >
+        <View style={localStyles.filterSheetContainer}>
+          <Text style={localStyles.filterSheetTitle}>검색 필터</Text>
+          <Text style={localStyles.filterSheetLabel}>검색 대상</Text>
+          <View style={localStyles.searchFieldRow}>
+            {SEARCH_FIELD_OPTIONS.map((option) => {
+              const selected = option.key === searchField;
+              return (
+                <TouchableOpacity
+                  key={option.key}
+                  style={[
+                    localStyles.searchFieldChip,
+                    selected && localStyles.filterChipSelected,
+                  ]}
+                  onPress={() => setSearchField(option.key)}
+                  activeOpacity={0.85}
+                >
+                  <Text
+                    style={[
+                      localStyles.searchFieldChipText,
+                      selected && localStyles.filterChipTextSelected,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <View style={localStyles.searchBar}>
+            <FontAwesome6
+              name="magnifying-glass"
+              size={14}
+              color={theme.colors.textMuted}
+            />
+            <TextInput
+              style={localStyles.searchInput}
+              value={searchKeyword}
+              onChangeText={setSearchKeyword}
+              placeholder={`${searchFieldLabel} 검색어 입력`}
+              placeholderTextColor={theme.colors.textMuted}
+              returnKeyType="search"
+              onSubmitEditing={onPressApplyFilter}
+            />
+            {searchKeyword.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setSearchKeyword("")}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel="검색어 지우기"
+              >
+                <FontAwesome6
+                  name="circle-xmark"
+                  size={16}
+                  color={theme.colors.textMuted}
+                />
+              </TouchableOpacity>
+            )}
+          </View>
+          <TouchableOpacity
+            style={localStyles.openOnlyRow}
+            onPress={() => setOpenOnly(!openOnly)}
+            activeOpacity={0.7}
+          >
+            <FontAwesome6
+              name={openOnly ? "square-check" : "square"}
+              size={18}
+              color={openOnly ? theme.colors.primary : theme.colors.textMuted}
+            />
+            <Text style={localStyles.openOnlyText}>모집 미완료만 보기</Text>
+          </TouchableOpacity>
+          <View style={localStyles.filterSheetActions}>
+            <TouchableOpacity
+              style={localStyles.resetButton}
+              onPress={onPressResetFilter}
+              activeOpacity={0.85}
+            >
+              <Text style={localStyles.resetButtonText}>초기화</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={localStyles.applyButton}
+              onPress={onPressApplyFilter}
+              activeOpacity={0.85}
+            >
+              <Text style={localStyles.applyButtonText}>적용</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </RBSheet>
       <TouchableOpacity onPress={onPressNewPost} activeOpacity={0.85} style={localStyles.fab}>
         <FontAwesome6 name="add" size={22} color={theme.colors.white} />
       </TouchableOpacity>
@@ -413,6 +638,14 @@ export default function ConnectScreen() {
           setMaxCapacityInput={setMaxCapacityInput}
           maxCapacityInputErrorText={maxCapacityInputErrorText}
           validateMaxCapacity={validateMaxCapacity}
+
+          categoryOptions={categoryOptions}
+          categoryPreset={categoryPreset}
+          setCategoryPreset={setCategoryPreset}
+          customCategoryInput={customCategoryInput}
+          setCustomCategoryInput={setCustomCategoryInput}
+          isCustomCategory={isCustomCategory}
+          categoryInputErrorText={categoryInputErrorText}
 
           deadlineDts={deadlineDts}
           showDatePicker={showDatePicker}

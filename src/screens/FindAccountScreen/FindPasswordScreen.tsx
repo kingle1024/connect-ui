@@ -168,8 +168,8 @@ const FindPasswordScreen = () => {
     setError(null);
     setLoading(true);
     try {
-      if (newPassword.length < 8 || !/[a-zA-Z]/.test(newPassword) || !/[0-9]/.test(newPassword) || !/[!@#$%^&*()]/.test(newPassword)) {
-        throw new Error('비밀번호는 8자 이상이며, 영문, 숫자, 특수문자를 포함해야 합니다.');
+      if (newPassword.length < 4) {
+        throw new Error('비밀번호는 4자리 이상이어야 합니다.');
       }
       if (newPassword !== confirmPassword) {
         throw new Error('새 비밀번호와 확인 비밀번호가 일치하지 않습니다.');
@@ -279,7 +279,7 @@ const FindPasswordScreen = () => {
             <View style={styles.passwordInputContainer}>
               <TextInput
                 style={styles.passwordInput}
-                placeholder="새 비밀번호를 입력해주세요 (8자 이상)"
+                placeholder="새 비밀번호를 입력해주세요 (4자 이상)"
                 value={newPassword}
                 onChangeText={setNewPassword}
                 secureTextEntry={!showNewPassword}

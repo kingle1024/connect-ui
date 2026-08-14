@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Constants from "expo-constants";
 import AuthContext from "./AuthContext";
-import { User } from "@/types";
+import { TypeBottomTabNavigationParams, User } from "@/types";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRootNavigation } from "@/hooks/useNavigation";
@@ -24,6 +24,13 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [processingSignup, setProcessingSignup] = useState(false);
   const [processingSignin, setProcessingSignin] = useState(false);
 
+  // 세션만 정리 (화면 이동 없음) — 앱 초기화 시 만료 토큰 정리용
+  const clearSession = useCallback(async () => {
+    await AsyncStorage.removeItem("accessToken");
+    await AsyncStorage.removeItem("refreshToken");
+    setUser(null);
+  }, []);
+
   useEffect(() => {
     const unsubscribe = async () => {
       try {
@@ -41,6 +48,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               email: response.data.email || "",
               name: response.data.name || "",
               profileUrl: response.data.profileUrl || "",
+              verified: !!response.data.verified,
             });
           }
         }
@@ -79,22 +87,23 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     email: retryResponse.data.email || "",
                     name: retryResponse.data.name || "",
                     profileUrl: retryResponse.data.profileUrl || "",
+                    verified: !!retryResponse.data.verified,
                   });
                 } else {
-                  await signout();
+                  await clearSession();
                 }
               } else {
-                await signout();
+                await clearSession();
               }
             } catch (refreshError) {
               // refreshToken 만료 or 재발급 실패
-              await signout();
+              await clearSession();
             }
           } else {
-            await signout();
+            await clearSession();
           }
         } else {
-          await signout();
+          await clearSession();
         }
       } finally {
         setInitialized(true);
@@ -104,11 +113,11 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signup = useCallback(
-    async (email: string, password: string, name: string) => {
+    async (userId: string, email: string, password: string, name: string) => {
       setProcessingSignup(true);
       try {
         const response = await axiosInstance.post("/api/auth/register", {
-          userId: email,
+          userId: userId,
           password: password,
           email: email,
           name: name,
@@ -117,6 +126,11 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           console.log("response.status", response.status);
           navigation.navigate("Signin");
         }
+      } catch (error: any) {
+        // 서버가 검증 실패 사유를 plain text로 내려주므로 그대로 사용자에게 전달
+        const serverMessage =
+          typeof error.response?.data === "string" ? error.response.data : null;
+        throw new Error(serverMessage ?? "회원가입 중 오류가 발생했습니다.");
       } finally {
         setProcessingSignup(false);
       }
@@ -125,13 +139,17 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   );
 
   const signin = useCallback(
-    async (email: string, password: string) => {
+    async (
+      userId: string,
+      password: string,
+      redirectTab: keyof TypeBottomTabNavigationParams = "Connect"
+    ) => {
       setProcessingSignin(true);
       try {
         const response = await axiosInstance.post<SignInResponse>(
           "/api/auth/login",
           {
-            userId: email,
+            userId: userId,
             password: password,
           }
         );
@@ -143,14 +161,30 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             response.data.refreshToken
           );
 
-          setUser({
-            userId: email,
-            email: email,
-            name: "익명",
-            profileUrl: "",
-          });
+          // 로그인 응답에는 사용자 정보가 없으므로 토큰으로 실제 프로필을 조회한다.
+          try {
+            const me = await axiosInstance.get("/api/auth/me", {
+              headers: { Authorization: `Bearer ${response.data.accessToken}` },
+            });
+            setUser({
+              userId: me.data?.userId || userId,
+              email: me.data?.email || "",
+              name: me.data?.name || "",
+              profileUrl: me.data?.profileUrl || "",
+              verified: !!me.data?.verified,
+            });
+          } catch (meError) {
+            // 프로필 조회에 실패해도 로그인 자체는 성공 처리한다.
+            setUser({
+              userId: userId,
+              email: "",
+              name: "",
+              profileUrl: "",
+            });
+          }
+          // 로그인 진입 지점의 탭으로 복귀 (없으면 모집 탭)
           navigation.navigate("BottomTab", {
-            screen: "Connect",
+            screen: redirectTab,
           });
         } else {
           setUser(null);
@@ -172,17 +206,36 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   );
 
   const signout = useCallback(async () => {
-    await AsyncStorage.removeItem("accessToken");
-    await AsyncStorage.removeItem("refreshToken");
-    setUser(null);
+    await clearSession();
 
     navigation.navigate("Signin");
-  }, [navigation]);
+  }, [clearSession, navigation]);
 
   const updateProfileImage = useCallback(
     async (filepath: string) => {},
     [user]
   );
+
+  // 이름 변경·이메일 인증 등 서버 상태가 바뀐 뒤 내 정보를 다시 가져온다
+  const refreshUser = useCallback(async () => {
+    const accessToken = await AsyncStorage.getItem("accessToken");
+    if (!accessToken) return;
+    try {
+      const me = await axiosInstance.get("/api/auth/me", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setUser({
+        userId: me.data?.userId || "",
+        email: me.data?.email || "",
+        name: me.data?.name || "",
+        profileUrl: me.data?.profileUrl || "",
+        verified: !!me.data?.verified,
+      });
+    } catch (error) {
+      // 갱신 실패 시 기존 정보 유지 (세션 만료 처리는 기존 초기화 로직에 맡긴다)
+      console.log("refreshUser failed", error);
+    }
+  }, []);
 
   const addFcmToken = useCallback(async (token: string) => {}, [user]);
 
@@ -197,6 +250,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       processingSignin,
       updateProfileImage,
       addFcmToken,
+      refreshUser,
     };
   }, [
     initialized,
@@ -208,6 +262,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     processingSignin,
     updateProfileImage,
     addFcmToken,
+    refreshUser,
   ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
