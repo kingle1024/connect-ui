@@ -18,7 +18,7 @@ import React, {
   useState,
 } from "react";
 import Alert from '@blazejkustra/react-native-alert';
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import { Reply } from "@/types";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -40,6 +40,10 @@ import theme from "@/modules/theme";
 import VerifiedBadge from "@/components/VerifiedBadge";
 
 const screenHeight = Dimensions.get("window").height;
+// 댓글 입력창 한 줄 높이. 등록 버튼도 같은 높이로 맞춘다.
+const REPLY_BOX_MIN_HEIGHT = 44;
+// 하단 댓글 입력 바의 위아래 여백
+const COMMENT_BAR_PADDING = 10;
 
 const editStyles = StyleSheet.create({
   input: {
@@ -152,7 +156,9 @@ const ConnectDetail = () => {
   const [expandedReplies, setExpandedReplies] = useState<number[]>([]);
   // 대댓글을 달 대상 댓글. null 이면 게시글에 대한 일반 댓글이다.
   const [replyTarget, setReplyTarget] = useState<{ id: number; userName: string } | null>(null);
-  const [replyInputHeight, setReplyInputHeight] = useState(0);
+  // 댓글 입력창이 실제로 그려진 높이 (여러 줄이 되면 커진다)
+  const [replyBoxHeight, setReplyBoxHeight] = useState(REPLY_BOX_MIN_HEIGHT);
+  const insets = useSafeAreaInsets();
   const refSheet = useRef<CustomBottomSheetRef>(null);
   const openProfileBottomSheet = useCallback(
     (userId: string, userName: string) => {
@@ -273,14 +279,6 @@ const ConnectDetail = () => {
   useEffect(() => {
     loadCategories();
   }, [loadCategories]);
-
-  const onTextInputContentSizeChange = useCallback((event: any) => {
-    const height = Math.min(
-      150,
-      Math.max(40, event.nativeEvent.contentSize.height)
-    );
-    setReplyInputHeight(height);
-  }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -1005,8 +1003,10 @@ const ConnectDetail = () => {
     return (
       <View
         style={{
+          // 하단 댓글 시트에 가려지지 않도록 시트 높이만큼 비워 둔다
           height:
-            screenHeight * 0.1 + (refSheet.current?.bottomSheetHeight ?? 0),
+            (selectedUser ? screenHeight * 0.1 : 0) +
+            (refSheet.current?.bottomSheetHeight ?? 0),
         }}
       ></View>
     );
@@ -1038,13 +1038,19 @@ const ConnectDetail = () => {
       />
       <CustomBottomSheet
         ref={refSheet}
-        minClosingHeight={screenHeight * 0.1}
-        // 댓글 입력 모드에서는 입력창 높이 + 위아래 padding(20*2) 만큼 필요하다.
-        // padding 을 빼먹으면 시트가 내용보다 짧아져 입력창/등록 버튼이 화면 밖으로 잘린다.
+        // 댓글 입력 모드에서는 시트 높이를 내용에 딱 맞춘다. 예전엔 여기에 화면 높이의 10% 를
+        // 항상 더해서 입력창 아래에 큰 빈 공간이 남았다. (프로필 모드는 그대로)
+        minClosingHeight={selectedUser ? screenHeight * 0.1 : 0}
+        // 댓글 입력 모드: 입력창 실제 높이 + 위아래 padding + 대댓글 안내/에러 문구 + 하단 안전영역.
+        // 하나라도 빼먹으면 시트가 내용보다 짧아져 입력창/등록 버튼이 화면 밖으로 잘린다.
         extraContentHeight={
           selectedUser
             ? 200
-            : Math.max(40, replyInputHeight) + 40 + (replyTarget ? 26 : 0)
+            : replyBoxHeight +
+              COMMENT_BAR_PADDING * 2 +
+              (replyTarget ? 26 : 0) +
+              (replyInputErrorText ? 21 : 0) +
+              insets.bottom
         }
         onOpen={() => {
             if (selectedUser) {
@@ -1121,10 +1127,12 @@ const ConnectDetail = () => {
         ) : ( // ✨ selectedUser가 없으면 댓글 입력 모드
           <View
             style={{
-              padding: 20,
+              paddingHorizontal: 16,
+              paddingTop: COMMENT_BAR_PADDING,
+              paddingBottom: COMMENT_BAR_PADDING + insets.bottom,
               flexDirection: "row",
               alignItems: "flex-end",
-              gap: 10,
+              gap: 8,
             }}
           >
             <View style={{ flex: 1 }}>
@@ -1185,15 +1193,14 @@ const ConnectDetail = () => {
                 borderColor: replyInputErrorText ? theme.colors.danger : theme.colors.field,
                 paddingHorizontal: 14,
                 paddingVertical: 10,
-                minHeight: 40,
+                minHeight: REPLY_BOX_MIN_HEIGHT,
                 maxHeight: 150,
               }}
-              onContentSizeChange={(e) => {
-                const height = Math.min(
-                  150,
-                  Math.max(40, e.nativeEvent.contentSize.height)
+              // 실제로 그려진 높이를 재서 시트 높이와 등록 버튼 높이에 쓴다
+              onLayout={(e) => {
+                setReplyBoxHeight(
+                  Math.max(REPLY_BOX_MIN_HEIGHT, Math.round(e.nativeEvent.layout.height))
                 );
-                setReplyInputHeight(height);
               }}
             />
             {replyInputErrorText && (
@@ -1205,12 +1212,17 @@ const ConnectDetail = () => {
             {/* 등록 버튼. 예전에는 absolute 로 띄우고 "바텀시트 열림" state 로 가렸지만,
                 그 state 를 갱신하는 곳이 없어 버튼이 영원히 보이지 않았다.
                 시트는 항상 하단에 붙어 있으니 입력창 옆에 같이 배치한다. */}
+            {/* 입력창과 같은 높이·모서리로 꽉 채운다 (입력창 실제 높이를 onLayout 으로 재서 맞춘다).
+                에러 문구가 있으면 그만큼 띄워 입력창과 나란히 둔다. */}
             <TouchableOpacity
               style={{
                 backgroundColor: theme.colors.primary,
-                paddingVertical: 10,
+                height: replyBoxHeight,
                 paddingHorizontal: 18,
-                borderRadius: theme.radius.pill,
+                marginBottom: replyInputErrorText ? 21 : 0,
+                borderRadius: theme.radius.md,
+                alignItems: "center",
+                justifyContent: "center",
                 opacity: (replyInput.trim() && boardDetail) ? 1 : 0.5,
               }}
               onPress={handleRegisterReply}
