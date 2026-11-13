@@ -113,13 +113,13 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signup = useCallback(
-    async (userId: string, email: string, password: string, name: string) => {
+    async (userId: string, password: string, name: string) => {
       setProcessingSignup(true);
       try {
         const response = await axiosInstance.post("/api/auth/register", {
           userId: userId,
           password: password,
-          email: email,
+          // 이메일은 회원가입에서 받지 않는다 (마이페이지 더존 이메일 인증 때 저장)
           name: name,
         });
         if (response.status === 200) {

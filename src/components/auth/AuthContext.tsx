@@ -4,7 +4,7 @@ import { createContext } from "react";
 export interface AuthContextProp {
   initialized: boolean;
   user: User | null;
-  signup: (userId: string, email: string, password: string, name: string) => Promise<void>;
+  signup: (userId: string, password: string, name: string) => Promise<void>;
   processingSignup: boolean;
   signin: (
     userId: string,

@@ -9,7 +9,6 @@ import {
   Platform,
 } from "react-native";
 import Alert from '@blazejkustra/react-native-alert';
-import validator from "validator";
 import { useCallback, useContext, useMemo, useRef, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AuthContext from "@/components/auth/AuthContext";
@@ -104,14 +103,12 @@ const styles = StyleSheet.create({
 const SignupScreen = () => {
   const navigation = useRootNavigation<"Signup">();
   const [userId, setUserId] = useState("");
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmedPassword, setConfirmedPassword] = useState("");
   const [name, setName] = useState("");
   const { processingSignup, signup } = useContext(AuthContext);
 
   const userIdRef = useRef<TextInput>(null);
-  const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
   const confirmedPasswordRef = useRef<TextInput>(null);
   const nameRef = useRef<TextInput>(null);
@@ -129,39 +126,24 @@ const SignupScreen = () => {
     return null;
   }, [userId]);
 
-  const emailErrorText = useMemo(() => {
-    if (email.length === 0) {
-      return "이메일을 입력해주세요.";
-    }
-    if (!validator.normalizeEmail(email)) {
-      return "올바른 이메일이 아닙니다.";
-    }
-    return null;
-  }, [email]);
-
   const passwordErrorText = useMemo(() => {
     if (password.length === 0) {
       return "비밀번호를 입력해주세요.";
     }
     if (password.length < 4) {
-      return "비밀번호는 4자리 이상이여야합니다";
-    }
-    if (password !== confirmedPassword) {
-      return "비밀번호를 확인해주세요.";
+      return "비밀번호는 4자리 이상이어야 합니다.";
     }
     return null;
-  }, [password, confirmedPassword]);
+  }, [password]);
 
   const confirmedPasswordErrorText = useMemo(() => {
     if (confirmedPassword.length === 0) {
-      return "비밀번호를 입력해주세요.";
-    }
-    if (confirmedPassword.length < 4) {
-      return "비밀번호는 4자리 이상이여야합니다";
+      return "비밀번호를 한 번 더 입력해주세요.";
     }
     if (password !== confirmedPassword) {
-      return "비밀번호를 확인해주세요.";
+      return "비밀번호가 일치하지 않습니다.";
     }
+    return null;
   }, [password, confirmedPassword]);
 
   const nameErrorText = useMemo(() => {
@@ -173,10 +155,6 @@ const SignupScreen = () => {
 
   const onChangeUserIdText = useCallback((text: string) => {
     setUserId(text);
-  }, []);
-
-  const onChangeEmailText = useCallback((text: string) => {
-    setEmail(text);
   }, []);
 
   const onChangePasswordText = useCallback((text: string) => {
@@ -194,14 +172,12 @@ const SignupScreen = () => {
   const signupButtonEnabled = useMemo(() => {
     return (
       userIdErrorText == null &&
-      emailErrorText == null &&
       passwordErrorText == null &&
       confirmedPasswordErrorText == null &&
       nameErrorText == null
     );
   }, [
     userIdErrorText,
-    emailErrorText,
     passwordErrorText,
     confirmedPasswordErrorText,
     nameErrorText,
@@ -216,18 +192,15 @@ const SignupScreen = () => {
 
   const onPressSignupButton = useCallback(async () => {
     try {
-      await signup(userId, email, password, name);
+      await signup(userId, password, name);
     } catch (error: any) {
       Alert.alert(error.message);
     }
-  }, [userId, email, password, name, signup]);
+  }, [userId, password, name, signup]);
 
   const firstInvalidInputRef = useMemo(() => {
     if (userIdErrorText != null) {
       return userIdRef;
-    }
-    if (emailErrorText != null) {
-      return emailRef;
     }
     if (passwordErrorText != null) {
       return passwordRef;
@@ -241,7 +214,6 @@ const SignupScreen = () => {
     return null;
   }, [
     userIdErrorText,
-    emailErrorText,
     passwordErrorText,
     confirmedPasswordErrorText,
     nameErrorText,
@@ -319,23 +291,6 @@ const SignupScreen = () => {
           />
           {userIdErrorText && (
             <Text style={styles.errorText}>{userIdErrorText}</Text>
-          )}
-        </View>
-        <View style={styles.section}>
-          <Text style={styles.title}>이메일</Text>
-          <TextInput
-            ref={emailRef}
-            value={email}
-            style={styles.input}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            onChangeText={onChangeEmailText}
-            returnKeyType="next"
-            submitBehavior="submit"
-            onSubmitEditing={onSubmitEditing}
-          />
-          {emailErrorText && (
-            <Text style={styles.errorText}>{emailErrorText}</Text>
           )}
         </View>
         <View style={styles.section}>

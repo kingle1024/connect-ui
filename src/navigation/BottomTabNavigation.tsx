@@ -20,6 +20,8 @@ const BottomTabNavigation = () => {
   return (
     <BottomTab.Navigator
       initialRouteName="Connect"
+      // 뒤로가기 시 첫 탭(친구)이 아니라 시작 탭(모집)으로 돌아간다. 모집 탭에선 더 돌아갈 곳이 없다.
+      backBehavior="initialRoute"
       screenOptions={{
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.textMuted,
