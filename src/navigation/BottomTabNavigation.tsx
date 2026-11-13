@@ -2,6 +2,7 @@ import React, { useContext } from "react";
 import Alert from '@blazejkustra/react-native-alert';
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Feather, Entypo } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ConnectNavigation from "./ConnectNavigation";
 import ChatNavigation from "./ChatNavigation";
 import AuthContext from "@/components/auth/AuthContext";
@@ -14,6 +15,7 @@ const BottomTab = createBottomTabNavigator();
 const BottomTabNavigation = () => {
   const { user: me } = useContext(AuthContext);
   const rootNavigation = useRootNavigation();
+  const insets = useSafeAreaInsets();
 
   return (
     <BottomTab.Navigator
@@ -26,9 +28,12 @@ const BottomTabNavigation = () => {
           backgroundColor: theme.colors.surface,
           borderTopColor: theme.colors.border,
           borderTopWidth: 1,
-          height: 60,
-          paddingTop: 6,
-          paddingBottom: 8,
+          // 탭 항목은 아이콘 칸 28 + 항목 상하 패딩 10 + 라벨(11px) 약 14 = 52 가 필요하다.
+          // 예전엔 높이 60 에 패딩 14 를 줘서 45 만 남아 라벨이 7px 로 눌려 잘렸다.
+          // paddingBottom 을 직접 주면 라이브러리가 넣던 하단 안전영역도 사라지므로 직접 더한다.
+          height: 62 + insets.bottom,
+          paddingTop: 4,
+          paddingBottom: 4 + insets.bottom,
         },
       }}
     >
