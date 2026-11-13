@@ -32,14 +32,20 @@
         height: 100%;
       }
       /* These styles disable body scrolling if you are using <ScrollView> */
+      /* html 까지 막아야 한다. 오른쪽 드로어(drawerType: slide)는 닫혀 있을 때 화면 오른쪽 밖에
+         놓이는데, html 이 overflow: visible 이면 모바일 브라우저가 그 영역까지 레이아웃 뷰포트를
+         넓혀서 페이지가 축소되고 가로·세로 스크롤이 생긴다. */
+      html,
       body {
         overflow: hidden;
+        width: 100%;
       }
       /* These styles make the root element full-height */
       #root {
         display: flex;
         height: 100%;
         flex: 1;
+        overflow: hidden;
       }
     </style>
   </head>
