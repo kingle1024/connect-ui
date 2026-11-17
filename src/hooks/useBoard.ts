@@ -6,7 +6,7 @@ import { useContext } from "react";
 import AuthContext from "@/components/auth/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import dayjs from "dayjs";
-import axios from "axios";
+import apiClient from "@/utils/api";
 import Constants from "expo-constants";
 import Toast from "react-native-toast-message";
 import {
@@ -74,9 +74,8 @@ export const useBoard = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const insets = useSafeAreaInsets();
   const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL ?? "";
-  const axiosInstance = axios.create({
-    baseURL: API_BASE_URL,
-  });
+  // 공용 클라이언트: 로그인 토큰을 자동으로 붙이고, 게스트 쿠키도 실어 보낸다(withCredentials)
+  const axiosInstance = apiClient;
 
   const titleInputErrorText = useMemo(() => {
     if (titleInput.length === 0) {

@@ -43,7 +43,9 @@ const screenHeight = Dimensions.get("window").height;
 
 export default function ConnectScreen() {
   const navigation = useRootNavigation<"ConnectDetail" | "Signin">();
-  const { user: me } = useContext(AuthContext);
+  const { user: me, guest, ensureActor } = useContext(AuthContext);
+  // 글을 쓰는 주체: 회원 또는 (로그인하지 않았다면) 쿠키로 식별되는 게스트
+  const actor = me ?? guest;
   const refRBSheet = useRef<any>(null);
   const filterSheetRef = useRef<any>(null);
   const flatListRef = useRef<FlatList<any>>(null);
@@ -141,21 +143,13 @@ export default function ConnectScreen() {
     refRBSheet.current?.close();
   };
 
-  const onPressNewPost = () => {
-    if (me) {
+  // 로그인하지 않았어도 글을 쓸 수 있다. 이때는 랜덤 닉네임 게스트로 작성된다.
+  const onPressNewPost = async () => {
+    const writer = await ensureActor();
+    if (writer) {
       refRBSheet.current?.open();
     } else {
-      Alert.alert(
-        "로그인이 필요합니다.",
-        "새 글을 작성하려면 로그인이 필요합니다.",
-        [
-          {
-            text: "로그인",
-            onPress: () => navigation.navigate("Signin"),
-          },
-          { text: "닫기" },
-        ]
-      );
+      Alert.alert("잠시 후 다시 시도해주세요.", "작성자 정보를 준비하지 못했습니다.");
     }
   };
 
@@ -195,7 +189,8 @@ export default function ConnectScreen() {
     }
   };
 
-  const onPressMore = (item: Post) => {
+  const onPressMore = async (item: Post) => {
+    const me = actor ?? (await ensureActor());
     if (me) {
       // Build action sheet options conditionally: include "삭제" only for the author
       const baseOptions = ["참여하기"];
@@ -278,17 +273,7 @@ export default function ConnectScreen() {
         }
       );
     } else {
-      Alert.alert(
-        "로그인이 필요합니다.",
-        "모집에 참여하려면 로그인이 필요합니다.",
-        [
-          {
-            text: "로그인",
-            onPress: () => navigation.navigate("Signin"),
-          },
-          { text: "닫기" },
-        ]
-      );
+      Alert.alert("잠시 후 다시 시도해주세요.", "작성자 정보를 준비하지 못했습니다.");
     }
   };
 
@@ -456,7 +441,7 @@ export default function ConnectScreen() {
           <PostItem
             item={item}
             now={now}
-            me={me}
+            me={actor}
             insets={insets}
             onPressListItem={onPressListItem}
             onPressMore={onPressMore}

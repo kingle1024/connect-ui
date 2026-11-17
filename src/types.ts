@@ -63,6 +63,7 @@ export interface User {
   name: string;
   profileUrl?: string;
   verified?: boolean; // 더존 이메일 인증 완료 여부
+  guest?: boolean; // 로그인하지 않은 게스트(서버가 쿠키로 식별하는 임시 계정)
 }
 
 export interface CreateCommentRequest {

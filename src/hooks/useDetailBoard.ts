@@ -1,13 +1,11 @@
 import Constants from "expo-constants";
 import { useCallback, useMemo, useState } from "react";
 import { ConnectDetailBoardDto, Post } from "@/types";
-import axios from "axios";
+import apiClient from "@/utils/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL ?? "";
-const axiosInstance = axios.create({
-  baseURL: API_BASE_URL,
-});
+// 공용 클라이언트: 로그인 토큰을 자동으로 붙이고, 게스트 쿠키도 실어 보낸다(withCredentials)
+const axiosInstance = apiClient;
 
 export const useDetailBoard = () => {
 

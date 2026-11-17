@@ -8,7 +8,8 @@ import axiosInstance from "@/utils/api";
 
 const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL;
 export const useReply = () => {
-  const { user: me } = useContext(AuthContext); // 로그인한 사용자 정보
+  // 로그인하지 않았어도 댓글을 쓸 수 있다. 이때는 쿠키로 식별되는 게스트가 작성자가 된다.
+  const { ensureActor } = useContext(AuthContext);
   const [reply, setReply] = useState<Reply[] | null>(null);
   const [replyInput, setReplyInput] = useState("");
   const [replyInputErrorText, setReplyInputErrorText] = useState<string | null>(null); // 에러 메시지 상태 추가
@@ -26,8 +27,9 @@ export const useReply = () => {
   // 댓글 또는 대댓글을 서버에 제출하는 함수
   const submitReply = useCallback(
     async (boardId: number, parentReplyId: number | null, content: string) => {
+      const me = await ensureActor();
       if (!me) {
-        setReplyInputErrorText("로그인이 필요합니다.");
+        setReplyInputErrorText("작성자 정보를 준비하지 못했습니다. 잠시 후 다시 시도해주세요.");
         return;
       }
       if (!content.trim()) {
@@ -47,8 +49,9 @@ export const useReply = () => {
           title: parentReplyId === null ? "" : null, // 일반 댓글인 경우 비어있는 문자열, 대댓글인 경우 null
         };
 
-        const response = await axios.post<ReplyDto>(
-          `${API_BASE_URL}/api/boards/${boardId}/comments`,
+        // 작성자는 서버가 로그인 토큰/게스트 쿠키로 정한다. 둘 다 실리도록 공용 axiosInstance 로 보낸다.
+        const response = await axiosInstance.post<ReplyDto>(
+          `/api/boards/${boardId}/comments`,
           requestBody
         );
 
@@ -63,7 +66,7 @@ export const useReply = () => {
         throw error; // 에러를 호출자에게 다시 던져 처리할 수 있도록 합니다.
       }
     },
-    [me, loadReply] // me (사용자 정보)와 loadReply가 변경될 때 함수 재생성
+    [ensureActor, loadReply]
   );
 
   const deleteComment = useCallback(async (boardId: number, replyId: number) => {

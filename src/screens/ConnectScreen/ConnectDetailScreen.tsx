@@ -38,6 +38,7 @@ import Constants from "expo-constants";
 import axios from "axios";
 import theme from "@/modules/theme";
 import VerifiedBadge from "@/components/VerifiedBadge";
+import { isGuestUserId } from "@/utils/guest";
 
 const screenHeight = Dimensions.get("window").height;
 // 댓글 입력창 한 줄 높이. 등록 버튼도 같은 높이로 맞춘다.
@@ -119,7 +120,9 @@ const editStyles = StyleSheet.create({
 
 const ConnectDetail = () => {
   const navigation = useRootNavigation<"ConnectDetail" | "BottomTab" | "Signin">();
-  const { user: me } = useContext(AuthContext);
+  const { user: member, guest, ensureActor } = useContext(AuthContext);
+  // 댓글·채팅을 쓰는 주체: 회원, 아니면 쿠키로 식별되는 게스트 (로그인 없이도 댓글·채팅 가능)
+  const me = member ?? guest;
   const [isSendingFriendRequest, setIsSendingFriendRequest] = useState(false);
   const [selectedUser, setSelectedUser] = useState<{
     userId: string;
@@ -176,26 +179,17 @@ const ConnectDetail = () => {
   const [isStartingChat, setIsStartingChat] = useState(false);
   const currentBoardId = routes.params.parentId;
 
-  const promptCommentLogin = useCallback(() => {
-    Alert.alert(
-      "로그인이 필요합니다.",
-      "댓글을 작성하려면 로그인이 필요합니다.",
-      [
-        {
-          text: "로그인",
-          onPress: () => navigation.navigate("Signin"),
-        },
-        { text: "닫기" },
-      ]
-    );
-  }, [navigation]);
+  const alertActorUnavailable = useCallback(() => {
+    Alert.alert("잠시 후 다시 시도해주세요.", "작성자 정보를 준비하지 못했습니다.");
+  }, []);
 
   const handleRegisterReply = useCallback(async () => {
     // 대댓글 대상이 지정돼 있으면 그 댓글의 자식으로, 없으면 게시글 직속 댓글로 등록한다.
     const parentReplyIdForSubmit = replyTarget?.id ?? null;
 
-    if (!me) {
-      promptCommentLogin();
+    // 로그인하지 않았다면 이때 게스트(랜덤 닉네임)를 발급받는다
+    if (!(await ensureActor())) {
+      alertActorUnavailable();
       return;
     }
     if (!currentBoardId) {
@@ -222,7 +216,7 @@ const ConnectDetail = () => {
     } catch (error) {
       console.error("댓글 등록 중 최종 에러:", error);
     }
-  }, [me, promptCommentLogin, currentBoardId, replyInput, submitReply, replyTarget]);
+  }, [ensureActor, alertActorUnavailable, currentBoardId, replyInput, submitReply, replyTarget]);
 
   const toggleExpand = (id: number) => {
     setExpandedReplies((prev) =>
@@ -236,9 +230,10 @@ const ConnectDetail = () => {
     if (isSendingFriendRequest) return;
     setIsSendingFriendRequest(true);
 
-    const currentUserId = me?.userId || me?.email;
+    // 친구는 회원끼리만 맺는다 (게스트는 기기 쿠키에 묶인 임시 계정이라)
+    const currentUserId = member?.userId || member?.email;
     if (!currentUserId) {
-      Alert.alert("권한 오류", "로그인이 필요합니다.");
+      Alert.alert("로그인이 필요합니다.", "친구 요청은 로그인 후 이용할 수 있어요.");
       setIsSendingFriendRequest(false);
       return;
     }
@@ -266,7 +261,7 @@ const ConnectDetail = () => {
       setSelectedUser(null); // 요청 후 바텀시트 닫기
       refSheet.current?.close(); // 요청 후 바텀시트 닫기
     }
-  }, [isSendingFriendRequest, me]);
+  }, [isSendingFriendRequest, member]);
 
   useEffect(() => {
     if (routes.params.parentId) {
@@ -292,9 +287,10 @@ const ConnectDetail = () => {
     if (isStartingChat) return; // 이미 채팅 시작 중이면 무시
     setIsStartingChat(true);
 
-    const currentUserId = me?.userId || me?.email; // 현재 로그인 유저의 고유 ID (userId나 email 중 하나)
+    // 로그인하지 않았다면 게스트로 채팅한다 (없으면 이때 발급)
+    const currentUserId = (me ?? (await ensureActor()))?.userId;
     if (!currentUserId) {
-      Alert.alert("권한 오류", "로그인이 필요합니다.");
+      alertActorUnavailable();
       setIsStartingChat(false);
       return;
     }
@@ -366,7 +362,7 @@ const ConnectDetail = () => {
     } finally {
       setIsStartingChat(false);
     }
-  }, [me?.userId, me?.email, isStartingChat, navigation]); // me.username 대신 me.userId/email 사용
+  }, [me?.userId, ensureActor, alertActorUnavailable, isStartingChat, navigation]);
 
   const startEdit = useCallback(() => {
     if (!boardDetail) return;
@@ -464,15 +460,11 @@ const ConnectDetail = () => {
   // 화면 이동 없이 대상 댓글만 지정하고 입력창으로 포커스를 옮긴다.
   const onPressReply = useCallback(
     (item: Reply) => {
-      if (!me) {
-        promptCommentLogin();
-        return;
-      }
       setSelectedUser(null);
       setReplyTarget({ id: item.id, userName: item.userName });
       inputRef.current?.focus();
     },
-    [me, promptCommentLogin]
+    []
   );
 
   // 주의: FlatList 의 ListHeaderComponent 에 "컴포넌트 함수"로 넘기면 안 된다.
@@ -1076,7 +1068,8 @@ const ConnectDetail = () => {
 
             {me?.userId !== selectedUser.userId && ( // 본인 프로필이 아닐 때만
               <>
-                {/* 친구 요청 버튼 */}
+                {/* 친구 요청 버튼 (게스트에게는 친구 요청을 보낼 수 없다) */}
+                {!isGuestUserId(selectedUser.userId) && (
                 <TouchableOpacity
                   style={{
                     backgroundColor: theme.colors.primary,
@@ -1095,6 +1088,7 @@ const ConnectDetail = () => {
                     </Text>
                   )}
                 </TouchableOpacity>
+                )}
 
                 {/* 1:1 대화하기 버튼 */}
                 <TouchableOpacity
@@ -1174,12 +1168,6 @@ const ConnectDetail = () => {
               value={replyInput}
               onChangeText={(text) => {
                   setReplyInput(text);
-              }}
-              onFocus={() => {
-                if (!me) {
-                  inputRef.current?.blur();
-                  promptCommentLogin();
-                }
               }}
               placeholder={
                 replyTarget ? "대댓글을 남겨주세요." : "댓글을 남겨주세요."

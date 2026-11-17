@@ -30,7 +30,9 @@ export default function ChatRoomsListScreen({ navigation }) {
   const [isUserIdLoading, setIsUserIdLoading] = useState(true); // 🌟 사용자 ID 로딩 상태
   const [isRoomsLoading, setIsRoomsLoading] = useState(false); // 🌟 채팅방 목록 로딩 상태
   const [rooms, setRooms] = useState([]);
-  const { user: me, initialized } = useContext(AuthContext);
+  const { user: member, guest, ensureActor, initialized } = useContext(AuthContext);
+  // 로그인하지 않았다면 쿠키로 식별되는 게스트로 채팅한다
+  const me = member ?? guest;
 
   const stompClient = useRef(null);
 
@@ -43,7 +45,9 @@ export default function ChatRoomsListScreen({ navigation }) {
       try {
         // 🌟 친구/모집 화면과 동일한 식별자를 써야 멤버십(user_id)이 일치한다.
         //    로그인 직후에는 email이 빈 문자열이므로 userId를 우선 사용.
-        const currentUserId = me?.userId || me?.email;
+        // 회원도 게스트도 아니면 이때 게스트(랜덤 닉네임)를 발급받는다
+        const actor = me ?? (await ensureActor());
+        const currentUserId = actor?.userId || actor?.email;
         if (currentUserId) {
           setUserId(currentUserId);
         } else {

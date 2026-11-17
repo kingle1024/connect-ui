@@ -6,6 +6,17 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRootNavigation } from "@/hooks/useNavigation";
 import Alert from '@blazejkustra/react-native-alert';
+import apiClient from "@/utils/api";
+
+// 서버의 게스트 응답(UserInfoResponse)을 앱의 User 로 바꾼다.
+const toGuestUser = (data: any): User => ({
+  userId: data?.userId || "",
+  email: "",
+  name: data?.name || "",
+  profileUrl: data?.profileUrl || "",
+  verified: false,
+  guest: true,
+});
 
 type SignInResponse = {
   accessToken: string;
@@ -21,6 +32,8 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const navigation = useRootNavigation<"BottomTab" | "Signin">();
   const [initialized, setInitialized] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  // 비로그인 게스트. 서버가 심어준 HttpOnly 쿠키로 식별되고, 앱은 그 결과(닉네임 등)만 들고 있는다.
+  const [guest, setGuest] = useState<User | null>(null);
   const [processingSignup, setProcessingSignup] = useState(false);
   const [processingSignin, setProcessingSignin] = useState(false);
 
@@ -29,6 +42,16 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await AsyncStorage.removeItem("accessToken");
     await AsyncStorage.removeItem("refreshToken");
     setUser(null);
+  }, []);
+
+  // 쿠키에 게스트가 있으면 복원한다. 없으면 만들지 않는다 (구경만 하는 방문자까지 계정을 만들지 않게).
+  const loadGuest = useCallback(async () => {
+    try {
+      const res = await apiClient.get("/api/auth/guest");
+      setGuest(res.status === 200 && res.data?.userId ? toGuestUser(res.data) : null);
+    } catch (error) {
+      setGuest(null);
+    }
   }, []);
 
   useEffect(() => {
@@ -106,6 +129,10 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           await clearSession();
         }
       } finally {
+        // 회원이 아니면 예전에 쓰던 게스트가 있는지 쿠키로 확인한다.
+        if (!(await AsyncStorage.getItem("accessToken"))) {
+          await loadGuest();
+        }
         setInitialized(true);
       }
     };
@@ -207,9 +234,11 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signout = useCallback(async () => {
     await clearSession();
+    // 로그아웃하면 이 기기의 게스트로 돌아간다 (예전에 게스트로 쓴 글/채팅을 다시 이어갈 수 있게)
+    loadGuest();
 
     navigation.navigate("Signin");
-  }, [clearSession, navigation]);
+  }, [clearSession, loadGuest, navigation]);
 
   const updateProfileImage = useCallback(
     async (filepath: string) => {},
@@ -239,10 +268,31 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const addFcmToken = useCallback(async (token: string) => {}, [user]);
 
+  /**
+   * 글/댓글/채팅을 쓰는 주체를 돌려준다.
+   * 회원이면 회원 정보, 아니면 게스트. 게스트가 아직 없으면 서버에 요청해 랜덤 닉네임 게스트를 만든다.
+   * (서버가 쿠키를 심어주므로 이후 요청부터 본인 확인은 쿠키로 된다)
+   */
+  const ensureActor = useCallback(async (): Promise<User | null> => {
+    if (user) return user;
+    if (guest) return guest;
+    try {
+      const res = await apiClient.post("/api/auth/guest");
+      const created = toGuestUser(res.data);
+      setGuest(created);
+      return created;
+    } catch (error) {
+      console.log("게스트 발급 실패", error);
+      return null;
+    }
+  }, [user, guest]);
+
   const value = useMemo(() => {
     return {
       initialized,
       user,
+      guest,
+      ensureActor,
       signup,
       processingSignup,
       signin,
@@ -255,6 +305,8 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [
     initialized,
     user,
+    guest,
+    ensureActor,
     signup,
     processingSignup,
     signin,

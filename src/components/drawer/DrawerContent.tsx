@@ -18,7 +18,7 @@ const DrawerContent = (props: DrawerContentComponentProps) => {
   const navigation = useRootNavigation<
     "Signin" | "MyPage" | "Meal" | "Inquiry" | "Help"
   >();
-  const { user: me, signout } = useContext(AuthContext);
+  const { user: me, guest, signout } = useContext(AuthContext);
 
   const onPressBottomButton = useCallback(() => {
     if (me) {
@@ -75,11 +75,18 @@ const DrawerContent = (props: DrawerContentComponentProps) => {
               />
             ) : null}
           </View>
+        ) : guest ? (
+          // 로그인하지 않고 글/댓글/채팅을 쓴 게스트. 이 닉네임으로 보인다.
+          <Text style={styles.userName}>{guest.name} (게스트)</Text>
         ) : (
           <Text style={styles.userName}>로그인이 필요합니다.</Text>
         )}
         <Text style={styles.userEmail}>
-          {me ? me.userId : "로그인하여 모든 기능을 이용해보세요."}
+          {me
+            ? me.userId
+            : guest
+              ? "로그인하면 친구·마이페이지도 쓸 수 있어요."
+              : "로그인하여 모든 기능을 이용해보세요."}
         </Text>
       </View>
 

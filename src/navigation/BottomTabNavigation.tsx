@@ -108,25 +108,7 @@ const BottomTabNavigation = () => {
         }}
         listeners={() => ({
           tabPress: (e) => {
-            // 로그인 상태 확인
-            if (!me) {
-              e.preventDefault(); // <--- 이게 핵심! 탭 네비게이션을 멈춥니다.
-              Alert.alert(
-                "로그인이 필요합니다.",
-                "채팅을 이용하려면 로그인이 필요합니다.",
-                [
-                  {
-                    text: "로그인",
-                    onPress: () => {
-                      rootNavigation.navigate("Signin", {
-                        redirectTab: "Chat",
-                      });
-                    },
-                  },
-                  { text: "닫기" },
-                ]
-              );
-            }
+            // 로그인하지 않아도 채팅할 수 있다. 채팅 목록 화면이 게스트(랜덤 닉네임)를 발급받는다.
           },
         })}
       />
