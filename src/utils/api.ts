@@ -1,6 +1,7 @@
 import axios, { AxiosHeaders, InternalAxiosRequestConfig } from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
+import { GUEST_TOKEN_HEADER, getGuestToken } from "@/utils/guest";
 
 const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL || "";
 
@@ -34,6 +35,14 @@ axiosInstance.interceptors.request.use(async (config: InternalAxiosRequestConfig
     const accessToken = await AsyncStorage.getItem("accessToken");
     if (accessToken) {
       headers.set("Authorization", `Bearer ${accessToken}`);
+    }
+  }
+  // 회원이 아니면 게스트 토큰도 헤더로 보낸다. 쿠키가 실리는 브라우저에서는 서버가 쿠키를 먼저 보고,
+  // Safari/iOS 처럼 다른 사이트 쿠키를 막는 곳에서는 이 헤더로 같은 사람임을 확인한다.
+  if (!headers.has("Authorization") && !headers.has(GUEST_TOKEN_HEADER)) {
+    const guestToken = await getGuestToken();
+    if (guestToken) {
+      headers.set(GUEST_TOKEN_HEADER, guestToken);
     }
   }
   config.headers = headers;

@@ -7,6 +7,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRootNavigation } from "@/hooks/useNavigation";
 import Alert from '@blazejkustra/react-native-alert';
 import apiClient from "@/utils/api";
+import { saveGuestToken } from "@/utils/guest";
 
 // 서버의 게스트 응답(UserInfoResponse)을 앱의 User 로 바꾼다.
 const toGuestUser = (data: any): User => ({
@@ -44,11 +45,20 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setUser(null);
   }, []);
 
-  // 쿠키에 게스트가 있으면 복원한다. 없으면 만들지 않는다 (구경만 하는 방문자까지 계정을 만들지 않게).
+  // 쿠키(또는 저장해 둔 게스트 토큰)로 기존 게스트를 복원한다.
+  // 없으면 만들지 않는다 (구경만 하는 방문자까지 계정을 만들지 않게).
   const loadGuest = useCallback(async () => {
     try {
       const res = await apiClient.get("/api/auth/guest");
-      setGuest(res.status === 200 && res.data?.userId ? toGuestUser(res.data) : null);
+      if (res.status === 200 && res.data?.userId) {
+        // 만료가 연장된 새 토큰으로 바꿔 둔다 (Safari 처럼 쿠키가 막힌 곳에서 헤더로 쓴다)
+        await saveGuestToken(res.data.guestToken);
+        setGuest(toGuestUser(res.data));
+      } else {
+        // 서버가 모르는 토큰(만료·정지)이면 지워서 다음에 새 게스트를 받게 한다
+        await saveGuestToken(null);
+        setGuest(null);
+      }
     } catch (error) {
       setGuest(null);
     }
@@ -278,6 +288,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (guest) return guest;
     try {
       const res = await apiClient.post("/api/auth/guest");
+      await saveGuestToken(res.data?.guestToken);
       const created = toGuestUser(res.data);
       setGuest(created);
       return created;
