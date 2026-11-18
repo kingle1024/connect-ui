@@ -16,6 +16,14 @@ import Toast from "react-native-toast-message";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AuthContext from "@/components/auth/AuthContext";
 import theme from "@/modules/theme";
+import Alert from "@blazejkustra/react-native-alert";
+import {
+  GUEST_CLAIM_MENU_LABEL,
+  GuestClaimSummary,
+  claimGuestRecords,
+  describeGuestRecords,
+  fetchGuestClaimSummary,
+} from "@/utils/guestClaim";
 
 const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL ?? "";
 const axiosInstance = axios.create({
@@ -27,8 +35,17 @@ const errorMessageOf = (error: any, fallback: string) =>
   error?.response?.data?.message ?? fallback;
 
 export default function MyPageScreen() {
-  const { user: me, refreshUser } = useContext(AuthContext);
+  const { user: me, refreshUser, onGuestClaimed } = useContext(AuthContext);
   const insets = useSafeAreaInsets();
+
+  // 이 기기에서 게스트로 쓴 기록 (로그인 때 "나중에"를 눌렀어도 여기서 다시 가져올 수 있다)
+  const [guestClaim, setGuestClaim] = useState<GuestClaimSummary | null>(null);
+  const [claiming, setClaiming] = useState(false);
+
+  useEffect(() => {
+    if (!me?.userId) return;
+    fetchGuestClaimSummary().then(setGuestClaim);
+  }, [me?.userId]);
 
   // 이름(별칭) 변경
   const [nameInput, setNameInput] = useState(me?.name ?? "");
@@ -128,6 +145,34 @@ export default function MyPageScreen() {
     }
   }, [emailInput, codeInput, confirmingCode, refreshUser, showToast]);
 
+  const onClaimGuest = useCallback(() => {
+    if (!guestClaim?.available || claiming) return;
+    Alert.alert(
+      GUEST_CLAIM_MENU_LABEL,
+      `이 기기에서 '${guestClaim.guestName}'(으)로 쓴 ${describeGuestRecords(guestClaim)}을(를) 내 계정으로 가져올까요?`,
+      [
+        { text: "취소", style: "cancel" },
+        {
+          text: "가져오기",
+          onPress: async () => {
+            setClaiming(true);
+            try {
+              const moved = await claimGuestRecords();
+              onGuestClaimed();
+              setGuestClaim(null);
+              showToast("success", "가져왔어요", `${describeGuestRecords(moved)}이(가) 내 계정으로 옮겨졌어요.`);
+            } catch (error: any) {
+              showToast("error", "가져오지 못했어요", errorMessageOf(error, "잠시 후 다시 시도해주세요."));
+              fetchGuestClaimSummary().then(setGuestClaim);
+            } finally {
+              setClaiming(false);
+            }
+          },
+        },
+      ]
+    );
+  }, [guestClaim, claiming, onGuestClaimed, showToast]);
+
   if (!me) {
     return (
       <View style={styles.center}>
@@ -226,6 +271,25 @@ export default function MyPageScreen() {
           </>
         )}
       </View>
+
+      {/* 게스트 기록 가져오기: 이 기기에 가져올 게스트 기록이 있을 때만 보인다 */}
+      {guestClaim?.available ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{GUEST_CLAIM_MENU_LABEL}</Text>
+          <Text style={styles.helperText}>
+            이 기기에서 로그인하지 않고 '{guestClaim.guestName}'(으)로 쓴{" "}
+            {describeGuestRecords(guestClaim)}이(가) 있어요. 내 계정으로 가져오면 수정·삭제할 수 있고,
+            채팅방도 내 채팅 목록에 보여요.
+          </Text>
+          <TouchableOpacity style={styles.secondaryButton} onPress={onClaimGuest} disabled={claiming}>
+            {claiming ? (
+              <ActivityIndicator color={theme.colors.primary} size="small" />
+            ) : (
+              <Text style={styles.secondaryButtonText}>{GUEST_CLAIM_MENU_LABEL}</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      ) : null}
     </ScrollView>
   );
 }

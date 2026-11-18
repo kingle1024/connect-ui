@@ -9,6 +9,8 @@ export interface AuthContextProp {
   guest: User | null;
   // 글/댓글/채팅을 쓰는 주체: 회원이면 회원, 아니면 게스트(없으면 서버에서 새로 발급). 실패하면 null
   ensureActor: () => Promise<User | null>;
+  // 게스트 기록을 회원 계정으로 가져온 뒤 호출 (이 기기의 게스트 상태를 비움)
+  onGuestClaimed: () => void;
   signup: (userId: string, password: string, name: string) => Promise<void>;
   processingSignup: boolean;
   signin: (
@@ -29,6 +31,7 @@ const AuthContext = createContext<AuthContextProp>({
   user: null,
   guest: null,
   ensureActor: async () => null,
+  onGuestClaimed: () => {},
   signup: async () => {},
   processingSignup: false,
   signin: async () => {},

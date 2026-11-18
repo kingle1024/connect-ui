@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Constants from "expo-constants";
 import AuthContext from "./AuthContext";
 import { TypeBottomTabNavigationParams, User } from "@/types";
@@ -8,6 +8,14 @@ import { useRootNavigation } from "@/hooks/useNavigation";
 import Alert from '@blazejkustra/react-native-alert';
 import apiClient from "@/utils/api";
 import { saveGuestToken } from "@/utils/guest";
+import {
+  GUEST_CLAIM_MENU_LABEL,
+  claimGuestRecords,
+  describeGuestRecords,
+  fetchGuestClaimSummary,
+  isGuestClaimDeclined,
+  markGuestClaimDeclined,
+} from "@/utils/guestClaim";
 
 // 서버의 게스트 응답(UserInfoResponse)을 앱의 User 로 바꾼다.
 const toGuestUser = (data: any): User => ({
@@ -298,12 +306,75 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [user, guest]);
 
+  // 게스트 기록을 가져왔으면 이 기기의 게스트 상태를 비운다 (서버에서 비활성화됨, 다음에 새 게스트로 시작)
+  const onGuestClaimed = useCallback(() => {
+    setGuest(null);
+  }, []);
+
+  /**
+   * 로그인하면(앱을 다시 열어 로그인이 복구될 때 포함) 이 기기에 게스트로 쓴 기록이 있는지 확인하고
+   * 내 계정으로 가져올지 묻는다. 공용 기기에서 남의 기록이 붙지 않도록 자동으로 옮기지 않는다.
+   * "나중에"를 누르면 같은 회원+게스트 조합으로는 다시 묻지 않고, 마이페이지 버튼으로 가져오게 안내한다.
+   */
+  const promptedFor = useRef<string | null>(null);
+  useEffect(() => {
+    const memberUserId = user?.userId;
+    if (!initialized || !memberUserId || promptedFor.current === memberUserId) return;
+    promptedFor.current = memberUserId;
+
+    (async () => {
+      const summary = await fetchGuestClaimSummary();
+      if (!summary?.available || !summary.guestUserId) return;
+      if (await isGuestClaimDeclined(memberUserId, summary.guestUserId)) return;
+
+      const guestUserId = summary.guestUserId;
+      Alert.alert(
+        "게스트로 쓴 기록이 있어요",
+        `이 기기에서 '${summary.guestName}'(으)로 쓴 ${describeGuestRecords(summary)}을(를) 내 계정으로 가져올까요?`,
+        [
+          {
+            text: "나중에",
+            style: "cancel",
+            onPress: async () => {
+              await markGuestClaimDeclined(memberUserId, guestUserId);
+              Alert.alert(
+                "언제든 다시 가져올 수 있어요",
+                `마이페이지의 '${GUEST_CLAIM_MENU_LABEL}' 버튼으로 나중에 가져올 수 있어요. 이 기기의 브라우저 데이터를 지우면 가져올 수 없으니 참고해주세요.`
+              );
+            },
+          },
+          {
+            text: "가져오기",
+            onPress: async () => {
+              try {
+                const moved = await claimGuestRecords();
+                onGuestClaimed();
+                Alert.alert("가져왔어요", `${describeGuestRecords(moved)}이(가) 내 계정으로 옮겨졌어요.`);
+              } catch (error) {
+                Alert.alert(
+                  "가져오지 못했어요",
+                  `잠시 후 마이페이지의 '${GUEST_CLAIM_MENU_LABEL}' 버튼으로 다시 시도해주세요.`
+                );
+              }
+            },
+          },
+        ]
+      );
+    })();
+  }, [initialized, user?.userId, onGuestClaimed]);
+
+  // 로그아웃하면 다음 로그인 때 다시 확인할 수 있게 초기화
+  useEffect(() => {
+    if (!user) promptedFor.current = null;
+  }, [user]);
+
   const value = useMemo(() => {
     return {
       initialized,
       user,
       guest,
       ensureActor,
+      onGuestClaimed,
       signup,
       processingSignup,
       signin,
@@ -318,6 +389,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     user,
     guest,
     ensureActor,
+    onGuestClaimed,
     signup,
     processingSignup,
     signin,
