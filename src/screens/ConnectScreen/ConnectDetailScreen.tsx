@@ -18,6 +18,7 @@ import React, {
   useState,
 } from "react";
 import Alert from '@blazejkustra/react-native-alert';
+import Toast from "react-native-toast-message";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import { Reply } from "@/types";
@@ -454,6 +455,61 @@ const ConnectDetail = () => {
     ]);
   }, [boardDetail, deleteBoardDetail, navigation]);
 
+  // 모집 마감 여부: 인원이 찼거나 마감일이 지났으면 마감 (목록 화면의 참여하기와 같은 기준)
+  const isRecruitClosed =
+    !!boardDetail &&
+    (boardDetail.currentParticipants >= boardDetail.maxCapacity ||
+      !dayjs(boardDetail.deadlineDts).isAfter(dayjs()));
+
+  // 참여하기. 목록 화면(ConnectScreen)의 더보기 > 참여하기와 같은 흐름이다.
+  const onPressJoin = useCallback(() => {
+    if (!boardDetail) return;
+    if (!me) {
+      Alert.alert(
+        "로그인이 필요합니다.",
+        "모집에 참여하려면 로그인이 필요합니다.",
+        [
+          { text: "로그인", onPress: () => navigation.navigate("Signin") },
+          { text: "닫기" },
+        ]
+      );
+      return;
+    }
+    if (boardDetail.userId === me.userId) {
+      Toast.show({
+        type: "info",
+        text1: "이미 참여되어 있습니다",
+        visibilityTime: 2000,
+        topOffset: insets.top,
+      });
+      return;
+    }
+    if (isRecruitClosed) {
+      Toast.show({
+        type: "error",
+        text1: "모집 마감!",
+        text2: `${boardDetail.title} 모집이 마감되었습니다.`,
+        visibilityTime: 3000,
+        topOffset: insets.top,
+      });
+      return;
+    }
+    Alert.alert("참여하시겠습니까?", "지금 참여하면 합류할 수 있어요!", [
+      {
+        text: "참여",
+        onPress: () =>
+          Toast.show({
+            type: "success",
+            text1: "참여 완료!",
+            text2: `${boardDetail.title} 모집에 참여했습니다.`,
+            visibilityTime: 3000,
+            topOffset: insets.top,
+          }),
+      },
+      { text: "다음에" },
+    ]);
+  }, [boardDetail, me, isRecruitClosed, navigation, insets.top]);
+
   // 대댓글 달기.
   // 예전에는 ConnectDetail 을 댓글 id 로 push 했지만, 댓글은 게시글과 다른 테이블/시퀀스라서
   // id 가 겹치면 엉뚱한 게시글이 열리고 안 겹치면 /api/boards/{id} 가 404 로 빈 화면이 됐다.
@@ -677,7 +733,33 @@ const ConnectDetail = () => {
             <Text style={{ fontSize: 16, marginBottom: 24, color: "#6B7280" }}>
               {boardDetail?.content}
             </Text>
-            <View style={{ height: 200 }} />
+            {/* 참여하기 */}
+            <View style={{ marginBottom: 24, gap: 8 }}>
+              <Text style={{ fontSize: 14, color: theme.colors.textSecondary, textAlign: "center" }}>
+                참여 인원 {boardDetail.currentParticipants}/{boardDetail.maxCapacity}명
+                {boardDetail.deadlineDts
+                  ? ` · ${dayjs(boardDetail.deadlineDts).format("M월 D일")} 마감`
+                  : ""}
+              </Text>
+              <TouchableOpacity
+                style={[
+                  editStyles.primaryButton,
+                  { flex: 0 },
+                  isRecruitClosed && { backgroundColor: theme.colors.field },
+                ]}
+                onPress={onPressJoin}
+              >
+                <Text
+                  style={[
+                    editStyles.primaryButtonText,
+                    isRecruitClosed && { color: theme.colors.textSecondary },
+                  ]}
+                >
+                  {isRecruitClosed ? "모집 마감" : "참여하기"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={{ height: 176 }} />
           </View>
         )}
 
@@ -778,6 +860,8 @@ const ConnectDetail = () => {
     isEditing,
     startEdit,
     confirmDelete,
+    onPressJoin,
+    isRecruitClosed,
     saveEdit,
     cancelEdit,
     savingEdit,
