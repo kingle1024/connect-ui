@@ -67,7 +67,22 @@ export const useDetailBoard = () => {
     });
   }, []);
 
+  // 모집 참여 / 참여 취소. 서버가 갱신된 글(인원 수, joined)을 돌려준다.
+  const joinBoard = useCallback(async (id: number) => {
+    const response = await axiosInstance.post<ConnectDetailBoardDto>(`/api/boards/${id}/participants`);
+    setBoardDetail(response.data);
+    return response.data;
+  }, []);
+
+  const leaveBoard = useCallback(async (id: number) => {
+    const response = await axiosInstance.delete<ConnectDetailBoardDto>(`/api/boards/${id}/participants`);
+    setBoardDetail(response.data);
+    return response.data;
+  }, []);
+
   return {
+    joinBoard,
+    leaveBoard,
     boardDetail,
     loadingBoardDetail,
     boardDetailError,

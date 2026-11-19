@@ -122,4 +122,5 @@ export interface ConnectDetailBoardDto {
   maxCapacity: number;
   currentParticipants: number;
   verified?: boolean; // 작성자의 더존 이메일 인증 여부
+  joined?: boolean; // 내가 이 모집에 참여했는지 (회원 토큰 / 게스트 쿠키 기준)
 }

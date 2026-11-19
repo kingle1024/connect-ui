@@ -14,6 +14,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -39,6 +40,9 @@ import Constants from "expo-constants";
 import axios from "axios";
 import theme from "@/modules/theme";
 import VerifiedBadge from "@/components/VerifiedBadge";
+import { Feather } from "@expo/vector-icons";
+import { DrawerActions } from "@react-navigation/native";
+import { buildPostShareUrl, sharePost } from "@/utils/sharePost";
 import { isGuestUserId } from "@/utils/guest";
 
 const screenHeight = Dimensions.get("window").height;
@@ -137,6 +141,8 @@ const ConnectDetail = () => {
     loadBoardDetail,
     updateBoardDetail,
     deleteBoardDetail,
+    joinBoard,
+    leaveBoard,
   } = useDetailBoard();
   const [isEditing, setIsEditing] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
@@ -461,9 +467,21 @@ const ConnectDetail = () => {
     (boardDetail.currentParticipants >= boardDetail.maxCapacity ||
       !dayjs(boardDetail.deadlineDts).isAfter(dayjs()));
 
-  // 참여하기. 목록 화면(ConnectScreen)의 더보기 > 참여하기와 같은 흐름이다.
+  const isJoined = !!boardDetail?.joined;
+  const [joining, setJoining] = useState(false);
+
+  const showJoinError = useCallback(
+    (error: any, fallback: string) => {
+      const message =
+        typeof error?.response?.data === "string" ? error.response.data : fallback;
+      Toast.show({ type: "error", text1: message, visibilityTime: 3000, topOffset: insets.top });
+    },
+    [insets.top]
+  );
+
+  // 참여하기 / 참여 취소. 서버(board_participant)에 저장되고 참여 인원이 바로 갱신된다.
   const onPressJoin = useCallback(async () => {
-    if (!boardDetail) return;
+    if (!boardDetail || joining) return;
     // 로그인하지 않았다면 게스트로 참여한다 (없으면 이때 발급)
     const actor = me ?? (await ensureActor());
     if (!actor) {
@@ -473,12 +491,40 @@ const ConnectDetail = () => {
     if (boardDetail.userId === actor.userId) {
       Toast.show({
         type: "info",
-        text1: "이미 참여되어 있습니다",
-        visibilityTime: 2000,
+        text1: "내가 만든 모집이에요",
+        text2: "작성자는 처음부터 참여 인원에 포함돼요.",
+        visibilityTime: 2500,
         topOffset: insets.top,
       });
       return;
     }
+
+    if (isJoined) {
+      Alert.alert("참여를 취소할까요?", "취소하면 참여 인원에서 빠져요.", [
+        {
+          text: "참여 취소",
+          onPress: async () => {
+            setJoining(true);
+            try {
+              await leaveBoard(boardDetail.id);
+              Toast.show({
+                type: "info",
+                text1: "참여를 취소했어요",
+                visibilityTime: 2000,
+                topOffset: insets.top,
+              });
+            } catch (error) {
+              showJoinError(error, "참여 취소 중 오류가 발생했습니다.");
+            } finally {
+              setJoining(false);
+            }
+          },
+        },
+        { text: "닫기" },
+      ]);
+      return;
+    }
+
     if (isRecruitClosed) {
       Toast.show({
         type: "error",
@@ -492,18 +538,78 @@ const ConnectDetail = () => {
     Alert.alert("참여하시겠습니까?", "지금 참여하면 합류할 수 있어요!", [
       {
         text: "참여",
-        onPress: () =>
-          Toast.show({
-            type: "success",
-            text1: "참여 완료!",
-            text2: `${boardDetail.title} 모집에 참여했습니다.`,
-            visibilityTime: 3000,
-            topOffset: insets.top,
-          }),
+        onPress: async () => {
+          setJoining(true);
+          try {
+            await joinBoard(boardDetail.id);
+            Toast.show({
+              type: "success",
+              text1: "참여 완료!",
+              text2: `${boardDetail.title} 모집에 참여했습니다.`,
+              visibilityTime: 3000,
+              topOffset: insets.top,
+            });
+          } catch (error) {
+            showJoinError(error, "참여 중 오류가 발생했습니다.");
+            // 그 사이 정원이 찼을 수 있으니 최신 인원으로 다시 그린다
+            loadBoardDetail(boardDetail.id);
+          } finally {
+            setJoining(false);
+          }
+        },
       },
       { text: "다음에" },
     ]);
-  }, [boardDetail, me, ensureActor, alertActorUnavailable, isRecruitClosed, insets.top]);
+  }, [boardDetail, joining, me, ensureActor, alertActorUnavailable, isJoined, isRecruitClosed, insets.top, joinBoard, leaveBoard, loadBoardDetail, showJoinError]);
+
+  const onPressShare = useCallback(async () => {
+    if (!boardDetail) return;
+    const result = await sharePost(boardDetail);
+    if (result === "copied") {
+      Toast.show({
+        type: "success",
+        text1: "링크를 복사했어요",
+        text2: "붙여넣기로 친구에게 보내보세요.",
+        visibilityTime: 2500,
+        topOffset: insets.top,
+      });
+    } else if (result === "failed") {
+      Toast.show({
+        type: "error",
+        text1: "공유하지 못했어요",
+        text2: buildPostShareUrl(boardDetail.id),
+        visibilityTime: 4000,
+        topOffset: insets.top,
+      });
+    }
+  }, [boardDetail, insets.top]);
+
+  // 헤더 오른쪽: 공유 아이콘 + 기존 메뉴(드로어) 버튼
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <TouchableOpacity
+            onPress={onPressShare}
+            disabled={!boardDetail}
+            accessibilityRole="button"
+            accessibilityLabel="공유하기"
+            style={{ padding: 5, opacity: boardDetail ? 1 : 0.4 }}
+          >
+            <Feather name="share-2" size={22} color="black" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.dispatch(DrawerActions.toggleDrawer())}
+            accessibilityRole="button"
+            accessibilityLabel="메뉴"
+            style={{ padding: 5 }}
+          >
+            <Feather name="menu" size={24} color="black" />
+          </TouchableOpacity>
+        </View>
+      ),
+    });
+  }, [navigation, onPressShare, boardDetail]);
 
   // 대댓글 달기.
   // 예전에는 ConnectDetail 을 댓글 id 로 push 했지만, 댓글은 게시글과 다른 테이블/시퀀스라서
@@ -736,23 +842,44 @@ const ConnectDetail = () => {
                   ? ` · ${dayjs(boardDetail.deadlineDts).format("M월 D일")} 마감`
                   : ""}
               </Text>
-              <TouchableOpacity
-                style={[
-                  editStyles.primaryButton,
-                  { flex: 0 },
-                  isRecruitClosed && { backgroundColor: theme.colors.field },
-                ]}
-                onPress={onPressJoin}
-              >
-                <Text
-                  style={[
-                    editStyles.primaryButtonText,
-                    isRecruitClosed && { color: theme.colors.textSecondary },
-                  ]}
-                >
-                  {isRecruitClosed ? "모집 마감" : "참여하기"}
-                </Text>
-              </TouchableOpacity>
+              {(() => {
+                // 참여 중이면 '참여 취소', 내 글/마감이면 회색, 그 밖엔 '참여하기'
+                const muted = isAuthor || isJoined || isRecruitClosed;
+                const label = isAuthor
+                  ? "내가 만든 모집"
+                  : isJoined
+                    ? "참여 중 · 참여 취소"
+                    : isRecruitClosed
+                      ? "모집 마감"
+                      : "참여하기";
+                return (
+                  <TouchableOpacity
+                    style={[
+                      editStyles.primaryButton,
+                      { flex: 0 },
+                      muted && { backgroundColor: theme.colors.field },
+                      joining && { opacity: 0.6 },
+                    ]}
+                    onPress={onPressJoin}
+                    disabled={joining}
+                    accessibilityRole="button"
+                    accessibilityLabel={label}
+                  >
+                    {joining ? (
+                      <ActivityIndicator color={muted ? theme.colors.textSecondary : theme.colors.white} />
+                    ) : (
+                      <Text
+                        style={[
+                          editStyles.primaryButtonText,
+                          muted && { color: theme.colors.textSecondary },
+                        ]}
+                      >
+                        {label}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })()}
             </View>
             <View style={{ height: 176 }} />
           </View>
@@ -856,6 +983,8 @@ const ConnectDetail = () => {
     startEdit,
     confirmDelete,
     onPressJoin,
+    isJoined,
+    joining,
     isRecruitClosed,
     saveEdit,
     cancelEdit,

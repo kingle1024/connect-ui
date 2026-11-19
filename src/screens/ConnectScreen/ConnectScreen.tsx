@@ -34,6 +34,7 @@ import PostItem from "./PostItem";
 import dayjs from "dayjs";
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import Toast from "react-native-toast-message";
+import apiClient from "@/utils/api";
 import { useRootNavigation } from "@/hooks/useNavigation";
 import AuthContext from "@/components/auth/AuthContext";
 import NewPostSheet from "./NewPostSheet";
@@ -79,6 +80,7 @@ export default function ConnectScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const {
     posts,
+    setPosts,
     loadPosts,
     loadMorePosts,
     hasNextPage,
@@ -277,14 +279,33 @@ export default function ConnectScreen() {
     }
   };
 
-  const onPressJoin = (item: Post) => {
-    Toast.show({
-      type: "success",
-      text1: "참여 완료!",
-      text2: `${item.title} 모집에 참여했습니다.`,
-      visibilityTime: 3000,
-      topOffset: insets.top,
-    });
+  // 모집 참여 (서버에 저장). 성공하면 목록의 참여 인원도 바로 바꾼다.
+  const onPressJoin = async (item: Post) => {
+    try {
+      const { data } = await apiClient.post<Post>(`/api/boards/${item.id}/participants`);
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === item.id ? { ...p, currentParticipants: data.currentParticipants } : p
+        )
+      );
+      Toast.show({
+        type: "success",
+        text1: "참여 완료!",
+        text2: `${item.title} 모집에 참여했습니다.`,
+        visibilityTime: 3000,
+        topOffset: insets.top,
+      });
+    } catch (error: any) {
+      Toast.show({
+        type: "error",
+        text1:
+          typeof error?.response?.data === "string"
+            ? error.response.data
+            : "참여 중 오류가 발생했습니다.",
+        visibilityTime: 3000,
+        topOffset: insets.top,
+      });
+    }
   };
 
   const onPressReport = (item: Post) => {
