@@ -462,20 +462,15 @@ const ConnectDetail = () => {
       !dayjs(boardDetail.deadlineDts).isAfter(dayjs()));
 
   // 참여하기. 목록 화면(ConnectScreen)의 더보기 > 참여하기와 같은 흐름이다.
-  const onPressJoin = useCallback(() => {
+  const onPressJoin = useCallback(async () => {
     if (!boardDetail) return;
-    if (!me) {
-      Alert.alert(
-        "로그인이 필요합니다.",
-        "모집에 참여하려면 로그인이 필요합니다.",
-        [
-          { text: "로그인", onPress: () => navigation.navigate("Signin") },
-          { text: "닫기" },
-        ]
-      );
+    // 로그인하지 않았다면 게스트로 참여한다 (없으면 이때 발급)
+    const actor = me ?? (await ensureActor());
+    if (!actor) {
+      alertActorUnavailable();
       return;
     }
-    if (boardDetail.userId === me.userId) {
+    if (boardDetail.userId === actor.userId) {
       Toast.show({
         type: "info",
         text1: "이미 참여되어 있습니다",
@@ -508,7 +503,7 @@ const ConnectDetail = () => {
       },
       { text: "다음에" },
     ]);
-  }, [boardDetail, me, isRecruitClosed, navigation, insets.top]);
+  }, [boardDetail, me, ensureActor, alertActorUnavailable, isRecruitClosed, insets.top]);
 
   // 대댓글 달기.
   // 예전에는 ConnectDetail 을 댓글 id 로 push 했지만, 댓글은 게시글과 다른 테이블/시퀀스라서
