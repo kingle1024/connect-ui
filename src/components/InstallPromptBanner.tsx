@@ -16,6 +16,17 @@ import theme from "@/modules/theme";
 /** 하단 탭바(60) 위에 띄우기 위한 여백 */
 const TAB_BAR_HEIGHT = 60;
 
+/**
+ * 안드로이드에서 홈 화면에 추가하면 웹앱(WebAPK)이 설치되는데, 플레이 스토어를 거치지 않은
+ * 설치라서 Google Play 프로텍트가 "앱 검사 권장됨" 창을 띄운다. 처음 보는 사용자는
+ * 악성 앱 경고로 오해하기 쉬우므로, 설치 프롬프트를 띄우기 전에 미리 설명한다.
+ */
+const ANDROID_STEPS = [
+  "다음 화면에서 '설치'(또는 '추가')를 누르세요.",
+  "'Google Play 프로텍트 · 앱 검사 권장됨' 창이 뜨면 '앱 검사'를 누르세요.",
+  "검사가 끝나면 설치가 이어지고, 홈 화면에 '같이타' 아이콘이 생겨요.",
+];
+
 const IOS_STEPS = [
   "브라우저 하단(또는 상단)의 공유 버튼을 누르세요.",
   "목록에서 '홈 화면에 추가'를 선택하세요.",
@@ -29,7 +40,7 @@ const IOS_STEPS = [
 const InstallPromptBanner = () => {
   const { visible, mode, install, dismiss } = useInstallPrompt();
   const insets = useSafeAreaInsets();
-  const [showIosSteps, setShowIosSteps] = useState(false);
+  const [showSteps, setShowSteps] = useState(false);
   const slide = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -44,13 +55,9 @@ const InstallPromptBanner = () => {
 
   if (!visible) return null;
 
-  const handlePress = () => {
-    if (mode === "native") {
-      install();
-    } else {
-      setShowIosSteps((prev) => !prev);
-    }
-  };
+  // 바로 설치 프롬프트를 띄우지 않고, 먼저 설치 과정(특히 Play 프로텍트 창)을 안내한다.
+  const handlePress = () => setShowSteps((prev) => !prev);
+  const steps = mode === "native" ? ANDROID_STEPS : IOS_STEPS;
 
   return (
     <Animated.View
@@ -88,10 +95,10 @@ const InstallPromptBanner = () => {
           style={styles.installButton}
           onPress={handlePress}
           accessibilityRole="button"
-          accessibilityLabel={mode === "native" ? "홈 화면에 앱 추가" : "추가 방법 보기"}
+          accessibilityLabel={showSteps ? "안내 접기" : "추가 방법 보기"}
         >
           <Text style={styles.installButtonText}>
-            {mode === "native" ? "추가" : showIosSteps ? "닫기" : "방법"}
+            {showSteps ? "접기" : mode === "native" ? "추가" : "방법"}
           </Text>
         </TouchableOpacity>
 
@@ -106,9 +113,24 @@ const InstallPromptBanner = () => {
         </TouchableOpacity>
       </View>
 
-      {mode === "ios" && showIosSteps && (
+      {showSteps && (
         <View style={styles.steps}>
-          {IOS_STEPS.map((step, index) => (
+          {mode === "native" && (
+            <View style={styles.notice}>
+              <Feather
+                name="shield"
+                size={16}
+                color={theme.colors.primary}
+                style={styles.noticeIcon}
+              />
+              <Text style={styles.noticeText}>
+                설치 중에 <Text style={styles.noticeStrong}>'앱 검사 권장됨'</Text> 창이 뜰 수
+                있어요. 플레이 스토어가 아닌 웹사이트에서 바로 설치하는 앱이라 안드로이드가
+                보여주는 기본 안내예요. 바이러스나 문제가 있다는 뜻이 아니니 안심하세요.
+              </Text>
+            </View>
+          )}
+          {steps.map((step, index) => (
             <View key={step} style={styles.step}>
               <View style={styles.stepBadge}>
                 <Text style={styles.stepBadgeText}>{index + 1}</Text>
@@ -116,6 +138,16 @@ const InstallPromptBanner = () => {
               <Text style={styles.stepText}>{step}</Text>
             </View>
           ))}
+          {mode === "native" && (
+            <TouchableOpacity
+              style={styles.confirmButton}
+              onPress={install}
+              accessibilityRole="button"
+              accessibilityLabel="홈 화면에 앱 추가"
+            >
+              <Text style={styles.confirmButtonText}>확인했어요, 설치하기</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </Animated.View>
@@ -204,6 +236,39 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     color: theme.colors.textSecondary,
+  },
+  notice: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    padding: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.primaryTint,
+  },
+  noticeIcon: {
+    marginTop: 1,
+    marginRight: theme.spacing.sm,
+  },
+  noticeText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 18,
+    color: theme.colors.text,
+  },
+  noticeStrong: {
+    fontWeight: "700",
+  },
+  confirmButton: {
+    marginTop: theme.spacing.xs,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.primary,
+  },
+  confirmButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: theme.colors.white,
   },
 });
 
