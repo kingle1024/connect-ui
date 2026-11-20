@@ -14,6 +14,15 @@ interface DeadlineInfo {
   status: 'closed' | 'today' | 'future';
 }
 
+/**
+ * 마감일이 지났는지. 마감일은 날짜만 고르므로(시간은 글 쓴 시각이 들어간다)
+ * 마감일 당일은 23:59:59 까지 모집 중으로 본다.
+ */
+export function isDeadlinePassed(deadlineDts: string | null | undefined, now: Dayjs = dayjs()): boolean {
+  if (!deadlineDts) return false;
+  return now.isAfter(dayjs(deadlineDts).endOf('day'));
+}
+
 export function getDeadlineLabel(now: Dayjs, deadlineDts: string): DeadlineInfo {
   const endOfDeadlineDay = dayjs(deadlineDts).endOf('day'); // 마감일의 23:59:59로 설정
   const startOfToday = now.startOf('day');                   // 오늘 날짜의 00:00:00으로 설정

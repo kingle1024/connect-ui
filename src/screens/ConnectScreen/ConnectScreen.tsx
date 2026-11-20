@@ -32,6 +32,7 @@ import {
 import RBSheet from "react-native-raw-bottom-sheet";
 import PostItem from "./PostItem";
 import dayjs from "dayjs";
+import { isDeadlinePassed } from "@/utils/formatRelativeTime";
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import Toast from "react-native-toast-message";
 import apiClient from "@/utils/api";
@@ -234,10 +235,7 @@ export default function ConnectScreen() {
                 visibilityTime: 3000,
                 topOffset: insets.top,
               });
-            } else if (
-              dayjs(item.deadlineDts).isSame(now) ||
-              dayjs(item.deadlineDts).isBefore(dayjs())
-            ) {
+            } else if (isDeadlinePassed(item.deadlineDts)) {
               Toast.show({
                 type: "error",
                 text1: "모집 마감!",

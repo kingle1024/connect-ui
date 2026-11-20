@@ -5,6 +5,7 @@ import AuthContext from "@/components/auth/AuthContext"; // 사용자 정보를 
 import Constants from "expo-constants";
 import Alert from '@blazejkustra/react-native-alert';
 import axiosInstance from "@/utils/api";
+import dayjs from "dayjs";
 
 const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL;
 export const useReply = () => {
@@ -39,6 +40,43 @@ export const useReply = () => {
 
       setReplyInputErrorText(null); // 에러 메시지 초기화
 
+      // 응답을 기다리지 않고 바로 목록에 그린다(낙관적 업데이트).
+      // 서버 id 와 겹치지 않게 음수 임시 id 를 쓰고, 실패하면 이 항목만 걷어낸다.
+      const tempId = -Date.now();
+      const optimistic: Reply = {
+        id: tempId,
+        userId: me.userId,
+        userName: me.name,
+        title: null,
+        content,
+        insertDts: dayjs().format("YYYY-MM-DDTHH:mm:ss"),
+        replies: [],
+        pending: true,
+      };
+      setReply((prev) => {
+        const list = prev ?? [];
+        if (parentReplyId === null) return [...list, optimistic];
+        return list.map((r) =>
+          r.id === parentReplyId ? { ...r, replies: [...(r.replies ?? []), optimistic] } : r
+        );
+      });
+      setReplyInput("");
+
+      // 임시 항목을 바꾸거나(성공) 걷어낸다(실패). 다른 임시 항목은 건드리지 않는다.
+      const replaceTemp = (next: Reply | null) =>
+        setReply((prev) =>
+          (prev ?? []).flatMap((r) => {
+            if (r.id === tempId) return next ? [next] : [];
+            if (!r.replies?.some((c) => c.id === tempId)) return [r];
+            return [
+              {
+                ...r,
+                replies: r.replies.flatMap((c) => (c.id === tempId ? (next ? [next] : []) : [c])),
+              },
+            ];
+          })
+        );
+
       try {
         const requestBody: CreateCommentRequest = {
           parentId: parentReplyId,
@@ -56,17 +94,26 @@ export const useReply = () => {
         );
 
         console.log("댓글/대댓글 등록 성공:", response.data);
-        setReplyInput("");
-        loadReply(boardId);
+        // 다시 불러오지 않고 임시 항목만 서버 값으로 바꾼다 (재조회하면 아직 응답 안 온 다른 임시 댓글이 사라진다)
+        replaceTemp({ ...response.data, parentId: parentReplyId ?? undefined, replies: [] });
 
         return response.data; // 성공 시 응답 데이터 반환
-      } catch (error) {
+      } catch (error: any) {
         console.error("댓글/대댓글 등록 실패:", error);
-        setReplyInputErrorText("댓글 등록 중 오류가 발생했습니다.");
+        replaceTemp(null);
+        // 쓴 글은 잃지 않게 입력창으로 돌려놓는다 (그 사이 새로 입력 중이면 건드리지 않는다)
+        setReplyInput((cur) => (cur.trim() ? cur : content));
+        const serverMessage =
+          typeof error?.response?.data === "string"
+            ? error.response.data
+            : error?.response?.data?.message;
+        const message = serverMessage || "댓글 등록에 실패했습니다. 다시 시도해주세요.";
+        setReplyInputErrorText(message);
+        Alert.alert("댓글 등록 실패", message);
         throw error; // 에러를 호출자에게 다시 던져 처리할 수 있도록 합니다.
       }
     },
-    [ensureActor, loadReply]
+    [ensureActor]
   );
 
   const deleteComment = useCallback(async (boardId: number, replyId: number) => {

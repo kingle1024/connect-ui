@@ -55,6 +55,7 @@ export interface Reply {
   insertDts: string; // 작성일
   parentId?: number; // 대댓글인 경우 부모 댓글 ID
   replies?: Reply[]; // 대댓글 배열 (선택적)
+  pending?: boolean; // 등록 요청을 보냈지만 아직 응답이 오지 않은 임시 댓글
 }
 
 export interface User {

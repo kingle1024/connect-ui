@@ -24,7 +24,7 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import { Reply } from "@/types";
 import { MaterialIcons } from "@expo/vector-icons";
-import { formatRelativeTime } from "@/utils/formatRelativeTime";
+import { formatRelativeTime, isDeadlinePassed } from "@/utils/formatRelativeTime";
 import { useReply } from "@/hooks/useReply";
 import CustomBottomSheet, {
   CustomBottomSheetRef,
@@ -216,20 +216,25 @@ const ConnectDetail = () => {
       return;
     }
 
+    // submitReply 가 응답 전에 댓글을 목록에 먼저 그리므로, 화면 정리도 응답을 기다리지 않고 바로 한다.
+    // 방금 쓴 대댓글이 접힌 목록(기본 3개만 노출) 뒤에 숨지 않도록 대상 댓글을 펼쳐둔다
+    if (parentReplyIdForSubmit !== null) {
+      setExpandedReplies((prev) =>
+        prev.includes(parentReplyIdForSubmit) ? prev : [...prev, parentReplyIdForSubmit]
+      );
+    }
+    const targetForRetry = replyTarget;
+    setReplyTarget(null);
+    if (refSheet.current) {
+      refSheet.current.close();
+    }
+
     try {
       await submitReply(currentBoardId, parentReplyIdForSubmit, replyInput);
-      // 방금 쓴 대댓글이 접힌 목록(기본 3개만 노출) 뒤에 숨지 않도록 대상 댓글을 펼쳐둔다
-      if (parentReplyIdForSubmit !== null) {
-        setExpandedReplies((prev) =>
-          prev.includes(parentReplyIdForSubmit) ? prev : [...prev, parentReplyIdForSubmit]
-        );
-      }
-      setReplyTarget(null);
-      if (refSheet.current) {
-        refSheet.current.close();
-      }
     } catch (error) {
       console.error("댓글 등록 중 최종 에러:", error);
+      // 실패하면 입력창에 글이 돌아오므로, 대댓글이었다면 대상도 되돌려 그대로 다시 보낼 수 있게 한다
+      if (targetForRetry) setReplyTarget((cur) => cur ?? targetForRetry);
     }
   }, [ensureActor, alertActorUnavailable, currentBoardId, replyInput, submitReply, replyTarget]);
 
@@ -473,7 +478,7 @@ const ConnectDetail = () => {
   const isRecruitClosed =
     !!boardDetail &&
     (boardDetail.currentParticipants >= boardDetail.maxCapacity ||
-      !dayjs(boardDetail.deadlineDts).isAfter(dayjs()));
+      isDeadlinePassed(boardDetail.deadlineDts));
 
   const isJoined = !!boardDetail?.joined;
   const [joining, setJoining] = useState(false);
@@ -1016,7 +1021,7 @@ const ConnectDetail = () => {
       ? item.replies
       : item.replies?.slice(0, maxVisibleReplies);
     return (
-      <View style={{ gap: 8 }}>
+      <View style={{ gap: 8, opacity: item.pending ? 0.5 : 1 }}>
         {/* 댓글 박스 */}
         <View
           style={{
@@ -1054,7 +1059,7 @@ const ConnectDetail = () => {
                 </Text>
                 </TouchableOpacity>
                 <Text style={{ fontSize: 12, color: "#6B7280" }}>
-                  {formatRelativeTime(item.insertDts)}
+                  {item.pending ? "등록 중…" : formatRelativeTime(item.insertDts)}
                 </Text>
               </View>
 
@@ -1064,7 +1069,8 @@ const ConnectDetail = () => {
               </Text>
             </View>
 
-            {/* 버튼 영역 */}
+            {/* 버튼 영역 — 아직 서버 id 가 없는 임시 댓글엔 삭제/대댓글/대화하기를 띄우지 않는다 */}
+            {!item.pending && (
             <View
               style={{
                 flexDirection: "row",
@@ -1103,6 +1109,7 @@ const ConnectDetail = () => {
                 <Text style={{ fontSize: 12, color: "#6B7280" }}>대화하기</Text>
               </TouchableOpacity>
             </View>
+            )}
           </View>
 
           {/* 대댓글 리스트 */}
@@ -1123,6 +1130,7 @@ const ConnectDetail = () => {
                   backgroundColor: "#FFFFFF",
                   padding: 12,
                   borderRadius: 8,
+                  opacity: reply.pending ? 0.5 : 1,
                 }}
               >
                 <View
@@ -1151,7 +1159,7 @@ const ConnectDetail = () => {
                       </Text>
                       </TouchableOpacity>
                       <Text style={{ fontSize: 12, color: "#6B7280" }}>
-                        {formatRelativeTime(reply.insertDts)}
+                        {reply.pending ? "등록 중…" : formatRelativeTime(reply.insertDts)}
                       </Text>
                     </View>
                     <Text style={{ fontSize: 14, color: "#111827" }}>
@@ -1159,6 +1167,7 @@ const ConnectDetail = () => {
                     </Text>
                   </View>
 
+                  {!reply.pending && (
                   <TouchableOpacity
                     style={{
                       flexDirection: "row",
@@ -1175,6 +1184,7 @@ const ConnectDetail = () => {
                       대화하기
                     </Text>
                   </TouchableOpacity>
+                  )}
                 </View>
               </View>
             ))}
