@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from "react";
 import { Platform } from "react-native";
 import { NavigationContainerRefWithCurrent } from "@react-navigation/native";
+import { handleOverlayPopState, watchDialogsForBackClose } from "./webBackStack";
 
 // 웹(모바일 브라우저·홈 화면에 추가한 앱)에서 휴대폰 뒤로가기 버튼을 앱 안의 뒤로가기로 연결한다.
 //
@@ -31,14 +32,20 @@ export function useWebBackButton(
 
   useEffect(() => {
     if (Platform.OS !== "web") return;
+    const stopWatchingDialogs = watchDialogsForBackClose();
     const onPopState = () => {
+      // 열린 모달이 있으면 화면 대신 모달을 닫는다
+      if (handleOverlayPopState()) return;
       if (!navigationRef.isReady() || !navigationRef.canGoBack()) return;
       navigationRef.goBack();
       // goBack 결과가 state 에 반영된 뒤 다시 확인한다
       setTimeout(syncGuard, 0);
     };
     window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
+    return () => {
+      window.removeEventListener("popstate", onPopState);
+      stopWatchingDialogs();
+    };
   }, [navigationRef, syncGuard]);
 
   // NavigationContainer 의 onReady / onStateChange 에 넘긴다

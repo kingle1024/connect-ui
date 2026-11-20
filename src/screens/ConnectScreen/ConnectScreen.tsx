@@ -33,6 +33,7 @@ import RBSheet from "react-native-raw-bottom-sheet";
 import PostItem from "./PostItem";
 import dayjs from "dayjs";
 import { isDeadlinePassed } from "@/utils/formatRelativeTime";
+import { registerBackClose, useBackClose } from "@/navigation/webBackStack";
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import Toast from "react-native-toast-message";
 import apiClient from "@/utils/api";
@@ -52,7 +53,25 @@ export default function ConnectScreen() {
   const filterSheetRef = useRef<any>(null);
   const flatListRef = useRef<FlatList<any>>(null);
   const insets = useSafeAreaInsets();
-  const { showActionSheetWithOptions } = useActionSheet();
+  const { showActionSheetWithOptions: rawShowActionSheet } = useActionSheet();
+  // 액션시트도 휴대폰 뒤로가기로 닫히게 한다. 웹 액션시트는 Esc 키를 받으면 '취소'를 고른 것처럼 닫힌다.
+  const showActionSheetWithOptions: typeof rawShowActionSheet = useCallback(
+    (options, callback) => {
+      const dispose = registerBackClose(() => {
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      });
+      rawShowActionSheet(options, (index) => {
+        dispose();
+        return callback(index);
+      });
+    },
+    [rawShowActionSheet]
+  );
+  // 글쓰기·필터 시트가 열려 있는 동안 휴대폰 뒤로가기로 닫는다
+  const [isPostSheetOpen, setIsPostSheetOpen] = useState(false);
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+  useBackClose(isPostSheetOpen, () => refRBSheet.current?.close());
+  useBackClose(isFilterSheetOpen, () => filterSheetRef.current?.close());
 
   const pan = useRef(new Animated.Value(0)).current;
   const panResponder = useRef(
@@ -488,6 +507,8 @@ export default function ConnectScreen() {
       {/* 검색 필터 시트 */}
       <RBSheet
         ref={filterSheetRef}
+        onOpen={() => setIsFilterSheetOpen(true)}
+        onClose={() => setIsFilterSheetOpen(false)}
         useNativeDriver={false}
         height={340}
         closeOnPressMask={true}
@@ -594,6 +615,8 @@ export default function ConnectScreen() {
       </TouchableOpacity>
       <RBSheet
         ref={refRBSheet}
+        onOpen={() => setIsPostSheetOpen(true)}
+        onClose={() => setIsPostSheetOpen(false)}
         useNativeDriver={false}
         height={screenHeight * 0.9}
         closeOnPressMask={true}

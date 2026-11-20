@@ -20,6 +20,7 @@ import AuthContext from "@/components/auth/AuthContext";
 import { useRootNavigation } from "@/hooks/useNavigation";
 import { createOneToOneRoom, getOneToOneRoomsForUser } from "@/utils/chat";
 import theme from "@/modules/theme";
+import { useBackClose } from "@/navigation/webBackStack";
 import styles from './FriendsListScreen.styles';
 
 type Friend = {
@@ -91,6 +92,8 @@ const FriendsListScreen = () => {
   const [query, setQuery] = useState("");
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [actionVisible, setActionVisible] = useState(false);
+  // 휴대폰 뒤로가기(웹)로도 액션 모달을 닫는다
+  useBackClose(actionVisible, () => closeActions());
   const [deleting, setDeleting] = useState(false);
   const [openingChat, setOpeningChat] = useState(false); // <- 추가: 채팅 열기/생성 중 상태
   const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);

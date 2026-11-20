@@ -25,6 +25,7 @@ import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import { Reply } from "@/types";
 import { MaterialIcons } from "@expo/vector-icons";
 import { formatRelativeTime, isDeadlinePassed } from "@/utils/formatRelativeTime";
+import { useBackClose } from "@/navigation/webBackStack";
 import { useReply } from "@/hooks/useReply";
 import CustomBottomSheet, {
   CustomBottomSheetRef,
@@ -188,6 +189,8 @@ const ConnectDetail = () => {
   const closeProfileBottomSheet = useCallback(() => {
     setSelectedUser(null);
   }, []);
+  // 프로필 시트가 떠 있는 동안 휴대폰 뒤로가기(웹)는 화면 대신 시트를 닫는다
+  useBackClose(!!selectedUser, closeProfileBottomSheet);
   const inputRef = useRef<TextInput>(null);
 
   const [refreshing, setRefreshing] = useState(false);

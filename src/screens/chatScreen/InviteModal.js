@@ -15,6 +15,7 @@ import SockJS from "sockjs-client";
 import AuthContext from "@/components/auth/AuthContext";
 import { useContext } from "react";
 import theme from "@/modules/theme";
+import { useBackClose } from "@/navigation/webBackStack";
 
 export default function InviteModal({
   visible,
@@ -34,6 +35,9 @@ export default function InviteModal({
   const [selectedFriends, setSelectedFriends] = useState(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [roomParticipants, setRoomParticipants] = useState([]);
+
+  // 휴대폰 뒤로가기(웹)로도 초대 모달을 닫는다
+  useBackClose(visible, onClose);
 
   useEffect(() => {
     if (visible) {
