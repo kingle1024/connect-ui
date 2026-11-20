@@ -104,6 +104,14 @@ const editStyles = StyleSheet.create({
     borderRadius: theme.radius.md,
     backgroundColor: theme.colors.primary,
   },
+  // 세로 배치(column) 안에 들어가는 참여 버튼 — flex 를 주면 web 에서 flex-basis 0 으로 높이가 무너진다
+  joinButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.primary,
+  },
   primaryButtonText: {
     color: theme.colors.white,
     fontSize: 16,
@@ -855,8 +863,7 @@ const ConnectDetail = () => {
                 return (
                   <TouchableOpacity
                     style={[
-                      editStyles.primaryButton,
-                      { flex: 0 },
+                      editStyles.joinButton,
                       muted && { backgroundColor: theme.colors.field },
                       joining && { opacity: 0.6 },
                     ]}
