@@ -11,6 +11,7 @@ import Constants from "expo-constants";
 import { useFocusEffect } from "@react-navigation/native";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import localStyles from "./ChatRoomListScreen.styles.ts";
 import AuthContext from "@/components/auth/AuthContext";
@@ -24,6 +25,14 @@ const MessageType = {
 };
 
 const USER_ID_KEY = "chatAppUserId";
+
+// 방 이름으로 아바타 색을 고른다 (같은 방은 항상 같은 색)
+const AVATAR_COLORS = ["#FF8A65", "#4FC3F7", "#81C784", "#BA68C8", "#FFB74D", "#7986CB", "#4DB6AC"];
+const avatarColor = (name = "") => {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+};
 
 export default function ChatRoomsListScreen({ navigation }) {
   const [userId, setUserId] = useState(null);
@@ -197,61 +206,92 @@ export default function ChatRoomsListScreen({ navigation }) {
     ]);
   };
 
-  const renderRoomItem = ({ item }) => (
-    <TouchableOpacity
-      style={localStyles.roomItem}
-      onPress={() => handleJoinExistingRoom(item)}
-    >
-      <Text style={localStyles.roomName}>
-        {item.name}
-      </Text>
+  const renderRoomItem = ({ item }) => {
+    const name = item.name || "이름 없는 채팅방";
+    return (
       <TouchableOpacity
-        style={localStyles.leaveButton}
-        onPress={() => handleLeaveRoom(item.id, item.name)}
+        style={localStyles.roomItem}
+        onPress={() => handleJoinExistingRoom(item)}
+        activeOpacity={0.7}
       >
-        <Text style={localStyles.leaveButtonText}>나가기</Text>
+        <View style={[localStyles.roomAvatar, { backgroundColor: avatarColor(name) }]}>
+          <Text style={localStyles.roomAvatarText}>
+            {(name.trim()[0] || "?").toUpperCase()}
+          </Text>
+        </View>
+        <View style={localStyles.roomInfo}>
+          <Text style={localStyles.roomName} numberOfLines={1}>
+            {name}
+          </Text>
+          {item.participantsCount != null && (
+            <View style={localStyles.roomMeta}>
+              <Ionicons name="people-outline" size={13} color={theme.colors.textMuted} />
+              <Text style={localStyles.roomMetaText}>{item.participantsCount}명 참여 중</Text>
+            </View>
+          )}
+        </View>
+        <TouchableOpacity
+          style={localStyles.leaveButton}
+          onPress={() => handleLeaveRoom(item.id, name)}
+          accessibilityLabel="채팅방 나가기"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="exit-outline" size={20} color={theme.colors.textMuted} />
+        </TouchableOpacity>
       </TouchableOpacity>
-    </TouchableOpacity>
-  );
+    );
+  };
 
   // 🌟 전체 화면 로딩 상태는 isUserIdLoading이 담당 🌟
   if (isUserIdLoading) {
     return (
       <View style={localStyles.loadingContainer}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text>사용자 ID 로딩 중...</Text>
+        <Text style={localStyles.loadingText}>불러오는 중...</Text>
       </View>
     );
   }
 
   return (
     <View style={localStyles.container}>
-      <Text style={localStyles.header}>내 채팅방 목록</Text>
-      <View style={localStyles.buttonContainer}>
-        <TouchableOpacity
-          style={localStyles.button}
-          onPress={handleCreateAndJoinNewRoom}
-        >
-          <Text style={localStyles.buttonText}>새로운 채팅방 만들기</Text>
-        </TouchableOpacity>
-      </View>
-
-      {isRoomsLoading ? ( // 🌟 채팅방 목록 로딩 상태를 보여줌 🌟
+      {isRoomsLoading && rooms.length === 0 ? (
         <View style={localStyles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text>채팅방 목록 불러오는 중...</Text>
+          <Text style={localStyles.loadingText}>채팅방 목록 불러오는 중...</Text>
         </View>
-      ) : rooms.length === 0 ? (
-        <Text style={localStyles.emptyListText}>
-          아직 참여하고 있는 채팅방이 없습니다.
-        </Text>
       ) : (
         <FlatList
           data={rooms}
           renderItem={renderRoomItem}
           keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={localStyles.listContent}
+          refreshing={isRoomsLoading}
+          onRefresh={fetchUserRooms}
+          ListHeaderComponent={
+            rooms.length > 0 ? (
+              <Text style={localStyles.sectionTitle}>참여 중인 채팅방 {rooms.length}</Text>
+            ) : null
+          }
+          ListEmptyComponent={
+            <View style={localStyles.emptyContainer}>
+              <Ionicons name="chatbubbles-outline" size={48} color={theme.colors.textDisabled} />
+              <Text style={localStyles.emptyTitle}>아직 참여 중인 채팅방이 없어요</Text>
+              <Text style={localStyles.emptyListText}>
+                모집글에서 대화를 시작하거나{"\n"}오른쪽 아래 버튼으로 새 채팅방을 만들어 보세요.
+              </Text>
+            </View>
+          }
         />
       )}
+
+      <TouchableOpacity
+        style={localStyles.fab}
+        onPress={handleCreateAndJoinNewRoom}
+        accessibilityLabel="새로운 채팅방 만들기"
+        activeOpacity={0.85}
+      >
+        <Ionicons name="add" size={28} color={theme.colors.white} />
+      </TouchableOpacity>
     </View>
   );
 }

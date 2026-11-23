@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
-  StyleSheet,
   Text,
   View,
   TextInput,
@@ -8,7 +7,6 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
-  StatusBar,
 } from "react-native";
 import Alert from '@blazejkustra/react-native-alert';
 import { Client } from "@stomp/stompjs";
@@ -18,6 +16,7 @@ import Constants from "expo-constants";
 import Icon from "react-native-vector-icons/Ionicons"; // 🌟 아이콘 사용을 위해 임포트 🌟
 import localStyles from "./EnterChatRoom.styles";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import theme from "@/modules/theme";
 
 const SOCKET_URL = Constants.expoConfig.extra.API_BASE_URL + "/ws-chat";
 const API_BASE_URL = SOCKET_URL.substring(0, SOCKET_URL.lastIndexOf('/'));
@@ -30,12 +29,47 @@ const MessageType = {
   KICK: "KICK",
 };
 
+// 서버 insertDts(LocalDateTime, 예: "2026-11-23T10:15:30" 또는 [2026,11,23,10,15,30]) → Date
+const parseDate = (value) => {
+  if (!value) return null;
+  const d = Array.isArray(value)
+    ? new Date(value[0], (value[1] || 1) - 1, value[2] || 1, value[3] || 0, value[4] || 0, value[5] || 0)
+    : new Date(value);
+  return isNaN(d.getTime()) ? null : d;
+};
+
+const minuteKey = (value) => {
+  const d = parseDate(value);
+  return d ? Math.floor(d.getTime() / 60000) : null;
+};
+
+const formatTime = (value) => {
+  const d = parseDate(value);
+  if (!d) return "";
+  const h = d.getHours();
+  const m = String(d.getMinutes()).padStart(2, "0");
+  return `${h < 12 ? "오전" : "오후"} ${h % 12 === 0 ? 12 : h % 12}:${m}`;
+};
+
+const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+const formatDay = (d) =>
+  `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 ${WEEKDAYS[d.getDay()]}요일`;
+
+// 보낸 사람마다 같은 색이 나오도록 이름으로 아바타 색을 고른다
+const AVATAR_COLORS = ["#FF8A65", "#4FC3F7", "#81C784", "#BA68C8", "#FFB74D", "#7986CB", "#4DB6AC"];
+const avatarColor = (name = "") => {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+};
+const initialOf = (name = "") => (String(name).trim()[0] || "?").toUpperCase();
+
 export default function EnterChatRoom({ route, navigation }) {
-  const { 
-    username, 
-    roomId, 
-    roomName: initialRoomName, 
-    roomType 
+  const {
+    username,
+    roomId,
+    roomName: initialRoomName,
+    roomType
   } = route.params;
 
   const [_roomName, set_roomName] = useState(initialRoomName); // 로컬에서 관리할 방 이름
@@ -43,7 +77,8 @@ export default function EnterChatRoom({ route, navigation }) {
   const [tempRoomName, setTempRoomName] = useState(initialRoomName); // 편집 중인 임시 방 이름
 
   const [messages, setMessages] = useState([]);
-  const [currentMessage, setCurrentMessage] = useState("");  
+  const [currentMessage, setCurrentMessage] = useState("");
+  const canSend = currentMessage.trim() !== "";
 
   const client = useRef(null);
   const flatListRef = useRef(null);
@@ -71,10 +106,10 @@ export default function EnterChatRoom({ route, navigation }) {
         ...msg,
         id: msg.id || (Date.now().toString() + Math.random().toString(36).substr(2, 9)),
       }));
-      
+
       // 이전 메시지들을 먼저 설정하고, 이후 실시간 메시지가 추가되도록 합니다.
       setMessages(formattedHistory);
-      
+
       // 로딩된 메시지들이 보일 수 있도록 스크롤을 맨 아래로 이동
       if (flatListRef.current) {
           flatListRef.current.scrollToEnd({ animated: true });
@@ -84,8 +119,8 @@ export default function EnterChatRoom({ route, navigation }) {
       console.error("채팅 기록 로드에 실패했습니다:", error);
       Alert.alert("오류", "이전 채팅 기록을 불러오는데 실패했습니다.");
     }
-  }, [roomId, API_BASE_URL]); 
-    
+  }, [roomId, API_BASE_URL]);
+
   // 🌟 방 이름 업데이트 API 호출 함수 🌟
   const handleSaveRoomName = useCallback(async () => {
     if (isSavingRoomName.current) {
@@ -108,7 +143,7 @@ export default function EnterChatRoom({ route, navigation }) {
         },
         body: JSON.stringify({
           roomId: roomId,
-          roomName: tempRoomName 
+          roomName: tempRoomName
         }),
       });
 
@@ -127,7 +162,7 @@ export default function EnterChatRoom({ route, navigation }) {
       isSavingRoomName.current = false;
     }
   }, [roomId, tempRoomName, _roomName, username, API_BASE_URL]);
-    
+
   // 헤더 타이틀만 갱신 (STOMP 연결과 분리 — 방 이름 변경 시 재연결되면 안 됨)
   useEffect(() => {
     navigation.setOptions({
@@ -141,7 +176,7 @@ export default function EnterChatRoom({ route, navigation }) {
       onConnect: () => {
         console.log("STOMP 연결 성공!");
         fetchChatHistory().then(() => {
-          joinRoom(); 
+          joinRoom();
         });
 
         client.current.subscribe(`/topic/chat/${roomId}`, (message) => {
@@ -235,7 +270,8 @@ export default function EnterChatRoom({ route, navigation }) {
 
   const handleKeyDown = (e) => {
     if (Platform.OS === "web") {
-      if (e.key === "Enter" && !e.shiftKey) {
+      // 한글 조합 중(isComposing)의 Enter 는 글자 확정이지 전송이 아니다
+      if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent?.isComposing) {
         e.preventDefault();
         sendMessage();
       }
@@ -258,46 +294,107 @@ export default function EnterChatRoom({ route, navigation }) {
     openInviteModal();
   };
 
+  // 시스템 메시지 문구
+  const systemText = (item) => {
+    switch (item.type) {
+      case MessageType.JOIN:
+        return `${item.sender}님이 입장했습니다.`;
+      case MessageType.INVITE:
+        return `${item.sender}님이 ${item.recipient}님을 초대했습니다.`;
+      case MessageType.KICK:
+        return `${item.sender}님이 ${item.recipient}님을 강퇴했습니다.`;
+      case MessageType.LEAVE:
+        return `${item.sender}님이 퇴장했습니다.`;
+      default:
+        return "";
+    }
+  };
+
+  // 날짜 구분선 · 연속 메시지 묶음(같은 사람이 같은 분에 보낸 메시지)을 계산한 목록
+  const listItems = useMemo(() => {
+    const sameGroup = (a, b) =>
+      !!a && !!b &&
+      a.type === MessageType.CHAT && b.type === MessageType.CHAT &&
+      a.sender === b.sender &&
+      minuteKey(a.insertDts) === minuteKey(b.insertDts);
+
+    const result = [];
+    let lastDayKey = null;
+    messages.forEach((msg, idx) => {
+      const date = parseDate(msg.insertDts);
+      const dayKey = date ? date.toDateString() : null;
+      if (dayKey && dayKey !== lastDayKey) {
+        result.push({ kind: "date", id: `date-${dayKey}`, label: formatDay(date) });
+        lastDayKey = dayKey;
+      }
+      if (msg.type !== MessageType.CHAT) {
+        const text = systemText(msg);
+        if (text) result.push({ kind: "system", id: `sys-${msg.id}`, text });
+        return;
+      }
+      result.push({
+        kind: "chat",
+        id: msg.id,
+        msg,
+        isFirst: !sameGroup(messages[idx - 1], msg),
+        isLast: !sameGroup(msg, messages[idx + 1]),
+      });
+    });
+    return result;
+  }, [messages]);
+
   const renderMessageItem = ({ item }) => {
-    let messageContent = "";
-
-    if (item.type !== MessageType.CHAT) {
-      if (item.type === MessageType.JOIN) {
-        messageContent = `${item.sender}님이 입장했습니다.`;
-      } else if (item.type === MessageType.INVITE) {
-        messageContent = `${item.sender}님이 ${item.recipient}님을 초대했습니다.`;
-      } else if (item.type === MessageType.KICK) {
-        messageContent = `${item.sender}님이 ${item.recipient}님을 강퇴했습니다.`;
-      } else if (item.type === MessageType.LEAVE) {
-        // 🌟 LEAVE 메시지 타입 추가
-        messageContent = `${item.sender}님이 퇴장했습니다.`;
-      }
-
-      if (messageContent) {
-        return (
-          <View style={localStyles.systemMessage}>
-            <Text style={localStyles.systemText}>{messageContent}</Text>
-          </View>
-        );
-      } else {
-        return null;
-      }
+    if (item.kind === "date") {
+      return (
+        <View style={localStyles.dateDivider}>
+          <Text style={localStyles.dateDividerText}>{item.label}</Text>
+        </View>
+      );
+    }
+    if (item.kind === "system") {
+      return (
+        <View style={localStyles.systemMessage}>
+          <Text style={localStyles.systemText}>{item.text}</Text>
+        </View>
+      );
     }
 
-    const isMyMessage = item.sender === username;
+    const { msg, isFirst, isLast } = item;
+    const isMyMessage = msg.sender === username;
+    // 시간은 묶음의 마지막 말풍선에만 표시
+    const time = isLast ? formatTime(msg.insertDts) : "";
+
+    if (isMyMessage) {
+      return (
+        <View style={[localStyles.row, localStyles.rowMine, isFirst && localStyles.rowGroupStart]}>
+          {!!time && <Text style={localStyles.timeText}>{time}</Text>}
+          <View style={[localStyles.bubble, localStyles.myBubble]}>
+            <Text style={localStyles.myMessageText}>{msg.content}</Text>
+          </View>
+        </View>
+      );
+    }
+
     return (
-      <View
-        style={[
-          localStyles.messageContainer,
-          isMyMessage ? localStyles.myMessage : localStyles.otherMessage,
-        ]}
-      >
-        {!isMyMessage && (
-          <Text style={localStyles.senderText}>{item.sender}</Text>
-        )}
-        <Text style={isMyMessage ? localStyles.myMessageText : localStyles.messageText}>
-          {item.content}
-        </Text>
+      <View style={[localStyles.row, localStyles.rowOther, isFirst && localStyles.rowGroupStart]}>
+        <View style={localStyles.avatarSlot}>
+          {isFirst && (
+            <View style={[localStyles.avatar, { backgroundColor: avatarColor(msg.sender) }]}>
+              <Text style={localStyles.avatarText}>{initialOf(msg.sender)}</Text>
+            </View>
+          )}
+        </View>
+        <View style={localStyles.otherColumn}>
+          {isFirst && (
+            <Text style={localStyles.senderText} numberOfLines={1}>{msg.sender}</Text>
+          )}
+          <View style={localStyles.otherBubbleRow}>
+            <View style={[localStyles.bubble, localStyles.otherBubble]}>
+              <Text style={localStyles.messageText}>{msg.content}</Text>
+            </View>
+            {!!time && <Text style={localStyles.timeText}>{time}</Text>}
+          </View>
+        </View>
       </View>
     );
   };
@@ -315,10 +412,14 @@ export default function EnterChatRoom({ route, navigation }) {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
     >
-      {/* 🌟 헤더를 View로 감싸고 뒤로가기 버튼 추가 🌟 */}
+      {/* 헤더: 뒤로가기 · 방 이름(수정) · 초대 · 강퇴 */}
       <View style={localStyles.headerContainer}>
-        <TouchableOpacity style={localStyles.backButton} onPress={handleGoBack}>
-          <Icon name="chevron-back" size={28} color="#333" />
+        <TouchableOpacity
+          style={localStyles.headerIconButton}
+          onPress={handleGoBack}
+          accessibilityLabel="뒤로가기"
+        >
+          <Icon name="chevron-back" size={26} color={theme.colors.text} />
         </TouchableOpacity>
         <View style={localStyles.roomNameEditContainer}>
           {isEditingRoomName ? (
@@ -330,10 +431,11 @@ export default function EnterChatRoom({ route, navigation }) {
               autoFocus={true}
               onSubmitEditing={handleSaveRoomName}
               returnKeyType="done"
+              maxLength={50}
             />
           ) : (
-            <Text style={localStyles.headerText}>
-              방: {_roomName}
+            <Text style={localStyles.headerText} numberOfLines={1}>
+              {_roomName}
             </Text>
           )}
           <TouchableOpacity
@@ -346,23 +448,47 @@ export default function EnterChatRoom({ route, navigation }) {
               }
             }}
             style={localStyles.editSaveButton}
+            accessibilityLabel={isEditingRoomName ? "방 이름 저장" : "방 이름 수정"}
           >
             <Icon
-              name={isEditingRoomName ? "checkmark-circle" : "create-outline"} // 편집 중이면 체크마크, 아니면 연필 아이콘
-              size={24}
-              color="#333"
+              name={isEditingRoomName ? "checkmark-circle" : "create-outline"}
+              size={18}
+              color={isEditingRoomName ? theme.colors.primary : theme.colors.textMuted}
             />
           </TouchableOpacity>
         </View>
+        <TouchableOpacity
+          style={localStyles.headerIconButton}
+          onPress={inviteUser}
+          accessibilityLabel="사용자 초대"
+        >
+          <Icon name="person-add-outline" size={22} color={theme.colors.text} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={localStyles.headerIconButton}
+          onPress={kickUser}
+          accessibilityLabel="사용자 강퇴"
+        >
+          <Icon name="person-remove-outline" size={22} color={theme.colors.text} />
+        </TouchableOpacity>
       </View>
 
       <FlatList
         ref={flatListRef}
-        data={messages}
+        data={listItems}
         renderItem={renderMessageItem}
         keyExtractor={(item) => item.id.toString()}
         style={localStyles.chatArea}
-        contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }}
+        contentContainerStyle={localStyles.chatContent}
+        keyboardShouldPersistTaps="handled"
+        ListEmptyComponent={
+          <View style={localStyles.emptyContainer}>
+            <Icon name="chatbubbles-outline" size={44} color={theme.colors.textDisabled} />
+            <Text style={localStyles.emptyText}>
+              아직 대화가 없어요.{"\n"}첫 메시지를 보내보세요!
+            </Text>
+          </View>
+        }
       />
 
       <View style={localStyles.inputContainer}>
@@ -370,21 +496,19 @@ export default function EnterChatRoom({ route, navigation }) {
           style={localStyles.input}
           value={currentMessage}
           onChangeText={setCurrentMessage}
-          placeholder="메시지를 입력하세요..."
+          placeholder="메시지를 입력하세요"
+          placeholderTextColor={theme.colors.textDisabled}
           multiline
+          numberOfLines={1} // 웹 textarea 기본 2줄 → 1줄에서 시작
           onKeyPress={handleKeyDown}
         />
-        <TouchableOpacity style={localStyles.sendButton} onPress={sendMessage}>
-          <Text style={localStyles.sendButtonText}>전송</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={localStyles.leaderFunctionContainer}>
-        <TouchableOpacity style={localStyles.leaderButton} onPress={inviteUser}>
-          <Text style={localStyles.leaderButtonText}>사용자 초대</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={localStyles.leaderButton} onPress={kickUser}>
-          <Text style={localStyles.leaderButtonText}>사용자 강퇴</Text>
+        <TouchableOpacity
+          style={[localStyles.sendButton, !canSend && localStyles.sendButtonDisabled]}
+          onPress={sendMessage}
+          disabled={!canSend}
+          accessibilityLabel="전송"
+        >
+          <Icon name="arrow-up" size={20} color={theme.colors.white} />
         </TouchableOpacity>
       </View>
 
