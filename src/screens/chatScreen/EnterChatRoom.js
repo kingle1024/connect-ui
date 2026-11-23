@@ -62,6 +62,9 @@ const avatarColor = (name = "") => {
   for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 };
+// 서버가 붙여 주는 표시 이름(게스트는 "용감한 코알라 12" 같은 닉네임). 없으면 userId 로 대신한다.
+const senderNameOf = (m) => m?.senderName || m?.sender || "";
+const recipientNameOf = (m) => m?.recipientName || m?.recipient || "";
 const initialOf = (name = "") => (String(name).trim()[0] || "?").toUpperCase();
 
 export default function EnterChatRoom({ route, navigation }) {
@@ -414,13 +417,13 @@ export default function EnterChatRoom({ route, navigation }) {
   const systemText = (item) => {
     switch (item.type) {
       case MessageType.JOIN:
-        return `${item.sender}님이 입장했습니다.`;
+        return `${senderNameOf(item)}님이 입장했습니다.`;
       case MessageType.INVITE:
-        return `${item.sender}님이 ${item.recipient}님을 초대했습니다.`;
+        return `${senderNameOf(item)}님이 ${recipientNameOf(item)}님을 초대했습니다.`;
       case MessageType.KICK:
-        return `${item.sender}님이 ${item.recipient}님을 강퇴했습니다.`;
+        return `${senderNameOf(item)}님이 ${recipientNameOf(item)}님을 강퇴했습니다.`;
       case MessageType.LEAVE:
-        return `${item.sender}님이 퇴장했습니다.`;
+        return `${senderNameOf(item)}님이 퇴장했습니다.`;
       default:
         return "";
     }
@@ -496,13 +499,13 @@ export default function EnterChatRoom({ route, navigation }) {
         <View style={localStyles.avatarSlot}>
           {isFirst && (
             <View style={[localStyles.avatar, { backgroundColor: avatarColor(msg.sender) }]}>
-              <Text style={localStyles.avatarText}>{initialOf(msg.sender)}</Text>
+              <Text style={localStyles.avatarText}>{initialOf(senderNameOf(msg))}</Text>
             </View>
           )}
         </View>
         <View style={localStyles.otherColumn}>
           {isFirst && (
-            <Text style={localStyles.senderText} numberOfLines={1}>{msg.sender}</Text>
+            <Text style={localStyles.senderText} numberOfLines={1}>{senderNameOf(msg)}</Text>
           )}
           <View style={localStyles.otherBubbleRow}>
             <View style={[localStyles.bubble, localStyles.otherBubble]}>
