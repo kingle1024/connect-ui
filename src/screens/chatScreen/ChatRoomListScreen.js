@@ -155,6 +155,8 @@ export default function ChatRoomsListScreen({ navigation }) {
       username: userId,
       roomId: newRoomId,
       roomName: newRoomName,
+      // 서버엔 아직 방이 없다. 첫 메시지를 보내거나 친구를 초대할 때 만든다.
+      isNewRoom: true,
     });
   };
 

@@ -27,6 +27,7 @@ export default function InviteModal({
   API_BASE_URL,
   roomName,
   mode = "invite",
+  ensureJoined,
 }) {
   const { user: member, guest } = useContext(AuthContext);
   const me = member ?? guest; // 게스트도 채팅방에 친구를 초대할 수는 없지만(친구가 없음) 참여자 목록은 본다
@@ -176,9 +177,13 @@ export default function InviteModal({
     } catch (e) { console.warn('publishInvite error', e); }
   };
 
-  const confirmInvite = () => {
+  const confirmInvite = async () => {
     if (!selectedFriends || selectedFriends.size === 0) return;
     if (mode === "invite") {
+      // 새로 만든 방은 아직 서버에 없다. 초대하기 전에 방을 만든다(내가 입장 = 방 생성·방장).
+      if (ensureJoined) {
+        try { await ensureJoined(); } catch (e) { console.warn("방 생성 실패", e); }
+      }
       Array.from(selectedFriends).forEach(recipient => publishInvite(recipient));
     } else if (mode === "kick") {
       Array.from(selectedFriends).forEach(recipient => publishKick(recipient));

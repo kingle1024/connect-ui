@@ -69,7 +69,8 @@ export default function EnterChatRoom({ route, navigation }) {
     username,
     roomId,
     roomName: initialRoomName,
-    roomType
+    roomType,
+    isNewRoom = false,
   } = route.params;
 
   const [_roomName, set_roomName] = useState(initialRoomName); // 로컬에서 관리할 방 이름
@@ -87,6 +88,11 @@ export default function EnterChatRoom({ route, navigation }) {
   const historyLoadedRef = useRef(false);
   const leavingRef = useRef(false);
   const leaveAckRef = useRef(null);
+  // 새로 만든 방(isNewRoom)은 화면을 연 것만으로 서버에 방을 만들지 않는다.
+  // 첫 메시지를 보내거나 친구를 초대할 때 입장(addUser)하며 방이 생긴다. → 그냥 나가면 남는 게 없다.
+  const joinedRef = useRef(!isNewRoom);
+  const joinPromiseRef = useRef(null);
+  const joinAckRef = useRef(null);
   // 🌟 onBlur / onSubmitEditing / 저장 버튼 onPress 가 연달아 발생해도
   //    저장이 한 번만 실행되도록 하는 가드
   const isSavingRoomName = useRef(false);
@@ -139,6 +145,13 @@ export default function EnterChatRoom({ route, navigation }) {
       return;
     }
 
+    // 아직 서버에 없는 새 방이면 이름만 바꿔 둔다. (입장할 때 이 이름으로 방이 만들어진다)
+    if (!joinedRef.current) {
+      set_roomName(tempRoomName);
+      setIsEditingRoomName(false);
+      return;
+    }
+
     isSavingRoomName.current = true;
     try {
       const refreshToken = await AsyncStorage.getItem("refreshToken");
@@ -183,7 +196,7 @@ export default function EnterChatRoom({ route, navigation }) {
       onConnect: () => {
         console.log("STOMP 연결 성공!");
         fetchChatHistory().then(() => {
-          joinRoom();
+          if (joinedRef.current) joinRoom();
         });
 
         client.current.subscribe(`/topic/chat/${roomId}`, (message) => {
@@ -196,6 +209,14 @@ export default function EnterChatRoom({ route, navigation }) {
             leaveAckRef.current();
             leaveAckRef.current = null;
             return; // 화면을 떠나는 중이라 표시하지 않는다
+          }
+          if (
+            receivedMessage.type === MessageType.JOIN &&
+            receivedMessage.sender === username &&
+            joinAckRef.current
+          ) {
+            joinAckRef.current();
+            joinAckRef.current = null;
           }
           if (!receivedMessage.id) {
             receivedMessage.id =
@@ -232,7 +253,8 @@ export default function EnterChatRoom({ route, navigation }) {
 
     return () => {
       // 🌟 언마운트 시에는 소켓만 끊는다. (퇴장 메시지를 보내면 방에서 탈퇴 처리됨) 🌟
-      if (client.current && client.current.connected) {
+      // 아직 연결 중이어도 끊는다. (안 끊으면 화면을 떠난 뒤에 연결돼 입장 처리될 수 있다)
+      if (client.current) {
         client.current.deactivate();
       }
       console.log("STOMP 연결 해제 완료!");
@@ -252,6 +274,7 @@ export default function EnterChatRoom({ route, navigation }) {
   //    기록을 못 불러온 경우엔 대화가 있는지 알 수 없으므로 지우지 않는다.
   const removeRoomIfEmpty = useCallback(async () => {
     const stomp = client.current;
+    if (!joinedRef.current) return; // 서버에 만든 적 없는 새 방
     if (!stomp || !stomp.connected || !historyLoadedRef.current) return;
     if (messagesRef.current.some((m) => m.type === MessageType.CHAT)) return;
 
@@ -319,20 +342,43 @@ export default function EnterChatRoom({ route, navigation }) {
     }
   };
 
-  const sendMessage = () => {
-    if (currentMessage.trim() === "") return;
+  // 새 방이면 입장(=서버에 방 생성)하고, 서버가 내 JOIN 을 브로드캐스트할 때까지 기다린다.
+  const ensureJoined = () => {
+    if (joinedRef.current) return Promise.resolve();
+    if (joinPromiseRef.current) return joinPromiseRef.current;
+    const ack = new Promise((resolve) => {
+      joinAckRef.current = resolve;
+    });
+    joinRoom();
+    joinPromiseRef.current = Promise.race([
+      ack,
+      new Promise((resolve) => setTimeout(resolve, 3000)),
+    ]).then(() => {
+      joinAckRef.current = null;
+      joinedRef.current = true;
+    }).finally(() => {
+      joinPromiseRef.current = null;
+    });
+    return joinPromiseRef.current;
+  };
+
+  const sendMessage = async () => {
+    const content = currentMessage;
+    if (content.trim() === "") return;
 
     if (client.current && client.current.connected) {
+      setCurrentMessage("");
+      await ensureJoined();
+      if (!client.current || !client.current.connected) return;
       client.current.publish({
         destination: "/app/chat.sendMessage",
         body: JSON.stringify({
           type: MessageType.CHAT,
           roomId: roomId,
           sender: username,
-          content: currentMessage,
+          content,
         }),
       });
-      setCurrentMessage("");
     } else {
       console.warn("STOMP 클라이언트가 연결되지 않았습니다.");
     }
@@ -600,6 +646,7 @@ export default function EnterChatRoom({ route, navigation }) {
         API_BASE_URL={API_BASE_URL}
         roomName={_roomName}
         mode={modalMode}
+        ensureJoined={ensureJoined}
       />
     </KeyboardAvoidingView>
   );
