@@ -11,7 +11,7 @@ import {
   PanResponder,
   StyleSheet,
 } from 'react-native';
-import CustomDateTimePicker from '../../components/CustomDateTimePicker';
+import DeadlineField from '@/components/DeadlineField';
 import theme from '@/modules/theme';
 
 interface NewPostSheetProps {
@@ -50,10 +50,9 @@ interface NewPostSheetProps {
   isCustomCategory: boolean;
   categoryInputErrorText: string | null;
 
-  deadlineDts: Date;
-  showDatePicker: boolean;
-  setShowDatePicker: (show: boolean) => void;
-  handleDeadlineDtsChange: (event: any, selectedDate?: Date) => void;
+  /** null = '마감 시까지' */
+  deadlineDts: Date | null;
+  handleDeadlineDtsChange: (value: Date | null) => void;
 }
 
 const DESTINATION_QUICK_PICKS = ['강촌', '강변', '회사'];
@@ -67,7 +66,7 @@ const NewPostSheet: React.FC<NewPostSheetProps> = React.memo((props) => {
     maxCapacityInput, setMaxCapacityInput, maxCapacityInputErrorText, validateMaxCapacity,
     categoryOptions, categoryPreset, setCategoryPreset, customCategoryInput, setCustomCategoryInput,
     isCustomCategory, categoryInputErrorText,
-    deadlineDts, handleDeadlineDtsChange, showDatePicker, setShowDatePicker
+    deadlineDts, handleDeadlineDtsChange
   } = props;
 
 
@@ -228,16 +227,13 @@ const NewPostSheet: React.FC<NewPostSheetProps> = React.memo((props) => {
           </View>
         )}
 
-        <CustomDateTimePicker
+        {/* 마감일: 기본 '마감 시까지' */}
+        <DeadlineField
           testID="dateTimePicker"
           value={deadlineDts}
-          mode="date"
-          is24Hour={true}
           onChange={handleDeadlineDtsChange}
-          datePickerButtonComponentStyle={styles.datePickerButton}
-          datePickerTextComponentStyle={styles.datePickerText}
-          showDatePicker={showDatePicker}
-          setShowDatePicker={setShowDatePicker}
+          pickerButtonStyle={styles.datePickerButton}
+          pickerTextStyle={styles.datePickerText}
         />
       </ScrollView>
     </KeyboardAvoidingView>

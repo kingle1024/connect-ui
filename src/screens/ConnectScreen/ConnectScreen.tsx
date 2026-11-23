@@ -145,8 +145,6 @@ export default function ConnectScreen() {
     categoryInputErrorText,
     resetCategoryInput,
     deadlineDts,
-    showDatePicker,
-    setShowDatePicker,
     handleDeadlineDtsChange,
     savePost,
     deletePost,
@@ -675,8 +673,6 @@ export default function ConnectScreen() {
           categoryInputErrorText={categoryInputErrorText}
 
           deadlineDts={deadlineDts}
-          showDatePicker={showDatePicker}
-          setShowDatePicker={setShowDatePicker}
           handleDeadlineDtsChange={handleDeadlineDtsChange}
         />
       </RBSheet>

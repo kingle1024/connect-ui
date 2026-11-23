@@ -9,6 +9,23 @@ dayjs.extend(duration);
 export function formatRelativeTime(insertDts: string): string {
   return dayjs(insertDts).fromNow();
 }
+/**
+ * '마감 시까지'(날짜 제한 없음) 글의 마감일.
+ * 서버 컬럼이 NOT NULL 이라 null 대신 먼 미래 날짜를 저장한다.
+ */
+export const NO_DEADLINE_DTS = "9999-12-31T23:59:59";
+
+/** 날짜 제한 없는('마감 시까지') 글인지 */
+export function isOpenEndedDeadline(deadlineDts: string | Date | null | undefined): boolean {
+  if (!deadlineDts) return false;
+  return dayjs(deadlineDts).year() >= 9999;
+}
+
+/** 입력값(null = 마감 시까지)을 서버로 보낼 문자열로 */
+export function toDeadlinePayload(deadline: Date | null): string {
+  return deadline ? dayjs(deadline).format("YYYY-MM-DDTHH:mm:ss") : NO_DEADLINE_DTS;
+}
+
 interface DeadlineInfo {
   label: string;
   status: 'closed' | 'today' | 'future';
@@ -24,6 +41,9 @@ export function isDeadlinePassed(deadlineDts: string | null | undefined, now: Da
 }
 
 export function getDeadlineLabel(now: Dayjs, deadlineDts: string): DeadlineInfo {
+  if (isOpenEndedDeadline(deadlineDts)) {
+    return { label: "마감 시까지", status: "future" };
+  }
   const endOfDeadlineDay = dayjs(deadlineDts).endOf('day'); // 마감일의 23:59:59로 설정
   const startOfToday = now.startOf('day');                   // 오늘 날짜의 00:00:00으로 설정
   const startOfDeadlineDay = dayjs(deadlineDts).startOf('day'); // 마감일 날짜의 00:00:00으로 설정

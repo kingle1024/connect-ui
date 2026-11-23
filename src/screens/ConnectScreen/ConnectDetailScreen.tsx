@@ -24,7 +24,12 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import { Reply } from "@/types";
 import { MaterialIcons } from "@expo/vector-icons";
-import { formatRelativeTime, isDeadlinePassed } from "@/utils/formatRelativeTime";
+import {
+  formatRelativeTime,
+  isDeadlinePassed,
+  isOpenEndedDeadline,
+  toDeadlinePayload,
+} from "@/utils/formatRelativeTime";
 import { useBackClose } from "@/navigation/webBackStack";
 import { useReply } from "@/hooks/useReply";
 import CustomBottomSheet, {
@@ -35,7 +40,7 @@ import AuthContext from "@/components/auth/AuthContext";
 import { createOneToOneRoom, getOneToOneRoomsForUser } from "@/utils/chat";
 import { useDetailBoard } from "@/hooks/useDetailBoard";
 import { CATEGORY_CUSTOM, useCategories } from "@/hooks/useCategories";
-import CustomDateTimePicker from "@/components/CustomDateTimePicker";
+import DeadlineField from "@/components/DeadlineField";
 import dayjs from "dayjs";
 import Constants from "expo-constants";
 import axios from "axios";
@@ -167,8 +172,8 @@ const ConnectDetail = () => {
     : editCategoryPreset;
   const [editDestination, setEditDestination] = useState("");
   const [editMaxCapacity, setEditMaxCapacity] = useState("");
-  const [editDeadline, setEditDeadline] = useState(new Date());
-  const [showEditDatePicker, setShowEditDatePicker] = useState(false);
+  // null = '마감 시까지'
+  const [editDeadline, setEditDeadline] = useState<Date | null>(null);
   const isAuthor = !!me && !!boardDetail && me.userId === boardDetail.userId;
   const { reply, loadReply, replyInput, setReplyInput, replyInputErrorText, submitReply, deleteComment } =
     useReply();
@@ -403,17 +408,12 @@ const ConnectDetail = () => {
     setEditDestination(boardDetail.destination ?? "");
     setEditMaxCapacity(String(boardDetail.maxCapacity ?? ""));
     setEditDeadline(
-      boardDetail.deadlineDts ? dayjs(boardDetail.deadlineDts).toDate() : new Date()
+      boardDetail.deadlineDts && !isOpenEndedDeadline(boardDetail.deadlineDts)
+        ? dayjs(boardDetail.deadlineDts).toDate()
+        : null
     );
     setIsEditing(true);
   }, [boardDetail, categories]);
-
-  const handleEditDeadlineChange = useCallback((event: any, selectedDate?: Date) => {
-    setShowEditDatePicker(Platform.OS === "ios");
-    if (selectedDate) {
-      setEditDeadline(selectedDate);
-    }
-  }, []);
 
   const cancelEdit = useCallback(() => setIsEditing(false), []);
 
@@ -440,7 +440,7 @@ const ConnectDetail = () => {
         category: editCategory.trim(),
         destination: editDestination.trim(),
         maxCapacity: capacity,
-        deadlineDts: dayjs(editDeadline).format("YYYY-MM-DDTHH:mm:ss"),
+        deadlineDts: toDeadlinePayload(editDeadline),
       });
       setIsEditing(false);
       Alert.alert("완료", "게시글이 수정되었습니다.");
@@ -800,17 +800,12 @@ const ConnectDetail = () => {
               />
             </View>
             <View style={editStyles.field}>
-              <Text style={editStyles.fieldLabel}>마감일</Text>
-              <CustomDateTimePicker
+              <DeadlineField
                 testID="editDateTimePicker"
                 value={editDeadline}
-                mode="date"
-                is24Hour={true}
-                onChange={handleEditDeadlineChange}
-                datePickerButtonComponentStyle={editStyles.input}
-                datePickerTextComponentStyle={editStyles.datePickerText}
-                showDatePicker={showEditDatePicker}
-                setShowDatePicker={setShowEditDatePicker}
+                onChange={setEditDeadline}
+                pickerButtonStyle={editStyles.input}
+                pickerTextStyle={editStyles.datePickerText}
               />
             </View>
             <View style={{ flexDirection: "row", gap: 10, marginBottom: 24 }}>
@@ -855,7 +850,9 @@ const ConnectDetail = () => {
               <Text style={{ fontSize: 14, color: theme.colors.textSecondary, textAlign: "center" }}>
                 참여 인원 {boardDetail.currentParticipants}/{boardDetail.maxCapacity}명
                 {boardDetail.deadlineDts
-                  ? ` · ${dayjs(boardDetail.deadlineDts).format("M월 D일")} 마감`
+                  ? isOpenEndedDeadline(boardDetail.deadlineDts)
+                    ? " · 마감 시까지"
+                    : ` · ${dayjs(boardDetail.deadlineDts).format("M월 D일")} 마감`
                   : ""}
               </Text>
               {(() => {
@@ -1013,8 +1010,6 @@ const ConnectDetail = () => {
     editDestination,
     editMaxCapacity,
     editDeadline,
-    showEditDatePicker,
-    handleEditDeadlineChange,
   ]);
 
   const renderItem = useCallback(({ item }: { item: Reply }) => {

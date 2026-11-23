@@ -6,6 +6,7 @@ import { useContext } from "react";
 import AuthContext from "@/components/auth/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import dayjs from "dayjs";
+import { toDeadlinePayload } from "@/utils/formatRelativeTime";
 import apiClient from "@/utils/api";
 import Constants from "expo-constants";
 import Toast from "react-native-toast-message";
@@ -70,8 +71,8 @@ export const useBoard = () => {
   const [categoryPreset, setCategoryPreset] = useState<string>(CATEGORY_PRESETS[0]);
   const [customCategoryInput, setCustomCategoryInput] = useState("");
   const [maxCapacityInput, setMaxCapacityInputRaw] = useState("");
-  const [deadlineDts, setDeadlineDts] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  // null = '마감 시까지'(날짜 제한 없음). 새 글의 기본값
+  const [deadlineDts, setDeadlineDts] = useState<Date | null>(null);
   const insets = useSafeAreaInsets();
   const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL ?? "";
   // 공용 클라이언트: 로그인 토큰을 자동으로 붙이고, 게스트 쿠키도 실어 보낸다(withCredentials)
@@ -146,11 +147,8 @@ export const useBoard = () => {
     setCustomCategoryInput("");
   };
 
-  const handleDeadlineDtsChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(Platform.OS === "ios");
-    if (selectedDate) {
-      setDeadlineDts(selectedDate);
-    }
+  const handleDeadlineDtsChange = (value: Date | null) => {
+    setDeadlineDts(value);
   };
 
   const resetTitleInput = () => setTitleInput("");
@@ -298,7 +296,7 @@ export const useBoard = () => {
         category: categoryInput,
         userId: user?.userId ?? "anonymous",
         userName: user?.name ?? "익명",
-        deadlineDts: dayjs(deadlineDts).format("YYYY-MM-DDTHH:mm:ss"),
+        deadlineDts: toDeadlinePayload(deadlineDts),
         destination: destinationInput,
         maxCapacity: parseInt(maxCapacityInput || "0", 10) || 0,
         currentParticipants: 1,
@@ -449,8 +447,6 @@ export const useBoard = () => {
     validateMaxCapacity,
     deadlineDts,
     setDeadlineDts,
-    showDatePicker,
-    setShowDatePicker,
     handleDeadlineDtsChange,
     savePost,
     deletePost,
