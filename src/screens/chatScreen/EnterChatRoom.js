@@ -82,6 +82,11 @@ export default function EnterChatRoom({ route, navigation }) {
 
   const client = useRef(null);
   const flatListRef = useRef(null);
+  // 빈 방 정리 판단용: 최신 메시지 목록과 '이전 기록을 정상적으로 불러왔는지'
+  const messagesRef = useRef([]);
+  const historyLoadedRef = useRef(false);
+  const leavingRef = useRef(false);
+  const leaveAckRef = useRef(null);
   // 🌟 onBlur / onSubmitEditing / 저장 버튼 onPress 가 연달아 발생해도
   //    저장이 한 번만 실행되도록 하는 가드
   const isSavingRoomName = useRef(false);
@@ -90,6 +95,7 @@ export default function EnterChatRoom({ route, navigation }) {
   //    /app/chat.leaveUser 는 여기서 호출하지 않는다.
   //    (서버의 leaveUser 는 멤버십을 삭제하고, 남은 인원이 0명이면 방 자체를 지운다.)
   //    실제 방 나가기는 채팅방 목록 화면의 '나가기' 버튼에서만 수행한다.
+  //    예외: 대화 없이 나 혼자 남은 빈 방은 화면을 벗어날 때 정리한다. (removeRoomIfEmpty)
 
   const fetchChatHistory = useCallback(async () => {
     try {
@@ -109,6 +115,7 @@ export default function EnterChatRoom({ route, navigation }) {
 
       // 이전 메시지들을 먼저 설정하고, 이후 실시간 메시지가 추가되도록 합니다.
       setMessages(formattedHistory);
+      historyLoadedRef.current = true;
 
       // 로딩된 메시지들이 보일 수 있도록 스크롤을 맨 아래로 이동
       if (flatListRef.current) {
@@ -181,6 +188,15 @@ export default function EnterChatRoom({ route, navigation }) {
 
         client.current.subscribe(`/topic/chat/${roomId}`, (message) => {
           const receivedMessage = JSON.parse(message.body);
+          if (
+            receivedMessage.type === MessageType.LEAVE &&
+            receivedMessage.sender === username &&
+            leaveAckRef.current
+          ) {
+            leaveAckRef.current();
+            leaveAckRef.current = null;
+            return; // 화면을 떠나는 중이라 표시하지 않는다
+          }
           if (!receivedMessage.id) {
             receivedMessage.id =
               Date.now().toString() + Math.random().toString(36).substr(2, 9);
@@ -225,6 +241,60 @@ export default function EnterChatRoom({ route, navigation }) {
     username,
     fetchChatHistory
   ]);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  // 🌟 빈 방 정리: 방을 만들고 아무도 초대하지 않은 채(대화도 없이) 나가면 방을 지운다.
+  //    조건 — 이전 기록을 정상적으로 불러왔고, 주고받은 대화(CHAT)가 없고, 참여자가 나 혼자.
+  //    서버 leaveUser 는 마지막 멤버가 나가면 방 자체를 삭제한다.
+  //    기록을 못 불러온 경우엔 대화가 있는지 알 수 없으므로 지우지 않는다.
+  const removeRoomIfEmpty = useCallback(async () => {
+    const stomp = client.current;
+    if (!stomp || !stomp.connected || !historyLoadedRef.current) return;
+    if (messagesRef.current.some((m) => m.type === MessageType.CHAT)) return;
+
+    const res = await fetch(`${API_BASE_URL}/api/chat/rooms/participants`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ roomId }),
+    });
+    if (!res.ok) return;
+    const participants = (await res.json()) || [];
+    const onlyMe =
+      participants.length === 1 && String(participants[0].userId) === String(username);
+    if (!onlyMe) return;
+
+    // 서버가 멤버십·방을 지운 뒤 브로드캐스트하는 내 LEAVE 메시지를 받을 때까지 기다린다
+    const leaveAck = new Promise((resolve) => {
+      leaveAckRef.current = resolve;
+    });
+    stomp.publish({
+      destination: "/app/chat.leaveUser",
+      body: JSON.stringify({
+        type: MessageType.LEAVE,
+        roomId,
+        sender: username,
+        content: `${username}님이 나갔습니다.`,
+      }),
+    });
+    await leaveAck;
+  }, [roomId, username]);
+
+  // 헤더 뒤로가기·휴대폰/브라우저 뒤로가기 모두 화면 제거 전에 빈 방을 정리한다.
+  // 목록 화면이 다시 불러올 때 지워진 상태가 보이도록, 정리가 끝난 뒤(최대 2초) 이동한다.
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("beforeRemove", (e) => {
+      if (leavingRef.current) return;
+      e.preventDefault();
+      leavingRef.current = true;
+      const timeout = new Promise((resolve) => setTimeout(resolve, 2000));
+      Promise.race([removeRoomIfEmpty().catch((err) => console.warn("빈 방 정리 실패", err)), timeout])
+        .finally(() => navigation.dispatch(e.data.action));
+    });
+    return unsubscribe;
+  }, [navigation, removeRoomIfEmpty]);
 
   useEffect(() => {
     if (flatListRef.current && messages.length > 0) {
@@ -403,7 +473,15 @@ export default function EnterChatRoom({ route, navigation }) {
   const handleGoBack = () => {
     // 채팅방 상세 화면에서 채팅 목록 (메인 탭)으로 돌아감
     // 'MainTabs' 내비게이터로 이동하면서 '채팅' 탭이 활성화되도록 함
-    navigation.navigate("BottomTab", { screen: "Chat" });
+    // React Navigation v7 의 navigate 는 기존 화면으로 돌아가지 않고 새로 쌓는다.
+    // (그러면 채팅방 화면이 스택에 남아 소켓도 안 끊기고, 빈 방 정리도 안 된다) → popTo 로 닫는다.
+    if (typeof navigation.popTo === "function") {
+      navigation.popTo("BottomTab", { screen: "Chat" });
+    } else if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.navigate("BottomTab", { screen: "Chat" });
+    }
   };
 
   return (
