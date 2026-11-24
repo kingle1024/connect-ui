@@ -163,8 +163,16 @@ export default function ConnectScreen() {
     refRBSheet.current?.close();
   };
 
+  // + 버튼을 누른 시점의 카테고리 탭. 등록을 마치면 이 탭이 선택된 상태로 돌아온다.
+  const newPostSourceCategoryRef = useRef<string>(CATEGORY_FILTER_ALL);
+
   // 로그인하지 않았어도 글을 쓸 수 있다. 이때는 랜덤 닉네임 게스트로 작성된다.
   const onPressNewPost = async () => {
+    newPostSourceCategoryRef.current = selectedCategory;
+    // 특정 카테고리 탭에서 눌렀다면 작성 시트의 카테고리도 그 탭으로 미리 골라 둔다
+    if (categories.includes(selectedCategory)) {
+      setCategoryPreset(selectedCategory);
+    }
     const writer = await ensureActor();
     if (writer) {
       refRBSheet.current?.open();
@@ -191,6 +199,8 @@ export default function ConnectScreen() {
       resetMaxCapacityInput();
       resetCategoryInput();
       refRBSheet.current?.close();
+      // + 버튼을 누른 탭이 선택된 상태로 돌아온다 (탭이 바뀌면 목록도 그 탭 기준으로 다시 불러온다)
+      setSelectedCategory(newPostSourceCategoryRef.current);
       flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
       Toast.show({
         type: 'success',
