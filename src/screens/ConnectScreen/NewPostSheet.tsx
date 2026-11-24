@@ -144,9 +144,10 @@ const NewPostSheet: React.FC<NewPostSheetProps> = React.memo((props) => {
         )}
 
         {/* 제목 */}
+        <Text style={styles.fieldLabel}>제목</Text>
         <TextInput
           value={titleInput}
-          placeholder="제목"
+          placeholder="제목을 입력하세요"
           onChangeText={setTitleInput}
           onBlur={validateTitle} // <-- onBlur 추가
           placeholderTextColor={theme.colors.textMuted}
@@ -160,6 +161,7 @@ const NewPostSheet: React.FC<NewPostSheetProps> = React.memo((props) => {
         )}
 
         {/* 내용 */}
+        <Text style={styles.fieldLabel}>내용</Text>
         <TextInput
           value={contentInput}
           onChangeText={setContentInput}
@@ -177,9 +179,10 @@ const NewPostSheet: React.FC<NewPostSheetProps> = React.memo((props) => {
         )}
 
         {/* 도착지 */}
+        <Text style={styles.fieldLabel}>도착지</Text>
         <TextInput
           value={destinationInput}
-          placeholder="도착지 입력"
+          placeholder="도착지를 입력하세요"
           onChangeText={setDestinationInput}
           onBlur={validateDestination} // <-- onBlur 추가
           placeholderTextColor={theme.colors.textMuted}
@@ -211,11 +214,12 @@ const NewPostSheet: React.FC<NewPostSheetProps> = React.memo((props) => {
         )}
 
         {/* 최대 모집 인원 */}
+        <Text style={styles.fieldLabel}>최대 모집 인원(본인 포함)</Text>
         <TextInput
           value={maxCapacityInput}
           onChangeText={setMaxCapacityInput}
           onBlur={validateMaxCapacity} // <-- onBlur 추가
-          placeholder="최대 모집 인원(본인 포함)"
+          placeholder="예: 4"
           placeholderTextColor={theme.colors.textMuted}
           keyboardType="numeric"
           style={styles.textInput}
@@ -300,6 +304,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: theme.colors.textSecondary,
+    marginTop: 4,
     marginBottom: 8,
   },
   quickPickRow: {
