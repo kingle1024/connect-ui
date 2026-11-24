@@ -37,6 +37,14 @@ export function applyAlertTheme() {
 /* 메시지의 \\n 을 실제 줄바꿈으로 보여주고, 긴 단어도 영역 안에서 줄을 바꾼다 */
 .rn-alert__message { white-space: pre-line; word-break: keep-all; overflow-wrap: anywhere; }
 .rn-alert__title { white-space: pre-line; }
+/* 버튼이 하나뿐인 안내창(확인/OK)도 강조 버튼으로 보여준다 (라이브러리는 2개일 때만 강조) */
+.rn-alert__actions > .rn-alert__button--secondary:only-child {
+  background: var(--rn-alert-accent);
+  color: #fff;
+  border-color: color-mix(in srgb, #000 10%, var(--rn-alert-accent));
+  box-shadow: 0 1px 2px rgba(0,0,0,.1);
+}
+.rn-alert__actions > .rn-alert__button--secondary:only-child:hover { background: var(--rn-alert-accent-hover); }
 `;
   document.head.appendChild(style);
 }
