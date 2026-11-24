@@ -6,6 +6,7 @@
   "framework": null,
   "rewrites": [
     { "source": "/admin", "destination": "https://port-0-connect-service-mahm3yer16ed563d.sel4.cloudtype.app/admin/" },
+    { "source": "/admin/", "destination": "https://port-0-connect-service-mahm3yer16ed563d.sel4.cloudtype.app/admin/" },
     { "source": "/admin/:path*", "destination": "https://port-0-connect-service-mahm3yer16ed563d.sel4.cloudtype.app/admin/:path*" },
     { "source": "/api/admin/:path*", "destination": "https://port-0-connect-service-mahm3yer16ed563d.sel4.cloudtype.app/api/admin/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
