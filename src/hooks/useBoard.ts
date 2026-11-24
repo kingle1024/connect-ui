@@ -67,10 +67,13 @@ export const useBoard = () => {
   const loadingMoreRef = useRef(false);
   const [titleInput, setTitleInput] = useState<string>("");
   const [contentInput, setContentInput] = useState<string>("");
-  const [destinationInput, setDestinationInput] = useState("");
+  // 새 모집글 기본값: 도착지 강촌, 최대 모집 인원 4명 (작성 후 초기화할 때도 이 값으로 돌아간다)
+  const DEFAULT_DESTINATION = "강촌";
+  const DEFAULT_MAX_CAPACITY = "4";
+  const [destinationInput, setDestinationInput] = useState(DEFAULT_DESTINATION);
   const [categoryPreset, setCategoryPreset] = useState<string>(CATEGORY_PRESETS[0]);
   const [customCategoryInput, setCustomCategoryInput] = useState("");
-  const [maxCapacityInput, setMaxCapacityInputRaw] = useState("");
+  const [maxCapacityInput, setMaxCapacityInputRaw] = useState(DEFAULT_MAX_CAPACITY);
   // null = '마감 시까지'(날짜 제한 없음). 새 글의 기본값
   const [deadlineDts, setDeadlineDts] = useState<Date | null>(null);
   const insets = useSafeAreaInsets();
@@ -153,8 +156,8 @@ export const useBoard = () => {
 
   const resetTitleInput = () => setTitleInput("");
   const resetContenInput = () => setContentInput("");
-  const resetDestinationInput = () => setDestinationInput("");
-  const resetMaxCapacityInput = () => setMaxCapacityInputRaw("");
+  const resetDestinationInput = () => setDestinationInput(DEFAULT_DESTINATION);
+  const resetMaxCapacityInput = () => setMaxCapacityInputRaw(DEFAULT_MAX_CAPACITY);
 
   // 인원수는 숫자만 허용 (웹에서는 keyboardType="numeric"이 입력을 막지 않음)
   const setMaxCapacityInput = useCallback((text: string) => {

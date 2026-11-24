@@ -12,6 +12,7 @@ import Alert from '@blazejkustra/react-native-alert';
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import InviteModal from "./InviteModal";
+import ParticipantsModal from "./ParticipantsModal";
 import Constants from "expo-constants";
 import Icon from "react-native-vector-icons/Ionicons"; // 🌟 아이콘 사용을 위해 임포트 🌟
 import localStyles from "./EnterChatRoom.styles";
@@ -408,6 +409,18 @@ export default function EnterChatRoom({ route, navigation }) {
   const openInviteModal = () => setInviteModalVisible(true);
   const closeInviteModal = () => setInviteModalVisible(false);
 
+  // 참여자 보기
+  const [participantsVisible, setParticipantsVisible] = useState(false);
+  // 서버가 이름을 못 줄 때 대신 쓸 표시 이름 (메시지의 senderName 에서 모은다)
+  const participantNameHints = useMemo(() => {
+    const map = {};
+    for (const m of messages) {
+      if (m?.sender && m?.senderName) map[String(m.sender)] = m.senderName;
+      if (m?.recipient && m?.recipientName) map[String(m.recipient)] = m.recipientName;
+    }
+    return map;
+  }, [messages]);
+
   const kickUser = () => {
     setModalMode("kick");
     openInviteModal();
@@ -586,6 +599,13 @@ export default function EnterChatRoom({ route, navigation }) {
         </View>
         <TouchableOpacity
           style={localStyles.headerIconButton}
+          onPress={() => setParticipantsVisible(true)}
+          accessibilityLabel="참여자 보기"
+        >
+          <Icon name="people-outline" size={22} color={theme.colors.text} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={localStyles.headerIconButton}
           onPress={inviteUser}
           accessibilityLabel="사용자 초대"
         >
@@ -650,6 +670,16 @@ export default function EnterChatRoom({ route, navigation }) {
         roomName={_roomName}
         mode={modalMode}
         ensureJoined={ensureJoined}
+      />
+
+      <ParticipantsModal
+        visible={participantsVisible}
+        onClose={() => setParticipantsVisible(false)}
+        roomId={roomId}
+        username={username}
+        API_BASE_URL={API_BASE_URL}
+        nameHints={participantNameHints}
+        isNewRoom={!joinedRef.current}
       />
     </KeyboardAvoidingView>
   );
