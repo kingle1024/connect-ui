@@ -9,6 +9,10 @@ import { StatusBar } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
+import { applyAlertTheme } from "@/modules/alertTheme";
+
+// 웹 안내창(Alert.alert) 색·줄바꿈을 앱 테마에 맞춘다
+applyAlertTheme();
 
 export default function App() {
   const navigationRef = useNavigationContainerRef();
