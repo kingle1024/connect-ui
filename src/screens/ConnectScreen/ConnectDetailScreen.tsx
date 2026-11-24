@@ -893,26 +893,26 @@ const ConnectDetail = () => {
                 );
               })()}
             </View>
-            <View style={{ height: 176 }} />
           </View>
         )}
 
-        {/* 구분선 + 액션 */}
+        {/* 구분선 + 액션. 버튼들을 같은 폭으로 나눠 가운데 정렬해, 본문 바로 아래의 행동 바로 읽히게 한다. */}
         <View
           style={{
             borderTopWidth: 1,
             borderBottomWidth: 1,
-            borderColor: "#D1D5DB",
+            borderColor: "#E5E7EB",
             paddingVertical: 12,
             marginBottom: 24,
             flexDirection: "row",
-            gap: 16,
           }}
         >
           <View
             style={{
+              flex: 1,
               flexDirection: "row",
               alignItems: "center",
+              justifyContent: "center",
             }}
           >
             <TouchableOpacity
@@ -920,7 +920,7 @@ const ConnectDetail = () => {
               onPress={() => inputRef.current?.focus()}
             >
               <MaterialIcons
-                name="subdirectory-arrow-right"
+                name="chat-bubble-outline"
                 size={18}
                 color="#6B7280"
                 style={{ marginRight: 4 }}
@@ -928,10 +928,16 @@ const ConnectDetail = () => {
               <Text style={{ fontSize: 14, color: "#6B7280" }}>댓글</Text>
             </TouchableOpacity>
           </View>
+          {/* 내 글에 나와 대화하기는 의미가 없으니 남의 글에서만 보여준다 */}
+          {!isAuthor && (
           <View
             style={{
+              flex: 1,
               flexDirection: "row",
               alignItems: "center",
+              justifyContent: "center",
+              borderLeftWidth: 1,
+              borderColor: "#E5E7EB",
             }}
           >
             <TouchableOpacity
@@ -944,14 +950,15 @@ const ConnectDetail = () => {
                 color="#6B7280"
                 style={{ marginRight: 4 }}
               />
-              <Text style={{ fontSize: 14, color: "#6B7280" }}>대화하기</Text>
+              <Text style={{ fontSize: 14, color: "#6B7280" }}>1:1 대화하기</Text>
             </TouchableOpacity>
           </View>
+          )}
 
-          {/* 본인 글일 때만 수정/삭제 노출 */}
+          {/* 본인 글일 때만 수정/삭제 노출 (대화하기 자리를 대신한다) */}
           {isAuthor && !isEditing && (
             <>
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <View style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", borderLeftWidth: 1, borderColor: "#E5E7EB" }}>
                 <TouchableOpacity
                   style={{ flexDirection: "row", alignItems: "center" }}
                   onPress={startEdit}
@@ -965,7 +972,7 @@ const ConnectDetail = () => {
                   <Text style={{ fontSize: 14, color: theme.colors.primary }}>수정</Text>
                 </TouchableOpacity>
               </View>
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <View style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", borderLeftWidth: 1, borderColor: "#E5E7EB" }}>
                 <TouchableOpacity
                   style={{ flexDirection: "row", alignItems: "center" }}
                   onPress={confirmDelete}
