@@ -140,6 +140,20 @@ export default function ChatRoomsListScreen({ navigation }) {
   );
 
   const handleCreateAndJoinNewRoom = () => {
+    // 비회원(게스트)은 새 채팅방을 만들지 않는다. 초대할 친구가 없으니 모집글에서 대화를 시작하도록 안내한다.
+    if (!member) {
+      Alert.alert(
+        "대화를 시작하려면",
+        "모집 탭에서 글을 열고 '대화하기' 버튼을 눌러 주세요.\n로그인하면 친구 목록에서도 대화할 수 있어요.",
+        [
+          { text: "닫기", style: "cancel" },
+          { text: "로그인", onPress: () => navigation.navigate("Signin", { redirectTab: "Chat" }) },
+          { text: "모집 보러 가기", onPress: () => navigation.navigate("Connect") },
+        ]
+      );
+      return;
+    }
+
     if (isUserIdLoading || !userId) {
       Alert.alert(
         "알림",
@@ -279,7 +293,9 @@ export default function ChatRoomsListScreen({ navigation }) {
               <Ionicons name="chatbubbles-outline" size={48} color={theme.colors.textDisabled} />
               <Text style={localStyles.emptyTitle}>아직 참여 중인 채팅방이 없어요</Text>
               <Text style={localStyles.emptyListText}>
-                모집글에서 대화를 시작하거나{"\n"}오른쪽 아래 버튼으로 새 채팅방을 만들어 보세요.
+                {member
+                  ? "모집글에서 대화를 시작하거나\n오른쪽 아래 버튼으로 새 채팅방을 만들어 보세요."
+                  : "모집 탭에서 글을 열고 '대화하기'를 눌러 보세요.\n로그인하면 친구 목록에서도 대화할 수 있어요."}
               </Text>
             </View>
           }
