@@ -145,10 +145,10 @@ export default function ChatRoomsListScreen({ navigation }) {
       Alert.alert(
         "대화를 시작하려면",
         "모집 탭에서 글을 열고 '대화하기' 버튼을 눌러 주세요.\n로그인하면 친구 목록에서도 대화할 수 있어요.",
+        // 다른 안내창(친구 탭 '로그인이 필요합니다.')과 같은 모양: 웹 Alert 는 버튼이 2개일 때만 첫 버튼을 강조한다
         [
-          { text: "닫기", style: "cancel" },
-          { text: "로그인", onPress: () => navigation.navigate("Signin", { redirectTab: "Chat" }) },
           { text: "모집 보러 가기", onPress: () => navigation.navigate("Connect") },
+          { text: "닫기" },
         ]
       );
       return;
