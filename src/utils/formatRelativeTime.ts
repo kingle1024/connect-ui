@@ -12,13 +12,16 @@ export function formatRelativeTime(insertDts: string): string {
 /**
  * '마감 시까지'(날짜 제한 없음) 글의 마감일.
  * 서버 컬럼이 NOT NULL 이라 null 대신 먼 미래 날짜를 저장한다.
+ * deadline_dts 는 TIMESTAMP 라 2038-01-19 를 넘는 값(예: 9999-12-31)은 DB 가 거부해 등록이 500 으로 실패한다.
  */
-export const NO_DEADLINE_DTS = "9999-12-31T23:59:59";
+export const NO_DEADLINE_DTS = "2037-12-31T23:59:59";
+const NO_DEADLINE_DATE = "2037-12-31";
 
 /** 날짜 제한 없는('마감 시까지') 글인지 */
 export function isOpenEndedDeadline(deadlineDts: string | Date | null | undefined): boolean {
   if (!deadlineDts) return false;
-  return dayjs(deadlineDts).year() >= 9999;
+  const d = dayjs(deadlineDts);
+  return d.format("YYYY-MM-DD") === NO_DEADLINE_DATE || d.year() >= 9999;
 }
 
 /** 입력값(null = 마감 시까지)을 서버로 보낼 문자열로 */
