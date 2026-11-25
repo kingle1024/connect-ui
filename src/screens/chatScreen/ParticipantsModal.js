@@ -22,8 +22,8 @@ const HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
  * nameHints: 서버가 이름을 주지 못할 때 대신 쓸 { userId: 표시이름 } (채팅 메시지의 senderName 에서 모은다)
  * onStartChat(userId, name): 참여자 프로필의 '대화하기' — 그 사람과의 1:1 채팅방으로 간다
  *
- * 2명을 넘는 방(단체방)에서는 다른 참여자를 누르면 카카오톡 프로필처럼 크게 보여주고
- * 친구 추가 / 대화하기 버튼을 띄운다. 1:1 방은 이미 그 사람과 대화 중이라 목록만 보여준다.
+ * 다른 참여자를 누르면 카카오톡 프로필처럼 크게 보여주고 친구 추가 / 대화하기 버튼을 띄운다.
+ * 1:1 방(2명)은 이미 그 사람과 대화 중이라 '대화하기'는 빼고 친구 추가만 보여준다.
  */
 export default function ParticipantsModal({
   visible,
@@ -41,6 +41,10 @@ export default function ParticipantsModal({
   // 프로필을 보고 있는 참여자 (null 이면 목록)
   const [selected, setSelected] = useState(null);
   const [sendingRequest, setSendingRequest] = useState(false);
+  // 이미 친구인 사람 / 이번에 요청을 보낸 사람 (친구 추가 버튼 상태 표시용)
+  const [friendIds, setFriendIds] = useState(() => new Set());
+  const [requestedIds, setRequestedIds] = useState(() => new Set());
+  const meIsGuest = isGuestUserId(String(username));
 
   const handleClose = useCallback(() => {
     setSelected(null);
@@ -74,6 +78,15 @@ export default function ParticipantsModal({
     if (visible) load();
   }, [visible, load]);
 
+  // 회원이면 내 친구 목록을 받아 '친구' 표시에 쓴다 (실패해도 버튼은 그대로 동작)
+  useEffect(() => {
+    if (!visible || meIsGuest || !username) return;
+    fetch(`${API_BASE_URL}/api/friends/${encodeURIComponent(String(username))}/friends`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => setFriendIds(new Set((Array.isArray(data) ? data : []).map((d) => String(d.friendUserId)))))
+      .catch(() => {});
+  }, [visible, meIsGuest, username, API_BASE_URL]);
+
   // 나 → 방장 → 나머지 순으로 보여준다
   const rows = participants
     .map((p) => {
@@ -92,18 +105,24 @@ export default function ParticipantsModal({
     ? [{ userId: String(username), name: nameHints[String(username)] || "나", leader: true, me: true }]
     : rows;
 
-  // 단체방(2명 초과)에서만 다른 참여자의 프로필을 연다
-  const canOpenProfile = list.length > 2;
-
-  // 친구는 회원끼리만 맺는다 (게스트는 기기 쿠키에 묶인 임시 계정이라)
-  const canAddFriend = (target) =>
-    !!target && !target.me && !isGuestUserId(String(username)) && !isGuestUserId(target.userId);
+  // 1:1 방(나 + 상대)이면 '대화하기'는 필요 없다
+  const isOneToOne = list.length <= 2;
 
   const addFriend = async () => {
     if (!selected || sendingRequest) return;
+    // 친구는 회원끼리만 맺는다 (게스트는 기기 쿠키에 묶인 임시 계정이라)
+    if (meIsGuest) {
+      Alert.alert("친구 추가", "친구 추가는 로그인한 회원만 할 수 있어요.\n로그인한 뒤 다시 시도해 주세요.");
+      return;
+    }
+    if (isGuestUserId(selected.userId)) {
+      Alert.alert("친구 추가", `${selected.name}님은 게스트라서 친구로 추가할 수 없어요.\n대화로 연락해 주세요.`);
+      return;
+    }
     setSendingRequest(true);
     try {
       await sendFriendRequest(String(username), selected.userId);
+      setRequestedIds((prev) => new Set(prev).add(selected.userId));
       Alert.alert("친구 요청 완료", `${selected.name}님에게 친구 요청을 보냈습니다.`);
     } catch (e) {
       Alert.alert("친구 요청 실패", e?.message || "친구 요청 중 오류가 발생했습니다.");
@@ -133,7 +152,7 @@ export default function ParticipantsModal({
         {item.leader && <Text style={[s.badge, s.badgeLeader]}>방장</Text>}
       </>
     );
-    if (!canOpenProfile || item.me) return <View style={s.row}>{body}</View>;
+    if (item.me) return <View style={s.row}>{body}</View>;
     return (
       <TouchableOpacity
         style={s.row}
@@ -171,7 +190,21 @@ export default function ParticipantsModal({
           {isGuestUserId(selected.userId) && <Text style={s.profileSub}>게스트</Text>}
         </View>
         <View style={s.profileActions}>
-          {canAddFriend(selected) && (
+          {friendIds.has(selected.userId) ? (
+            <View style={s.action} accessibilityLabel="이미 친구">
+              <View style={s.actionIcon}>
+                <Icon name="people" size={24} color={theme.colors.primary} />
+              </View>
+              <Text style={s.actionText}>친구</Text>
+            </View>
+          ) : requestedIds.has(selected.userId) ? (
+            <View style={s.action} accessibilityLabel="친구 요청 보냄">
+              <View style={s.actionIcon}>
+                <Icon name="checkmark" size={24} color={theme.colors.primary} />
+              </View>
+              <Text style={s.actionText}>요청 보냄</Text>
+            </View>
+          ) : (
             <TouchableOpacity style={s.action} onPress={addFriend} disabled={sendingRequest} accessibilityLabel="친구 추가">
               <View style={s.actionIcon}>
                 {sendingRequest
@@ -181,12 +214,14 @@ export default function ParticipantsModal({
               <Text style={s.actionText}>친구 추가</Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={s.action} onPress={startChat} accessibilityLabel="대화하기">
-            <View style={s.actionIcon}>
-              <Icon name="chatbubble-outline" size={24} color={theme.colors.primary} />
-            </View>
-            <Text style={s.actionText}>대화하기</Text>
-          </TouchableOpacity>
+          {!isOneToOne && (
+            <TouchableOpacity style={s.action} onPress={startChat} accessibilityLabel="대화하기">
+              <View style={s.actionIcon}>
+                <Icon name="chatbubble-outline" size={24} color={theme.colors.primary} />
+              </View>
+              <Text style={s.actionText}>대화하기</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </Pressable>
     );

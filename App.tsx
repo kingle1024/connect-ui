@@ -2,7 +2,8 @@ import AuthProvider from "@/components/auth/AuthProvider";
 import InstallPromptBanner from "@/components/InstallPromptBanner";
 import { DrawNavigation } from "@/navigation/DrawNavigation";
 import { ActionSheetProvider } from "@expo/react-native-action-sheet";
-import { NavigationContainer, useNavigationContainerRef } from "@react-navigation/native";
+import { NavigationContainer, StackActions, useNavigationContainerRef } from "@react-navigation/native";
+import ChatNotifier from "@/components/ChatNotifier";
 import { useWebBackButton } from "@/navigation/useWebBackButton";
 import { consumeSharedPostId } from "@/utils/sharePost";
 import { StatusBar } from "react-native";
@@ -45,6 +46,10 @@ export default function App() {
               <DrawNavigation />
               <InstallPromptBanner />
               <Toast />
+              {/* 새 채팅 메시지 브라우저 알림 — 누르면 그 채팅방으로 (다른 채팅방 위에도 쌓이도록 push) */}
+              <ChatNotifier
+                openRoom={(params) => navigationRef.isReady() && navigationRef.dispatch(StackActions.push("채팅방 상세", params))}
+              />
             </AuthProvider>
           </NavigationContainer>
         </ActionSheetProvider>

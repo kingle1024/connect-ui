@@ -13,12 +13,15 @@ import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import InviteModal from "./InviteModal";
 import ParticipantsModal from "./ParticipantsModal";
+import CallPanel from "./CallPanel";
+import useVoiceCall from "./useVoiceCall";
 import Constants from "expo-constants";
 import Icon from "react-native-vector-icons/Ionicons"; // 🌟 아이콘 사용을 위해 임포트 🌟
 import localStyles from "./EnterChatRoom.styles";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import theme from "@/modules/theme";
 import { findOrCreateOneToOneRoom } from "@/utils/chat";
+import { setActiveChatRoom } from "@/modules/activeChatRoom";
 
 const SOCKET_URL = Constants.expoConfig.extra.API_BASE_URL + "/ws-chat";
 const API_BASE_URL = SOCKET_URL.substring(0, SOCKET_URL.lastIndexOf('/'));
@@ -87,6 +90,8 @@ export default function EnterChatRoom({ route, navigation }) {
   const canSend = currentMessage.trim() !== "";
 
   const client = useRef(null);
+  // 통화 신호 처리기 (STOMP 구독 콜백에서 최신 것을 부르기 위해 ref 로 둔다)
+  const callSignalRef = useRef(null);
   const flatListRef = useRef(null);
   // 빈 방 정리 판단용: 최신 메시지 목록과 '이전 기록을 정상적으로 불러왔는지'
   const messagesRef = useRef([]);
@@ -188,6 +193,20 @@ export default function EnterChatRoom({ route, navigation }) {
     }
   }, [roomId, tempRoomName, _roomName, username, API_BASE_URL]);
 
+  // 이 방을 보고 있는 동안에는 이 방의 새 메시지 알림을 띄우지 않는다
+  useEffect(() => {
+    const onFocus = () => setActiveChatRoom(roomId);
+    const onBlur = () => setActiveChatRoom(null);
+    onFocus();
+    const offFocus = navigation.addListener("focus", onFocus);
+    const offBlur = navigation.addListener("blur", onBlur);
+    return () => {
+      offFocus();
+      offBlur();
+      setActiveChatRoom(null);
+    };
+  }, [navigation, roomId]);
+
   // 헤더 타이틀만 갱신 (STOMP 연결과 분리 — 방 이름 변경 시 재연결되면 안 됨)
   useEffect(() => {
     navigation.setOptions({
@@ -228,6 +247,15 @@ export default function EnterChatRoom({ route, navigation }) {
               Date.now().toString() + Math.random().toString(36).substr(2, 9);
           }
           setMessages((prevMessages) => [...prevMessages, receivedMessage]);
+        });
+
+        // 음성 통화 신호 (참가/퇴장/연결 정보)
+        client.current.subscribe(`/topic/call/${roomId}`, (message) => {
+          try {
+            callSignalRef.current?.(JSON.parse(message.body));
+          } catch (e) {
+            console.warn("통화 신호 파싱 실패", e);
+          }
         });
 
         client.current.subscribe(`/user/queue/errors`, (error) => {
@@ -434,6 +462,8 @@ export default function EnterChatRoom({ route, navigation }) {
         Alert.alert("오류", "채팅방을 열 수 없습니다.");
         return;
       }
+      // 지금 있는 방이 바로 그 1:1 방이면 그대로 둔다
+      if (String(room.roomId) === String(roomId)) return;
       navigation.push("채팅방 상세", {
         username,
         roomId: room.roomId,
@@ -449,6 +479,32 @@ export default function EnterChatRoom({ route, navigation }) {
       startingChatRef.current = false;
     }
   }, [username, navigation]);
+
+  // 음성 통화 (2명이면 1:1, 여러 명이면 그룹 통화)
+  const call = useVoiceCall({
+    client,
+    roomId,
+    username,
+    API_BASE_URL,
+    ensureJoined,
+    // 통화를 처음 시작하면 채팅에도 남겨서 다른 사람들이 알 수 있게 한다
+    onCallStarted: () => {
+      client.current?.publish({
+        destination: "/app/chat.sendMessage",
+        body: JSON.stringify({
+          type: MessageType.CHAT,
+          roomId,
+          sender: username,
+          content: "📞 통화를 시작했어요. 위쪽 '참여' 버튼으로 들어오세요.",
+        }),
+      });
+    },
+  });
+  callSignalRef.current = call.handleSignal;
+  const callNameOf = useCallback(
+    (userId) => call.callNames[userId] || participantNameHints[userId] || String(userId),
+    [call.callNames, participantNameHints]
+  );
 
   const kickUser = () => {
     setModalMode("kick");
@@ -628,6 +684,18 @@ export default function EnterChatRoom({ route, navigation }) {
         </View>
         <TouchableOpacity
           style={localStyles.headerIconButton}
+          onPress={call.inCall ? call.leaveCall : call.joinCall}
+          disabled={call.joining}
+          accessibilityLabel={call.inCall ? "통화 나가기" : "통화하기"}
+        >
+          <Icon
+            name={call.inCall ? "call" : "call-outline"}
+            size={21}
+            color={call.inCall ? "#E5484D" : theme.colors.text}
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={localStyles.headerIconButton}
           onPress={() => setParticipantsVisible(true)}
           accessibilityLabel="참여자 보기"
         >
@@ -648,6 +716,8 @@ export default function EnterChatRoom({ route, navigation }) {
           <Icon name="person-remove-outline" size={22} color={theme.colors.text} />
         </TouchableOpacity>
       </View>
+
+      <CallPanel call={call} me={String(username)} nameOf={callNameOf} />
 
       <FlatList
         ref={flatListRef}
