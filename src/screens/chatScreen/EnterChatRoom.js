@@ -18,6 +18,7 @@ import Icon from "react-native-vector-icons/Ionicons"; // 🌟 아이콘 사용�
 import localStyles from "./EnterChatRoom.styles";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import theme from "@/modules/theme";
+import { findOrCreateOneToOneRoom } from "@/utils/chat";
 
 const SOCKET_URL = Constants.expoConfig.extra.API_BASE_URL + "/ws-chat";
 const API_BASE_URL = SOCKET_URL.substring(0, SOCKET_URL.lastIndexOf('/'));
@@ -421,6 +422,34 @@ export default function EnterChatRoom({ route, navigation }) {
     return map;
   }, [messages]);
 
+  // 참여자 프로필의 '대화하기': 그 사람과의 1:1 방을 찾거나 만들어 들어간다 (단체방은 뒤에 남겨 둔다)
+  const startingChatRef = useRef(false);
+  const startPrivateChat = useCallback(async (targetUserId, targetName) => {
+    if (startingChatRef.current) return;
+    if (String(targetUserId) === String(username)) return;
+    startingChatRef.current = true;
+    try {
+      const room = await findOrCreateOneToOneRoom(username, targetUserId, targetName);
+      if (!room?.roomId) {
+        Alert.alert("오류", "채팅방을 열 수 없습니다.");
+        return;
+      }
+      navigation.push("채팅방 상세", {
+        username,
+        roomId: room.roomId,
+        roomName: targetName,
+        roomType: "ONE_TO_ONE",
+        targetUserId,
+        targetUserDisplayName: targetName,
+      });
+    } catch (e) {
+      console.error("1:1 채팅 열기 실패", e);
+      Alert.alert("오류", "채팅방을 열 수 없습니다. 다시 시도해 주세요.");
+    } finally {
+      startingChatRef.current = false;
+    }
+  }, [username, navigation]);
+
   const kickUser = () => {
     setModalMode("kick");
     openInviteModal();
@@ -680,6 +709,7 @@ export default function EnterChatRoom({ route, navigation }) {
         API_BASE_URL={API_BASE_URL}
         nameHints={participantNameHints}
         isNewRoom={!joinedRef.current}
+        onStartChat={startPrivateChat}
       />
     </KeyboardAvoidingView>
   );

@@ -15,7 +15,8 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import localStyles from "./ChatRoomListScreen.styles.ts";
 import AuthContext from "@/components/auth/AuthContext";
-import { getRoomsForUser } from "@/utils/chat";
+import { getRoomsForUser, getFriendCount } from "@/utils/chat";
+import { alertStartChatGuide } from "@/utils/startChatGuide";
 import theme from "@/modules/theme";
 const API_BASE_URL = Constants.expoConfig.extra.API_BASE_URL;
 const SOCKET_URL = API_BASE_URL + "/ws-chat";
@@ -139,18 +140,11 @@ export default function ChatRoomsListScreen({ navigation }) {
     }, [userId, isUserIdLoading, fetchUserRooms, connectWebSocket]) // 🌟 의존성 배열에 isUserIdLoading 추가 🌟
   );
 
-  const handleCreateAndJoinNewRoom = () => {
-    // 비회원(게스트)은 새 채팅방을 만들지 않는다. 초대할 친구가 없으니 모집글에서 대화를 시작하도록 안내한다.
-    if (!member) {
-      Alert.alert(
-        "대화를 시작하려면",
-        "모집 탭에서 글을 열고 '대화하기' 버튼을 눌러 주세요.\n로그인하면 친구 목록에서도 대화할 수 있어요.",
-        // 다른 안내창(친구 탭 '로그인이 필요합니다.')과 같은 모양: 웹 Alert 는 버튼이 2개일 때만 첫 버튼을 강조한다
-        [
-          { text: "모집 보러 가기", onPress: () => navigation.navigate("Connect") },
-          { text: "닫기" },
-        ]
-      );
+  const handleCreateAndJoinNewRoom = async () => {
+    // 초대할 친구가 없으면(게스트는 친구를 맺을 수 없으니 항상) 새 방 대신 모집글에서 대화를 시작하도록 안내한다
+    const friendCount = member ? await getFriendCount(member.userId || member.email) : 0;
+    if (friendCount === 0) {
+      alertStartChatGuide(() => navigation.navigate("Connect"));
       return;
     }
 
@@ -295,7 +289,7 @@ export default function ChatRoomsListScreen({ navigation }) {
               <Text style={localStyles.emptyListText}>
                 {member
                   ? "모집글에서 대화를 시작하거나\n오른쪽 아래 버튼으로 새 채팅방을 만들어 보세요."
-                  : "모집 탭에서 글을 열고 '대화하기'를 눌러 보세요.\n로그인하면 친구 목록에서도 대화할 수 있어요."}
+                  : "모집 탭에서 글을 열고 '대화하기'를 눌러 보세요."}
               </Text>
             </View>
           }

@@ -60,3 +60,42 @@ export async function createOneToOneRoom(
     participants: [currentUserId, friendId],
   };
 }
+/**
+ * 상대와의 1:1 채팅방을 찾고, 없으면 만든다. (모집 글·채팅방 참여자 프로필의 '대화하기' 공용)
+ * 반환값의 roomId 로 "채팅방 상세" 에 들어가면 된다.
+ */
+export async function findOrCreateOneToOneRoom(
+  currentUserId: string,
+  targetUserId: string,
+  targetDisplayName?: string
+) {
+  const rooms = await getOneToOneRoomsForUser(currentUserId);
+  const existing = Array.isArray(rooms)
+    ? rooms.find((room: any) => String(room.userId) === String(targetUserId))
+    : null;
+  if (existing) return existing;
+  return createOneToOneRoom(currentUserId, targetUserId, targetDisplayName);
+}
+
+/** 회원끼리 친구 요청을 보낸다. 서버 오류 메시지가 있으면 그대로 던진다. */
+export async function sendFriendRequest(currentUserId: string, targetUserId: string) {
+  try {
+    await axiosInstance.post(
+      `/api/friends/${encodeURIComponent(currentUserId)}/friend-requests`,
+      { receiverUserId: targetUserId }
+    );
+  } catch (err: any) {
+    throw new Error(err?.response?.data?.message || "친구 요청 중 오류가 발생했습니다.");
+  }
+}
+
+/** 회원의 친구 수 (게스트·실패 시 0) */
+export async function getFriendCount(currentUserId?: string | null): Promise<number> {
+  if (!currentUserId) return 0;
+  try {
+    const res = await axiosInstance.get(`/api/friends/${encodeURIComponent(currentUserId)}/friends`);
+    return Array.isArray(res.data) ? res.data.length : 0;
+  } catch {
+    return 0;
+  }
+}

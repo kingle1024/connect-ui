@@ -1,8 +1,11 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Modal, Pressable, View, Text, TouchableOpacity, FlatList, ActivityIndicator } from "react-native";
+import Alert from "@blazejkustra/react-native-alert";
 import Icon from "react-native-vector-icons/Ionicons";
 import theme from "@/modules/theme";
 import { useBackClose } from "@/navigation/webBackStack";
+import { isGuestUserId } from "@/utils/guest";
+import { sendFriendRequest } from "@/utils/chat";
 
 // 채팅방 이름/아바타와 같은 규칙으로 색을 고른다 (같은 사람은 항상 같은 색)
 const AVATAR_COLORS = ["#FF8A65", "#4FC3F7", "#81C784", "#BA68C8", "#FFB74D", "#7986CB", "#4DB6AC"];
@@ -12,17 +15,40 @@ const avatarColor = (name = "") => {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 };
 
+const HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
+
 /**
  * 채팅방 참여자 목록.
  * nameHints: 서버가 이름을 주지 못할 때 대신 쓸 { userId: 표시이름 } (채팅 메시지의 senderName 에서 모은다)
+ * onStartChat(userId, name): 참여자 프로필의 '대화하기' — 그 사람과의 1:1 채팅방으로 간다
+ *
+ * 2명을 넘는 방(단체방)에서는 다른 참여자를 누르면 카카오톡 프로필처럼 크게 보여주고
+ * 친구 추가 / 대화하기 버튼을 띄운다. 1:1 방은 이미 그 사람과 대화 중이라 목록만 보여준다.
  */
-export default function ParticipantsModal({ visible, onClose, roomId, username, API_BASE_URL, nameHints = {}, isNewRoom = false }) {
+export default function ParticipantsModal({
+  visible,
+  onClose,
+  roomId,
+  username,
+  API_BASE_URL,
+  nameHints = {},
+  isNewRoom = false,
+  onStartChat,
+}) {
   const [participants, setParticipants] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  // 프로필을 보고 있는 참여자 (null 이면 목록)
+  const [selected, setSelected] = useState(null);
+  const [sendingRequest, setSendingRequest] = useState(false);
+
+  const handleClose = useCallback(() => {
+    setSelected(null);
+    onClose();
+  }, [onClose]);
 
   // 휴대폰 뒤로가기(웹)로도 닫는다
-  useBackClose(visible, onClose);
+  useBackClose(visible, handleClose);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -66,47 +92,138 @@ export default function ParticipantsModal({ visible, onClose, roomId, username, 
     ? [{ userId: String(username), name: nameHints[String(username)] || "나", leader: true, me: true }]
     : rows;
 
-  const renderItem = ({ item }) => (
-    <View style={s.row}>
+  // 단체방(2명 초과)에서만 다른 참여자의 프로필을 연다
+  const canOpenProfile = list.length > 2;
+
+  // 친구는 회원끼리만 맺는다 (게스트는 기기 쿠키에 묶인 임시 계정이라)
+  const canAddFriend = (target) =>
+    !!target && !target.me && !isGuestUserId(String(username)) && !isGuestUserId(target.userId);
+
+  const addFriend = async () => {
+    if (!selected || sendingRequest) return;
+    setSendingRequest(true);
+    try {
+      await sendFriendRequest(String(username), selected.userId);
+      Alert.alert("친구 요청 완료", `${selected.name}님에게 친구 요청을 보냈습니다.`);
+    } catch (e) {
+      Alert.alert("친구 요청 실패", e?.message || "친구 요청 중 오류가 발생했습니다.");
+    } finally {
+      setSendingRequest(false);
+    }
+  };
+
+  const startChat = () => {
+    if (!selected) return;
+    const target = selected;
+    handleClose();
+    onStartChat?.(target.userId, target.name);
+  };
+
+  const renderItem = ({ item }) => {
+    const avatar = (
       <View style={[s.avatar, { backgroundColor: avatarColor(item.userId) }]}>
         <Text style={s.avatarText}>{(item.name.trim()[0] || "?").toUpperCase()}</Text>
       </View>
-      <Text style={s.name} numberOfLines={1}>{item.name}</Text>
-      {item.me && <Text style={[s.badge, s.badgeMe]}>나</Text>}
-      {item.leader && <Text style={[s.badge, s.badgeLeader]}>방장</Text>}
-    </View>
-  );
+    );
+    const body = (
+      <>
+        {avatar}
+        <Text style={s.name} numberOfLines={1}>{item.name}</Text>
+        {item.me && <Text style={[s.badge, s.badgeMe]}>나</Text>}
+        {item.leader && <Text style={[s.badge, s.badgeLeader]}>방장</Text>}
+      </>
+    );
+    if (!canOpenProfile || item.me) return <View style={s.row}>{body}</View>;
+    return (
+      <TouchableOpacity
+        style={s.row}
+        onPress={() => setSelected(item)}
+        activeOpacity={0.6}
+        accessibilityLabel={`${item.name} 프로필 보기`}
+      >
+        {body}
+        <Icon name="chevron-forward" size={18} color={theme.colors.textMuted} style={{ marginLeft: "auto" }} />
+      </TouchableOpacity>
+    );
+  };
 
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={s.backdrop} onPress={onClose}>
-        <Pressable style={s.sheet} onPress={() => {}}>
-          <View style={s.header}>
-            <Text style={s.title}>참여자 {list.length > 0 ? list.length : ""}</Text>
-            <TouchableOpacity onPress={onClose} accessibilityLabel="닫기" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Icon name="close" size={22} color={theme.colors.textSecondary} />
+  // 카카오톡 프로필처럼: 색 배경 위에 큰 아바타와 이름, 아래에 동그란 동작 버튼들
+  const renderProfile = () => {
+    const color = avatarColor(selected.userId);
+    return (
+      <Pressable style={s.profileSheet} onPress={() => {}}>
+        <View style={[s.profileCover, { backgroundColor: color }]}>
+          <View style={s.profileTopBar}>
+            <TouchableOpacity onPress={() => setSelected(null)} accessibilityLabel="참여자 목록으로" hitSlop={HIT_SLOP}>
+              <Icon name="chevron-back" size={24} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleClose} accessibilityLabel="닫기" hitSlop={HIT_SLOP}>
+              <Icon name="close" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
+          <View style={s.profileAvatar}>
+            <Text style={[s.profileAvatarText, { color }]}>{(selected.name.trim()[0] || "?").toUpperCase()}</Text>
+          </View>
+          <View style={s.profileNameRow}>
+            <Text style={s.profileName} numberOfLines={1}>{selected.name}</Text>
+            {selected.leader && <Text style={s.profileLeader}>방장</Text>}
+          </View>
+          {isGuestUserId(selected.userId) && <Text style={s.profileSub}>게스트</Text>}
+        </View>
+        <View style={s.profileActions}>
+          {canAddFriend(selected) && (
+            <TouchableOpacity style={s.action} onPress={addFriend} disabled={sendingRequest} accessibilityLabel="친구 추가">
+              <View style={s.actionIcon}>
+                {sendingRequest
+                  ? <ActivityIndicator color={theme.colors.primary} />
+                  : <Icon name="person-add-outline" size={24} color={theme.colors.primary} />}
+              </View>
+              <Text style={s.actionText}>친구 추가</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={s.action} onPress={startChat} accessibilityLabel="대화하기">
+            <View style={s.actionIcon}>
+              <Icon name="chatbubble-outline" size={24} color={theme.colors.primary} />
+            </View>
+            <Text style={s.actionText}>대화하기</Text>
+          </TouchableOpacity>
+        </View>
+      </Pressable>
+    );
+  };
 
-          {loading && participants.length === 0 ? (
-            <View style={s.center}><ActivityIndicator color={theme.colors.primary} /></View>
-          ) : error ? (
-            <View style={s.center}>
-              <Text style={s.muted}>{error}</Text>
-              <TouchableOpacity onPress={load} style={s.retry}>
-                <Text style={s.retryText}>다시 시도</Text>
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
+      <Pressable style={s.backdrop} onPress={handleClose}>
+        {selected ? renderProfile() : (
+          <Pressable style={s.sheet} onPress={() => {}}>
+            <View style={s.header}>
+              <Text style={s.title}>참여자 {list.length > 0 ? list.length : ""}</Text>
+              <TouchableOpacity onPress={handleClose} accessibilityLabel="닫기" hitSlop={HIT_SLOP}>
+                <Icon name="close" size={22} color={theme.colors.textSecondary} />
               </TouchableOpacity>
             </View>
-          ) : (
-            <FlatList
-              data={list}
-              keyExtractor={(item) => item.userId}
-              renderItem={renderItem}
-              style={{ maxHeight: 360 }}
-              ListEmptyComponent={<View style={s.center}><Text style={s.muted}>참여자가 없어요.</Text></View>}
-            />
-          )}
-        </Pressable>
+
+            {loading && participants.length === 0 ? (
+              <View style={s.center}><ActivityIndicator color={theme.colors.primary} /></View>
+            ) : error ? (
+              <View style={s.center}>
+                <Text style={s.muted}>{error}</Text>
+                <TouchableOpacity onPress={load} style={s.retry}>
+                  <Text style={s.retryText}>다시 시도</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <FlatList
+                data={list}
+                keyExtractor={(item) => item.userId}
+                renderItem={renderItem}
+                style={{ maxHeight: 360 }}
+                ListEmptyComponent={<View style={s.center}><Text style={s.muted}>참여자가 없어요.</Text></View>}
+              />
+            )}
+          </Pressable>
+        )}
       </Pressable>
     </Modal>
   );
@@ -136,4 +253,52 @@ const s = {
   muted: { color: theme.colors.textMuted, fontSize: 14 },
   retry: { marginTop: 10, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, backgroundColor: theme.colors.primaryTint },
   retryText: { color: theme.colors.primary, fontWeight: "600" },
+
+  // 프로필
+  profileSheet: {
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: 400,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    overflow: "hidden",
+  },
+  profileCover: { alignItems: "center", paddingTop: 14, paddingBottom: 28, paddingHorizontal: 16 },
+  profileTopBar: { alignSelf: "stretch", flexDirection: "row", justifyContent: "space-between", marginBottom: 40 },
+  profileAvatar: {
+    width: 96,
+    height: 96,
+    borderRadius: 34,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  profileAvatarText: { fontSize: 40, fontWeight: "800" },
+  profileNameRow: { flexDirection: "row", alignItems: "center", maxWidth: "100%" },
+  profileName: { flexShrink: 1, color: "#fff", fontSize: 20, fontWeight: "700" },
+  profileLeader: {
+    marginLeft: 6,
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#fff",
+    backgroundColor: "rgba(255,255,255,0.25)",
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 999,
+    overflow: "hidden",
+  },
+  profileSub: { marginTop: 4, color: "rgba(255,255,255,0.85)", fontSize: 13 },
+  profileActions: { flexDirection: "row", justifyContent: "center", paddingVertical: 18, gap: 36 },
+  action: { alignItems: "center", minWidth: 64 },
+  actionIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: theme.colors.primaryTint,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 6,
+  },
+  actionText: { fontSize: 13, color: theme.colors.text, fontWeight: "600" },
 };

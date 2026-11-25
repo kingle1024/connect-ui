@@ -1,12 +1,11 @@
 import React, { useContext } from "react";
-import Alert from '@blazejkustra/react-native-alert';
+import { alertStartChatGuide } from "@/utils/startChatGuide";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Feather, Entypo } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ConnectNavigation from "./ConnectNavigation";
 import ChatNavigation from "./ChatNavigation";
 import AuthContext from "@/components/auth/AuthContext";
-import { useRootNavigation } from "@/hooks/useNavigation";
 import FriendNavigation from "./FriendNavigation";
 import theme from "@/modules/theme";
 
@@ -14,7 +13,6 @@ const BottomTab = createBottomTabNavigator();
 
 const BottomTabNavigation = () => {
   const { user: me } = useContext(AuthContext);
-  const rootNavigation = useRootNavigation();
   const insets = useSafeAreaInsets();
 
   return (
@@ -53,26 +51,12 @@ const BottomTabNavigation = () => {
             />
           ),
         }}
-        listeners={() => ({
+        listeners={({ navigation }) => ({
           tabPress: (e) => {
-            // 로그인 상태 확인
+            // 비회원은 친구를 맺을 수 없다 — 채팅 탭 + 버튼과 같은 안내로 모집글에서 대화를 시작하게 한다
             if (!me) {
               e.preventDefault();
-              Alert.alert(
-                "로그인이 필요합니다.",
-                "친구 목록을 보려면 로그인이 필요합니다.",
-                [
-                  {
-                    text: "로그인",
-                    onPress: () => {
-                      rootNavigation.navigate("Signin", {
-                        redirectTab: "Friends",
-                      });
-                    },
-                  },
-                  { text: "닫기" },
-                ]
-              );
+              alertStartChatGuide(() => navigation.navigate("Connect"));
             }
           },
         })}
