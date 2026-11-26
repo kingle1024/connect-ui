@@ -80,9 +80,16 @@ export const useDetailBoard = () => {
     return response.data;
   }, []);
 
+  // 모집 채팅방 열기 (작성자·참여자만). 서버가 방이 없으면 만들고 나를 넣은 뒤 방 정보를 준다.
+  const openBoardChatRoom = useCallback(async (id: number) => {
+    const response = await axiosInstance.post<{ roomId: string; roomName: string }>(`/api/boards/${id}/chat-room`);
+    return response.data;
+  }, []);
+
   return {
     joinBoard,
     leaveBoard,
+    openBoardChatRoom,
     boardDetail,
     loadingBoardDetail,
     boardDetailError,

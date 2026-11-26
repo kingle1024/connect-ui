@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useContext, useRef, useEffect } from "react";
+import React, { useMemo, useState, useContext, useRef, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import Alert from '@blazejkustra/react-native-alert';
-import { useNavigation, NavigationProp } from "@react-navigation/native";
+import { useNavigation, NavigationProp, useFocusEffect } from "@react-navigation/native";
 import { Feather, AntDesign } from "@expo/vector-icons";
 import FriendItem from "@/components/FriendItem";
 import Constants from "expo-constants";
@@ -82,7 +82,9 @@ const groupAllContacts = (friends: Friend[], pendingRequests: Friend[], query: s
 const FriendsListScreen = () => {
   const navigation = useNavigation<NavigationProp<any>>();
   const rootNavigation = useRootNavigation();
-  const { user: me } = useContext(AuthContext);
+  // 게스트도 친구를 맺을 수 있다 (가입하면 친구 관계가 회원 계정으로 옮겨진다)
+  const { user, guest } = useContext(AuthContext);
+  const me = user ?? guest;
 
   // 초기값을 빈 배열로 변경 (이후 fetch로 채움)
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -189,11 +191,14 @@ const FriendsListScreen = () => {
     }
   };
 
-  // 마운트 시 및 me 변경 시 친구 목록 로드
-  useEffect(() => {
-    fetchFriends();
-    fetchFriendRequests();
-  }, [me?.userId, me?.email]);
+  // 친구 탭이 보일 때마다(다른 탭에 갔다 와도) 친구·받은 요청을 새로 불러온다
+  useFocusEffect(
+    useCallback(() => {
+      fetchFriends();
+      fetchFriendRequests();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [me?.userId, me?.email])
+  );
 
   // 클릭한 친구와 1:1 채팅방이 이미 있는지 찾기
   const findOneToOneRoom = (rooms: any[], currentUserId: string, friendId: string) => {
@@ -303,14 +308,10 @@ const FriendsListScreen = () => {
                 return;
               }
 
-              const token = await getAuthToken();
-              if (!token) {
-                Alert.alert("권한 오류", "작업을 수행하려면 로그인되어 있어야 합니다.");
-                setDeleting(false);
-                return;
-              }
+              // 게스트는 로그인 토큰이 없다 (친구 API 는 경로의 userId 로 동작)
+              const token = user ? await getAuthToken() : null;
 
-              const endpoint = `${API_BASE_URL}/api/friends/${currentUserId}/friends/${selectedFriend.id}`;
+              const endpoint = `${API_BASE_URL}/api/friends/${encodeURIComponent(currentUserId)}/friends/${encodeURIComponent(selectedFriend.id)}`;
 
               const res = await fetch(endpoint, {
                 method: "DELETE",
@@ -318,7 +319,7 @@ const FriendsListScreen = () => {
                   {
                     Accept: "application/json",
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
                   },
               });
 
@@ -359,12 +360,8 @@ const FriendsListScreen = () => {
         setProcessingRequestId(null);
         return;
       }
-      const token = await getAuthToken();
-      if (!token) {
-        Alert.alert("권한 오류", "작업을 수행하려면 로그인되어 있어야 합니다.");
-        setProcessingRequestId(null);
-        return;
-      }
+      // 게스트는 로그인 토큰이 없다 (친구 API 는 경로의 userId 로 동작)
+      const token = user ? await getAuthToken() : null;
       if (!item.senderId) {
         Alert.alert("오류", "친구의 아이디가 잘못되었습니다.");
         setProcessingRequestId(null);
@@ -373,14 +370,14 @@ const FriendsListScreen = () => {
 
       // DB 구조에 따라, requestId는 friend_requests 테이블의 id입니다.
       // receiver_id가 현재 사용자와 일치하는지 백엔드에서 반드시 확인해야 합니다.
-      const endpoint = `${API_BASE_URL}/api/friends/${currentUserId}/friend-requests/${item.senderId}/process`
+      const endpoint = `${API_BASE_URL}/api/friends/${encodeURIComponent(currentUserId)}/friend-requests/${encodeURIComponent(item.senderId)}/process`
 
       const res = await fetch(endpoint, {
         method: "PUT",
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         // 백엔드의 FriendRequestProcessDto에 맞게 body 구성
         body: JSON.stringify({

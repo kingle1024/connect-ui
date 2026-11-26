@@ -308,6 +308,7 @@ export default function EnterChatRoom({ route, navigation }) {
   const removeRoomIfEmpty = useCallback(async () => {
     const stomp = client.current;
     if (!joinedRef.current) return; // 서버에 만든 적 없는 새 방
+    if (String(roomId).startsWith("board_")) return; // 모집 채팅방은 글과 함께 남는다 (방장 혼자여도)
     if (!stomp || !stomp.connected || !historyLoadedRef.current) return;
     if (messagesRef.current.some((m) => m.type === MessageType.CHAT)) return;
 

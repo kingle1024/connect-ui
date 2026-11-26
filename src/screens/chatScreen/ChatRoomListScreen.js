@@ -141,8 +141,8 @@ export default function ChatRoomsListScreen({ navigation }) {
   );
 
   const handleCreateAndJoinNewRoom = async () => {
-    // 초대할 친구가 없으면(게스트는 친구를 맺을 수 없으니 항상) 새 방 대신 모집글에서 대화를 시작하도록 안내한다
-    const friendCount = member ? await getFriendCount(member.userId || member.email) : 0;
+    // 초대할 친구가 없으면 새 방 대신 모집글에서 대화를 시작하도록 안내한다
+    const friendCount = me ? await getFriendCount(me.userId || me.email) : 0;
     if (friendCount === 0) {
       alertStartChatGuide(() => navigation.navigate("Connect"));
       return;
@@ -183,9 +183,21 @@ export default function ChatRoomsListScreen({ navigation }) {
     });
   };
 
-  const handleLeaveRoom = (roomIdToLeave, roomName) => {
+  const handleLeaveRoom = (roomIdToLeave, roomName, room) => {
     if (isUserIdLoading || !userId) {
       Alert.alert("오류", "사용자 ID가 설정되지 않았습니다.");
+      return;
+    }
+    // 방장은 나갈 수 없다 (서버도 거절한다). 모집 채팅방은 혼자 남아도, 그 밖의 방은 다른 사람이 있으면.
+    const isLeader = room && String(room.leaderId) === String(userId);
+    const isBoardRoom = String(roomIdToLeave).startsWith("board_");
+    if (isLeader && (isBoardRoom || (room.participantsCount ?? 0) > 1)) {
+      Alert.alert(
+        "방장은 나갈 수 없어요",
+        isBoardRoom
+          ? "모집 글을 올린 사람이 방장이에요.\n모집 글을 지우면 채팅방에서 나갈 수 있어요."
+          : "방장은 채팅방을 나갈 수 없어요."
+      );
       return;
     }
     Alert.alert("채팅방 나가기", `'${roomName}' 방을 정말 나가시겠습니까?`, [
@@ -242,7 +254,7 @@ export default function ChatRoomsListScreen({ navigation }) {
         </View>
         <TouchableOpacity
           style={localStyles.leaveButton}
-          onPress={() => handleLeaveRoom(item.id, name)}
+          onPress={() => handleLeaveRoom(item.id, name, item)}
           accessibilityLabel="채팅방 나가기"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >

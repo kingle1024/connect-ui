@@ -85,7 +85,7 @@ const DrawerContent = (props: DrawerContentComponentProps) => {
           {me
             ? me.userId
             : guest
-              ? "로그인하면 친구·마이페이지도 쓸 수 있어요."
+              ? "로그인하면 마이페이지도 쓸 수 있어요."
               : "로그인하여 모든 기능을 이용해보세요."}
         </Text>
       </View>

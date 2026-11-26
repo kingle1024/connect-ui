@@ -15,6 +15,7 @@ export type GuestClaimSummary = {
   boardCount: number;
   commentCount: number;
   chatRoomCount: number;
+  friendCount?: number;
 };
 
 const guestHeaders = async () => {
@@ -49,6 +50,7 @@ export const describeGuestRecords = (s: GuestClaimSummary): string =>
     s.boardCount ? `글 ${s.boardCount}개` : null,
     s.commentCount ? `댓글 ${s.commentCount}개` : null,
     s.chatRoomCount ? `채팅방 ${s.chatRoomCount}개` : null,
+    s.friendCount ? `친구 ${s.friendCount}명` : null,
   ]
     .filter(Boolean)
     .join(", ");
@@ -65,3 +67,17 @@ export const markGuestClaimDeclined = (memberUserId: string, guestUserId: string
   AsyncStorage.setItem(declinedKey(memberUserId, guestUserId), "1");
 
 export const GUEST_CLAIM_MENU_LABEL = "게스트 기록 가져오기";
+
+// 이 기기에서 방금 회원가입한 아이디. 그 아이디로 처음 로그인하면 묻지 않고 게스트 기록(친구 포함)을 옮긴다.
+// (방금 이 기기에서 가입한 사람이 곧 이 기기의 게스트라서 남의 기록이 붙을 걱정이 없다)
+const JUST_SIGNED_UP_KEY = "guestClaimJustSignedUp";
+
+export const markJustSignedUp = (userId: string) => AsyncStorage.setItem(JUST_SIGNED_UP_KEY, userId);
+
+/** 방금 가입한 아이디면 true 를 돌려주고 표시를 지운다 (한 번만 자동으로 옮긴다). */
+export const consumeJustSignedUp = async (userId: string) => {
+  const saved = await AsyncStorage.getItem(JUST_SIGNED_UP_KEY);
+  if (saved !== userId) return false;
+  await AsyncStorage.removeItem(JUST_SIGNED_UP_KEY);
+  return true;
+};

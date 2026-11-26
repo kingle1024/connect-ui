@@ -157,7 +157,9 @@ const ConnectDetail = () => {
     deleteBoardDetail,
     joinBoard,
     leaveBoard,
+    openBoardChatRoom,
   } = useDetailBoard();
+  const [openingBoardChat, setOpeningBoardChat] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [editTitle, setEditTitle] = useState("");
@@ -258,10 +260,10 @@ const ConnectDetail = () => {
     if (isSendingFriendRequest) return;
     setIsSendingFriendRequest(true);
 
-    // 친구는 회원끼리만 맺는다 (게스트는 기기 쿠키에 묶인 임시 계정이라)
-    const currentUserId = member?.userId || member?.email;
+    // 로그인하지 않았으면 게스트로 친구 요청을 보낸다 (없으면 이때 발급). 가입하면 친구 관계가 회원 계정으로 옮겨진다.
+    const currentUserId = (member ?? guest ?? (await ensureActor()))?.userId;
     if (!currentUserId) {
-      Alert.alert("로그인이 필요합니다.", "친구 요청은 로그인 후 이용할 수 있어요.");
+      Alert.alert("친구 요청 실패", "잠시 후 다시 시도해 주세요.");
       setIsSendingFriendRequest(false);
       return;
     }
@@ -289,7 +291,7 @@ const ConnectDetail = () => {
       setSelectedUser(null); // 요청 후 바텀시트 닫기
       refSheet.current?.close(); // 요청 후 바텀시트 닫기
     }
-  }, [isSendingFriendRequest, member]);
+  }, [isSendingFriendRequest, member, guest, ensureActor]);
 
   useEffect(() => {
     if (routes.params.parentId) {
@@ -577,6 +579,28 @@ const ConnectDetail = () => {
       { text: "다음에" },
     ]);
   }, [boardDetail, joining, me, ensureActor, alertActorUnavailable, isJoined, isRecruitClosed, insets.top, joinBoard, leaveBoard, loadBoardDetail, showJoinError]);
+
+  // 모집 채팅방 (글을 올리면 자동으로 생기고, 참여하면 들어간다). 작성자·참여자만 보인다.
+  const onPressBoardChat = useCallback(async () => {
+    if (!boardDetail || !me || openingBoardChat) return;
+    setOpeningBoardChat(true);
+    try {
+      const room = await openBoardChatRoom(boardDetail.id);
+      navigation.navigate("BottomTab", { screen: "Chat" });
+      setTimeout(() => {
+        navigation.navigate("채팅방 상세" as any, {
+          username: me.userId,
+          roomId: room.roomId,
+          roomName: room.roomName,
+          roomType: "GROUP",
+        });
+      }, 50);
+    } catch (error: any) {
+      Alert.alert("채팅방을 열 수 없어요", error?.response?.data?.message || "잠시 후 다시 시도해 주세요.");
+    } finally {
+      setOpeningBoardChat(false);
+    }
+  }, [boardDetail, me, openingBoardChat, openBoardChatRoom, navigation]);
 
   const onPressShare = useCallback(async () => {
     if (!boardDetail) return;
@@ -892,6 +916,21 @@ const ConnectDetail = () => {
                   </TouchableOpacity>
                 );
               })()}
+              {(isAuthor || isJoined) && (
+                <TouchableOpacity
+                  style={[editStyles.joinButton, openingBoardChat && { opacity: 0.6 }]}
+                  onPress={onPressBoardChat}
+                  disabled={openingBoardChat}
+                  accessibilityRole="button"
+                  accessibilityLabel="모집 채팅방"
+                >
+                  {openingBoardChat ? (
+                    <ActivityIndicator color={theme.colors.white} />
+                  ) : (
+                    <Text style={editStyles.primaryButtonText}>💬 모집 채팅방</Text>
+                  )}
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         )}
@@ -1298,8 +1337,7 @@ const ConnectDetail = () => {
 
             {me?.userId !== selectedUser.userId && ( // 본인 프로필이 아닐 때만
               <>
-                {/* 친구 요청 버튼 (게스트에게는 친구 요청을 보낼 수 없다) */}
-                {!isGuestUserId(selectedUser.userId) && (
+                {/* 친구 요청 버튼 (게스트끼리도 가능, 가입하면 회원 계정으로 이어진다) */}
                 <TouchableOpacity
                   style={{
                     backgroundColor: theme.colors.primary,
@@ -1318,7 +1356,6 @@ const ConnectDetail = () => {
                     </Text>
                   )}
                 </TouchableOpacity>
-                )}
 
                 {/* 1:1 대화하기 버튼 */}
                 <TouchableOpacity

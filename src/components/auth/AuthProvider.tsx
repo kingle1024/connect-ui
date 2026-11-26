@@ -11,7 +11,9 @@ import { saveGuestToken } from "@/utils/guest";
 import {
   GUEST_CLAIM_MENU_LABEL,
   claimGuestRecords,
+  consumeJustSignedUp,
   describeGuestRecords,
+  markJustSignedUp,
   fetchGuestClaimSummary,
   isGuestClaimDeclined,
   markGuestClaimDeclined,
@@ -168,7 +170,8 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           name: name,
         });
         if (response.status === 200) {
-          console.log("response.status", response.status);
+          // 이 아이디로 처음 로그인하면 게스트일 때의 기록(친구 포함)을 자동으로 옮긴다
+          await markJustSignedUp(userId).catch(() => {});
           navigation.navigate("Signin");
         }
       } catch (error: any) {
@@ -314,6 +317,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   /**
    * 로그인하면(앱을 다시 열어 로그인이 복구될 때 포함) 이 기기에 게스트로 쓴 기록이 있는지 확인하고
    * 내 계정으로 가져올지 묻는다. 공용 기기에서 남의 기록이 붙지 않도록 자동으로 옮기지 않는다.
+   * 단, 이 기기에서 방금 회원가입한 아이디의 첫 로그인이면 그 사람이 곧 이 기기의 게스트이므로 묻지 않고 옮긴다.
    * "나중에"를 누르면 같은 회원+게스트 조합으로는 다시 묻지 않고, 마이페이지 버튼으로 가져오게 안내한다.
    */
   const promptedFor = useRef<string | null>(null);
@@ -324,7 +328,20 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     (async () => {
       const summary = await fetchGuestClaimSummary();
+      const justSignedUp = await consumeJustSignedUp(memberUserId).catch(() => false);
       if (!summary?.available || !summary.guestUserId) return;
+
+      // 이 기기에서 방금 가입했으면 묻지 않고 옮긴다 (게스트 때 맺은 친구가 회원 계정의 친구로 이어진다)
+      if (justSignedUp) {
+        try {
+          const moved = await claimGuestRecords();
+          onGuestClaimed();
+          Alert.alert("게스트 기록을 옮겼어요", `게스트로 쓴 ${describeGuestRecords(moved)}이(가) 새 계정으로 옮겨졌어요.`);
+          return;
+        } catch {
+          // 실패하면 아래의 확인 창으로 다시 묻는다
+        }
+      }
       if (await isGuestClaimDeclined(memberUserId, summary.guestUserId)) return;
 
       const guestUserId = summary.guestUserId;

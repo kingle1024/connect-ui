@@ -44,7 +44,6 @@ export default function ParticipantsModal({
   // 이미 친구인 사람 / 이번에 요청을 보낸 사람 (친구 추가 버튼 상태 표시용)
   const [friendIds, setFriendIds] = useState(() => new Set());
   const [requestedIds, setRequestedIds] = useState(() => new Set());
-  const meIsGuest = isGuestUserId(String(username));
 
   const handleClose = useCallback(() => {
     setSelected(null);
@@ -78,14 +77,14 @@ export default function ParticipantsModal({
     if (visible) load();
   }, [visible, load]);
 
-  // 회원이면 내 친구 목록을 받아 '친구' 표시에 쓴다 (실패해도 버튼은 그대로 동작)
+  // 내 친구 목록을 받아 '친구' 표시에 쓴다 (실패해도 버튼은 그대로 동작)
   useEffect(() => {
-    if (!visible || meIsGuest || !username) return;
+    if (!visible || !username) return;
     fetch(`${API_BASE_URL}/api/friends/${encodeURIComponent(String(username))}/friends`)
       .then((r) => (r.ok ? r.json() : []))
       .then((data) => setFriendIds(new Set((Array.isArray(data) ? data : []).map((d) => String(d.friendUserId)))))
       .catch(() => {});
-  }, [visible, meIsGuest, username, API_BASE_URL]);
+  }, [visible, username, API_BASE_URL]);
 
   // 나 → 방장 → 나머지 순으로 보여준다
   const rows = participants
@@ -110,15 +109,7 @@ export default function ParticipantsModal({
 
   const addFriend = async () => {
     if (!selected || sendingRequest) return;
-    // 친구는 회원끼리만 맺는다 (게스트는 기기 쿠키에 묶인 임시 계정이라)
-    if (meIsGuest) {
-      Alert.alert("친구 추가", "친구 추가는 로그인한 회원만 할 수 있어요.\n로그인한 뒤 다시 시도해 주세요.");
-      return;
-    }
-    if (isGuestUserId(selected.userId)) {
-      Alert.alert("친구 추가", `${selected.name}님은 게스트라서 친구로 추가할 수 없어요.\n대화로 연락해 주세요.`);
-      return;
-    }
+    // 게스트끼리도 친구를 맺을 수 있다. 게스트가 회원가입하면 친구 관계가 회원 계정으로 옮겨진다.
     setSendingRequest(true);
     try {
       await sendFriendRequest(String(username), selected.userId);

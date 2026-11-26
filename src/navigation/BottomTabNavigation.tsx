@@ -12,7 +12,9 @@ import theme from "@/modules/theme";
 const BottomTab = createBottomTabNavigator();
 
 const BottomTabNavigation = () => {
-  const { user: me } = useContext(AuthContext);
+  // 회원이거나, 이미 게스트로 활동 중이면 친구 탭을 쓸 수 있다 (게스트도 친구를 맺고, 가입하면 그대로 옮겨진다)
+  const { user, guest } = useContext(AuthContext);
+  const me = user ?? guest;
   const insets = useSafeAreaInsets();
 
   return (
@@ -53,7 +55,7 @@ const BottomTabNavigation = () => {
         }}
         listeners={({ navigation }) => ({
           tabPress: (e) => {
-            // 비회원은 친구를 맺을 수 없다 — 채팅 탭 + 버튼과 같은 안내로 모집글에서 대화를 시작하게 한다
+            // 아직 아무 활동도 안 한 방문자는 친구가 없다 — 채팅 탭 + 버튼과 같은 안내로 모집글에서 대화를 시작하게 한다
             if (!me) {
               e.preventDefault();
               alertStartChatGuide(() => navigation.navigate("Connect"));

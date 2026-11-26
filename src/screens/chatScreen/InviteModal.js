@@ -30,7 +30,7 @@ export default function InviteModal({
   ensureJoined,
 }) {
   const { user: member, guest } = useContext(AuthContext);
-  const me = member ?? guest; // 게스트도 채팅방에 친구를 초대할 수는 없지만(친구가 없음) 참여자 목록은 본다
+  const me = member ?? guest; // 게스트도 친구를 맺고 채팅방에 초대할 수 있다
   const [friends, setFriends] = useState([]);
   const [friendsLoading, setFriendsLoading] = useState(false);
   const [selectedFriends, setSelectedFriends] = useState(new Set());
