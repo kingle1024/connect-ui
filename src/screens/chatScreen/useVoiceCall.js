@@ -9,9 +9,23 @@ import Alert from "@blazejkustra/react-native-alert";
  * - 서버(/app/call.signal → /topic/call/{roomId})는 누가 들어왔는지와 연결 정보만 전달한다.
  * - 새로 들어온 사람이 기존 참가자 모두에게 offer 를 보내고, 기존 참가자는 answer 만 한다
  *   (양쪽이 동시에 offer 를 보내 꼬이는 일을 막는다).
+ * - 휴대폰(LTE)↔노트북처럼 직접 연결이 안 되면 서버가 발급한 Cloudflare TURN 이 소리를 중계한다.
  * - 지금은 웹에서만 동작한다 (앱은 react-native-webrtc 가 필요).
  */
-const ICE_SERVERS = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }];
+// 서버가 TURN(Cloudflare) 접속 정보를 못 주면 STUN 만으로 연결을 시도한다
+const FALLBACK_ICE_SERVERS = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }];
+
+const fetchIceServers = async (API_BASE_URL) => {
+  try {
+    const r = await fetch(`${API_BASE_URL}/api/chat/call/ice-servers`);
+    const d = r.ok ? await r.json() : null;
+    return Array.isArray(d?.iceServers) && d.iceServers.length > 0
+      ? d.iceServers.map(({ urls, username, credential }) => (username ? { urls, username, credential } : { urls }))
+      : FALLBACK_ICE_SERVERS;
+  } catch {
+    return FALLBACK_ICE_SERVERS;
+  }
+};
 
 export const isCallSupported = () =>
   Platform.OS === "web" &&
@@ -38,6 +52,7 @@ export default function useVoiceCall({ client, roomId, username, API_BASE_URL, e
   const peersRef = useRef({}); // userId -> RTCPeerConnection
   const pendingIceRef = useRef({}); // userId -> candidate[] (remoteDescription 전에 온 것)
   const audioRef = useRef({}); // userId -> HTMLAudioElement
+  const iceServersRef = useRef(FALLBACK_ICE_SERVERS);
 
   const publish = useCallback(
     (signal) => {
@@ -78,7 +93,7 @@ export default function useVoiceCall({ client, roomId, username, API_BASE_URL, e
   const createPeer = useCallback(
     (userId) => {
       if (peersRef.current[userId]) return peersRef.current[userId];
-      const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+      const pc = new RTCPeerConnection({ iceServers: iceServersRef.current });
       peersRef.current[userId] = pc;
       setPeerState(userId, "connecting");
 
@@ -216,6 +231,8 @@ export default function useVoiceCall({ client, roomId, username, API_BASE_URL, e
     try {
       await ensureJoined?.();
       const startingNew = callParticipants.filter((p) => p !== me).length === 0;
+      // 연결을 만들기 전에 TURN 접속 정보를 받아 둔다 (실패하면 STUN 만 쓴다)
+      iceServersRef.current = await fetchIceServers(API_BASE_URL);
       try {
         localStreamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
       } catch (e) {
@@ -234,7 +251,7 @@ export default function useVoiceCall({ client, roomId, username, API_BASE_URL, e
     } finally {
       setJoining(false);
     }
-  }, [joining, client, ensureJoined, callParticipants, me, publish, cleanup, onCallStarted]);
+  }, [joining, client, ensureJoined, callParticipants, me, publish, cleanup, onCallStarted, API_BASE_URL]);
 
   const leaveCall = useCallback(() => {
     if (!inCallRef.current) return;
